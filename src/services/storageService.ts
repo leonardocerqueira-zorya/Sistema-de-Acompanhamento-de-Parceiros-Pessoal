@@ -1,5 +1,6 @@
 import type { Partner, Referral } from '../types';
 import { evaluateMissingFields } from './sheetsService';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const PARTNERS_STORAGE_KEY = 'parceiros_data_v2';
 const REFERRALS_STORAGE_KEY = 'indicacoes_data_v2';
@@ -83,6 +84,7 @@ export function saveStoredPartners(partners: Partner[]): void {
   } catch (e) {
     console.error('Erro ao salvar parceiros no localStorage', e);
   }
+  scheduleCloudBackupSync();
 }
 
 export function loadStoredReferrals(): Referral[] {
@@ -124,6 +126,7 @@ export function saveStoredReferrals(referrals: Referral[]): void {
   } catch (e) {
     console.error('Erro ao salvar indicações no localStorage', e);
   }
+  scheduleCloudBackupSync();
 }
 
 // Clear all data to completely start clean
@@ -219,4 +222,47 @@ export function importAllData(json: string): ImportResult {
     ok: true,
     message: `Backup restaurado: ${partners.length} parceiros e ${referrals.length} indicações.`
   };
+}
+
+// ---------------------------------------------------------------------------
+// Espelho na nuvem (Supabase) -- opcional e best-effort.
+// localStorage continua sendo a fonte da verdade e o app funciona 100% offline;
+// se o Supabase estiver configurado (ver supabaseClient.ts), cada save local
+// também empurra o mesmo formato do backup (SystemBackup) pra nuvem, em segundo
+// plano, sem bloquear a UI e sem quebrar nada se a rede/Supabase falhar.
+// ---------------------------------------------------------------------------
+
+const CLOUD_BACKUP_TABLE = 'system_backups';
+const CLOUD_BACKUP_ROW_ID = 'main';
+const CLOUD_SYNC_DEBOUNCE_MS = 1500;
+
+let cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleCloudBackupSync(): void {
+  if (!isSupabaseConfigured) return;
+  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => {
+    cloudSyncTimer = null;
+    pushBackupToSupabase().catch(e => console.warn('Sync com Supabase falhou (dados seguem salvos localmente):', e));
+  }, CLOUD_SYNC_DEBOUNCE_MS);
+}
+
+export async function pushBackupToSupabase(): Promise<void> {
+  if (!supabase) return;
+  const backup = JSON.parse(exportAllData()) as SystemBackup;
+  const { error } = await supabase
+    .from(CLOUD_BACKUP_TABLE)
+    .upsert({ id: CLOUD_BACKUP_ROW_ID, data: backup, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+export async function pullBackupFromSupabase(): Promise<SystemBackup | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from(CLOUD_BACKUP_TABLE)
+    .select('data')
+    .eq('id', CLOUD_BACKUP_ROW_ID)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.data as SystemBackup) ?? null;
 }
