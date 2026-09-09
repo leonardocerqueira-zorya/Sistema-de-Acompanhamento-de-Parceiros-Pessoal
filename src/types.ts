@@ -12,7 +12,8 @@ export interface Partner {
   document?: string; // CNPJ ou CPF do parceiro (somente dígitos armazenados internamente)
   name: string;
   profile?: PartnerProfile; // Perfil do parceiro
-  responsiblePerson?: string; // Pessoa responsável / gestor do canal
+  responsiblePerson?: string; // Contato dentro do parceiro (ex: DP, contador) — NÃO é o executivo interno
+  accountOwner?: string; // Executivo interno da Zorya/QRPoint dono do relacionamento (define a carteira)
   email?: string;
   phone?: string;
   company?: string;
@@ -127,12 +128,32 @@ export interface Referral {
   missingFields?: string[];
 }
 
-// Acesso (nível de UX enquanto a persistência é local; vira RLS real ao migrar para Supabase).
+// Acesso: login real via Supabase Auth. O papel e o executivo vêm do profile
+// autenticado (ver authService.ts), não de uma escolha livre na UI.
 export type UserRole = 'master' | 'executivo';
 
 export interface AccessState {
   role: UserRole;
-  executive: string | null; // Nome do executivo (responsiblePerson) quando role === 'executivo'
+  executive: string | null; // Nome do executivo (Partner.accountOwner) quando role === 'executivo'
+}
+
+// Linha da tabela `profiles` no Supabase: papel e carteira de um usuário logado.
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: UserRole;
+  executiveName: string | null;
+  createdAt: string;
+}
+
+// Convite pendente (tabela `pending_invites`): criado pelo master, "reivindicado"
+// (vira profiles) no primeiro login da pessoa convidada.
+export interface PendingInvite {
+  email: string;
+  role: UserRole;
+  executiveName: string | null;
+  invitedBy: string | null;
+  createdAt: string;
 }
 
 export type PeriodPreset =

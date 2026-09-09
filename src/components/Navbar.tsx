@@ -6,7 +6,7 @@ import {
   logout, 
   getAccessToken 
 } from '../services/firebaseAuth';
-import type { AccessState, UserRole } from '../types';
+import type { AccessState, UserRole, UserProfile } from '../types';
 import {
   LayoutDashboard,
   Users,
@@ -22,10 +22,12 @@ import {
   Sliders,
   ShieldAlert,
   Briefcase,
-  ShieldCheck
+  ShieldCheck,
+  UserPlus,
+  KeyRound
 } from 'lucide-react';
 
-export type AppTab = 'dashboard' | 'referrals' | 'commissions' | 'partners' | 'carteiras' | 'sheets' | 'audit' | 'settings';
+export type AppTab = 'dashboard' | 'referrals' | 'commissions' | 'partners' | 'carteiras' | 'sheets' | 'audit' | 'settings' | 'users';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -38,6 +40,8 @@ interface NavbarProps {
   access: AccessState;
   executives: string[];
   onChangeAccess: (access: AccessState) => void;
+  authProfile?: UserProfile | null;
+  onLogout?: () => void;
 }
 
 export default function Navbar({
@@ -50,7 +54,9 @@ export default function Navbar({
   onOpenNotifications,
   access,
   executives,
-  onChangeAccess
+  onChangeAccess,
+  authProfile = null,
+  onLogout
 }: NavbarProps) {
   const [user, setUser] = useState<User | null>(null);
   const [hasToken, setHasToken] = useState<boolean>(false);
@@ -232,46 +238,84 @@ export default function Navbar({
               <Sliders className="w-3.5 h-3.5 text-indigo-400" />
               <span>Configurações</span>
             </button>
+
+            {authProfile?.role === 'master' && (
+              <button
+                id="tab-users"
+                onClick={() => setActiveTab('users')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  activeTab === 'users'
+                    ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <UserPlus className="w-3.5 h-3.5 text-amber-400" />
+                <span>Usuários</span>
+              </button>
+            )}
           </nav>
 
           {/* User Auth & Actions */}
           <div className="flex items-center gap-2.5">
-            {/* Access Mode Control (master vs executivo) */}
-            <div className="hidden lg:flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-xl px-2 py-1">
-              {access.role === 'master' ? (
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              ) : (
-                <Briefcase className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              )}
-              <select
-                value={access.role}
-                onChange={(e) => {
-                  const role = e.target.value as UserRole;
-                  onChangeAccess({
-                    role,
-                    executive: role === 'executivo' ? (access.executive || executives[0] || null) : null
-                  });
-                }}
-                className="bg-transparent text-[11px] font-bold text-slate-200 focus:outline-none cursor-pointer"
-                title="Modo de acesso (nível de UX enquanto a base é local)"
-              >
-                <option className="text-slate-900" value="master">Master</option>
-                <option className="text-slate-900" value="executivo">Executivo</option>
-              </select>
-              {access.role === 'executivo' && (
+            {/* Access Mode: badge somente-leitura quando há login real (Supabase Auth); dropdown livre só no modo offline/sem Supabase */}
+            {authProfile ? (
+              <div className="hidden lg:flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-xl px-2.5 py-1">
+                {authProfile.role === 'master' ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                ) : (
+                  <Briefcase className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                )}
+                <span className="text-[11px] font-bold text-slate-200">
+                  {authProfile.role === 'master' ? 'Master' : authProfile.executiveName || 'Executivo'}
+                </span>
+                <span className="text-[10px] text-slate-500 max-w-[110px] truncate hidden xl:inline">{authProfile.email}</span>
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    title="Sair"
+                    className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition border-l border-slate-700 pl-1.5 ml-0.5"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="hidden lg:flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-xl px-2 py-1">
+                {access.role === 'master' ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                ) : (
+                  <Briefcase className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                )}
                 <select
-                  value={access.executive || ''}
-                  onChange={(e) => onChangeAccess({ role: 'executivo', executive: e.target.value || null })}
-                  className="bg-transparent text-[11px] font-semibold text-indigo-300 focus:outline-none cursor-pointer max-w-[130px] truncate border-l border-slate-700 pl-1.5"
-                  title="Executivo (carteira exibida)"
+                  value={access.role}
+                  onChange={(e) => {
+                    const role = e.target.value as UserRole;
+                    onChangeAccess({
+                      role,
+                      executive: role === 'executivo' ? (access.executive || executives[0] || null) : null
+                    });
+                  }}
+                  className="bg-transparent text-[11px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                  title="Modo de acesso (offline, sem Supabase configurado)"
                 >
-                  {executives.length === 0 && <option className="text-slate-900" value="">Sem executivos</option>}
-                  {executives.map(ex => (
-                    <option key={ex} className="text-slate-900" value={ex}>{ex}</option>
-                  ))}
+                  <option className="text-slate-900" value="master">Master</option>
+                  <option className="text-slate-900" value="executivo">Executivo</option>
                 </select>
-              )}
-            </div>
+                {access.role === 'executivo' && (
+                  <select
+                    value={access.executive || ''}
+                    onChange={(e) => onChangeAccess({ role: 'executivo', executive: e.target.value || null })}
+                    className="bg-transparent text-[11px] font-semibold text-indigo-300 focus:outline-none cursor-pointer max-w-[130px] truncate border-l border-slate-700 pl-1.5"
+                    title="Executivo (carteira exibida)"
+                  >
+                    {executives.length === 0 && <option className="text-slate-900" value="">Sem executivos</option>}
+                    {executives.map(ex => (
+                      <option key={ex} className="text-slate-900" value={ex}>{ex}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
 
             {/* Google Account Status */}
             {user ? (

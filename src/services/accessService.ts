@@ -42,11 +42,11 @@ function normExec(name: string | null | undefined): string {
   return (name || '').trim().toLowerCase();
 }
 
-// Lista de executivos distintos derivada dos parceiros (responsiblePerson = executivo dono da carteira).
+// Lista de executivos distintos derivada dos parceiros (accountOwner = executivo interno dono da carteira).
 export function listExecutives(partners: Partner[]): string[] {
   const set = new Map<string, string>();
   partners.forEach(p => {
-    const name = (p.responsiblePerson || '').trim();
+    const name = (p.accountOwner || '').trim();
     if (name) set.set(name.toLowerCase(), name);
   });
   return Array.from(set.values()).sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -56,7 +56,7 @@ export function listExecutives(partners: Partner[]): string[] {
 export function scopePartnersForAccess(partners: Partner[], access: AccessState): Partner[] {
   if (access.role === 'master' || !access.executive) return partners;
   const exec = normExec(access.executive);
-  return partners.filter(p => normExec(p.responsiblePerson) === exec);
+  return partners.filter(p => normExec(p.accountOwner) === exec);
 }
 
 // Indicações visíveis para o acesso atual: apenas as dos parceiros da carteira do executivo.

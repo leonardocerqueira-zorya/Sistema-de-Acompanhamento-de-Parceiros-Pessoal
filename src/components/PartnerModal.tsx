@@ -29,6 +29,7 @@ export default function PartnerModal({
   const [document, setDocument] = useState('');
   const [profile, setProfile] = useState<PartnerProfile | ''>('Contabilidade');
   const [responsiblePerson, setResponsiblePerson] = useState('');
+  const [accountOwner, setAccountOwner] = useState('');
   const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -45,6 +46,7 @@ export default function PartnerModal({
       setDocument(initialData.document ? formatDocument(initialData.document) : '');
       setProfile((initialData.profile as PartnerProfile) || 'Contabilidade');
       setResponsiblePerson(initialData.responsiblePerson || '');
+      setAccountOwner(initialData.accountOwner || '');
       setCompany(initialData.company || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
@@ -57,6 +59,7 @@ export default function PartnerModal({
       setDocument('');
       setProfile('Contabilidade');
       setResponsiblePerson('');
+      setAccountOwner('');
       setCompany('');
       setEmail('');
       setPhone('');
@@ -80,6 +83,7 @@ export default function PartnerModal({
       name: name.trim(),
       profile: (profile as PartnerProfile) || undefined,
       responsiblePerson: responsiblePerson.trim() || undefined,
+      accountOwner: accountOwner.trim() || undefined,
       company: company.trim() || undefined,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
@@ -221,16 +225,30 @@ export default function PartnerModal({
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                <span>Pessoa Responsável (Zorya / Gestor)</span>
+                <span>Pessoa de Contato (no parceiro)</span>
                 {!responsiblePerson && <span className="text-[10px] text-amber-600 font-bold">Pendente</span>}
               </label>
               <input
                 type="text"
-                placeholder="Ex: Mariana Ramos ou Carlos Eduardo"
+                placeholder="Ex: contador, DP ou o próprio parceiro"
                 value={responsiblePerson}
                 onChange={(e) => setResponsiblePerson(e.target.value)}
                 className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500 ${!responsiblePerson ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300'}`}
               />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Executivo Responsável (Zorya / QRPoint)
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Mariana Ramos ou Carlos Eduardo"
+                value={accountOwner}
+                onChange={(e) => setAccountOwner(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Define a carteira exibida quando esse executivo faz login.</p>
             </div>
           </div>
 

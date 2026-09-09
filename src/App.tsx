@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import type { Referral, Partner, FilterState, AppNotification, CommissionInstallment, AccessState } from './types';
+import type { Session } from '@supabase/supabase-js';
+import type { Referral, Partner, FilterState, AppNotification, CommissionInstallment, AccessState, UserProfile } from './types';
 import {
   loadStoredPartners,
   saveStoredPartners,
@@ -22,18 +23,27 @@ import {
   scopePartnersForAccess,
   scopeReferralsForAccess
 } from './services/accessService';
-import { 
-  loadNotifications, 
-  dispatchNotification, 
-  markAsRead, 
-  markAllAsRead, 
-  clearNotifications 
+import {
+  isSupabaseConfigured,
+  getSession,
+  onAuthStateChange,
+  loadOrClaimOwnProfile,
+  signOut as authSignOut
+} from './services/authService';
+import {
+  loadNotifications,
+  dispatchNotification,
+  markAsRead,
+  markAllAsRead,
+  clearNotifications
 } from './services/notificationService';
 import type { SheetImportResult } from './services/sheetsService';
 import { formatCurrency, normalizeDocument } from './utils/analytics';
 import { calculateReferralVintages, checkAndTriggerVintageCutoffNotifications } from './utils/vintageAnalytics';
 import { generateCommissionInstallments, updateReferralCommissionStatusFromInstallments } from './utils/commissionLogic';
 import Navbar, { type AppTab } from './components/Navbar';
+import Login from './components/Login';
+import UsersView from './components/UsersView';
 import Dashboard from './components/Dashboard';
 import ReferralsTable from './components/ReferralsTable';
 import CommissionsView from './components/CommissionsView';
@@ -57,6 +67,66 @@ export default function App() {
   const [access, setAccess] = useState<AccessState>({ role: 'master', executive: null });
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Login real (Supabase Auth, magic link). Sem Supabase configurado, o app roda
+  // no modo antigo (dropdown livre de acesso, sem login) — ver Navbar.tsx.
+  const [session, setSession] = useState<Session | null>(null);
+  const [authProfile, setAuthProfile] = useState<UserProfile | null>(null);
+  const [authChecked, setAuthChecked] = useState(!isSupabaseConfigured);
+  const [accessDeniedMsg, setAccessDeniedMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let active = true;
+
+    const loadProfileFor = async (s: Session | null) => {
+      if (!s || !s.user.email) {
+        setAuthProfile(null);
+        setAuthChecked(true);
+        return;
+      }
+      try {
+        const p = await loadOrClaimOwnProfile(s.user.id, s.user.email);
+        if (!active) return;
+        if (!p) {
+          setAccessDeniedMsg('Seu e-mail ainda não foi convidado. Peça ao Master para te adicionar em Usuários.');
+          await authSignOut();
+          setSession(null);
+          setAuthProfile(null);
+        } else {
+          setAuthProfile(p);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar perfil de acesso', err);
+      } finally {
+        if (active) setAuthChecked(true);
+      }
+    };
+
+    getSession().then(s => {
+      setSession(s);
+      loadProfileFor(s);
+    });
+    const unsubscribe = onAuthStateChange(s => {
+      setSession(s);
+      loadProfileFor(s);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await authSignOut();
+    setSession(null);
+    setAuthProfile(null);
+  };
+
+  // Com Supabase configurado, o acesso vem do login real (authProfile), não do dropdown livre.
+  const effectiveAccess: AccessState = (isSupabaseConfigured && authProfile)
+    ? { role: authProfile.role, executive: authProfile.executiveName }
+    : access;
 
   // Filter state for dashboard and lists
   const [filter, setFilter] = useState<FilterState>({
@@ -369,6 +439,7 @@ export default function App() {
         if (!existing.joinedDate && imported.joinedDate) existing.joinedDate = imported.joinedDate;
         if (!existing.profile && imported.profile) existing.profile = imported.profile;
         if (!existing.responsiblePerson && imported.responsiblePerson) existing.responsiblePerson = imported.responsiblePerson;
+        if (!existing.accountOwner && imported.accountOwner) existing.accountOwner = imported.accountOwner;
         if (!existing.email && imported.email) existing.email = imported.email;
         if (!existing.phone && imported.phone) existing.phone = imported.phone;
         if (!existing.company && imported.company) existing.company = imported.company;
@@ -422,7 +493,7 @@ export default function App() {
 
   // Master-only: cria N indicações "só número" (sem empresa) para preservar conversão e perdidos.
   const handleBulkCreateReferrals = (newRefs: Referral[]) => {
-    if (!checkIsMaster(access)) {
+    if (!checkIsMaster(effectiveAccess)) {
       showToast('Apenas o acesso Master pode registrar indicações sem empresa.');
       return;
     }
@@ -517,15 +588,23 @@ export default function App() {
   };
 
   // Derived access scoping: executivo vê apenas sua carteira; master vê tudo.
-  const isMaster = checkIsMaster(access);
+  const isMaster = checkIsMaster(effectiveAccess);
   const executives = listExecutives(partners);
-  const visiblePartners = scopePartnersForAccess(partners, access);
-  const visibleReferrals = scopeReferralsForAccess(referrals, partners, access);
+  const visiblePartners = scopePartnersForAccess(partners, effectiveAccess);
+  const visibleReferrals = scopeReferralsForAccess(referrals, partners, effectiveAccess);
 
   const incompleteCount =
     visibleReferrals.filter(r => r.hasMissingData).length +
     visiblePartners.filter(p => p.hasMissingData).length;
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  // Gate: exige login real quando o Supabase está configurado.
+  if (isSupabaseConfigured && !authChecked) {
+    return <div className="min-h-screen bg-slate-950" />;
+  }
+  if (isSupabaseConfigured && !session) {
+    return <Login deniedMessage={accessDeniedMsg} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
@@ -548,6 +627,8 @@ export default function App() {
         access={access}
         executives={executives}
         onChangeAccess={handleChangeAccess}
+        authProfile={authProfile}
+        onLogout={isSupabaseConfigured ? handleLogout : undefined}
       />
 
       {/* Main Container */}
@@ -672,6 +753,13 @@ export default function App() {
             onSavedPlansChange={() => {
               showToast('Configurações de planos e comissões atualizadas com sucesso!');
             }}
+          />
+        )}
+
+        {activeTab === 'users' && authProfile?.role === 'master' && (
+          <UsersView
+            currentUserId={authProfile.id}
+            executiveSuggestions={executives}
           />
         )}
 

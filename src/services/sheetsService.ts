@@ -313,7 +313,10 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   const partnerIdx = headers.findIndex(h => h.includes('parceir') || h.includes('indicador') || h.includes('canal'));
   const partnerDateIdx = headers.findIndex(h => h.includes('entrada') || h.includes('cadastro') || h.includes('onboarding'));
   const partnerProfileIdx = headers.findIndex(h => h.includes('perfil') || h.includes('tipo parceir') || h.includes('categoria'));
-  const responsibleIdx = headers.findIndex(h => h.includes('respons') || h.includes('executiv') || h.includes('gestor') || h.includes('sdr'));
+  // "pessoa_responsavel" = contato dentro do parceiro (DP/contador/o próprio parceiro).
+  const responsibleIdx = headers.findIndex(h => h.includes('respons') && !h.includes('executiv'));
+  // "executivo_responsavel"/"gestor interno" etc. = executivo da Zorya/QRPoint dono da carteira (Partner.accountOwner).
+  const accountOwnerIdx = headers.findIndex(h => h.includes('executiv') || h.includes('account owner') || h.includes('carteira') || h.includes('sdr'));
   const conexaIdx = headers.findIndex(h => h.includes('conexa') || h.includes('id_conexa') || h.includes('erp'));
 
   // CNPJ/CPF columns. A referral sheet has an explicit "cnpj_cpf_cliente"; a partner sheet has a generic "cnpj_cpf".
@@ -357,6 +360,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
     const partnerJoinDate = partnerDateIdx >= 0 && row[partnerDateIdx]?.trim() ? parseDateString(row[partnerDateIdx]) : undefined;
     const partnerProfile = partnerProfileIdx >= 0 && row[partnerProfileIdx]?.trim() ? (row[partnerProfileIdx].trim() as any) : undefined;
     const responsiblePerson = responsibleIdx >= 0 && row[responsibleIdx]?.trim() ? row[responsibleIdx].trim() : undefined;
+    const accountOwner = accountOwnerIdx >= 0 && row[accountOwnerIdx]?.trim() ? row[accountOwnerIdx].trim() : undefined;
     const idConexa = conexaIdx >= 0 && row[conexaIdx]?.trim() ? row[conexaIdx].trim() : undefined;
 
     // Resolve CNPJ/CPF for partner and client from the available columns.
@@ -384,6 +388,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
         document: partnerDocument,
         profile: partnerProfile,
         responsiblePerson: responsiblePerson,
+        accountOwner: accountOwner,
         joinedDate: partnerJoinDate,
         email: partnerEmail,
         phone: partnerPhone,
@@ -399,6 +404,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
       if (partnerJoinDate && !p.joinedDate) p.joinedDate = partnerJoinDate;
       if (partnerProfile && !p.profile) p.profile = partnerProfile;
       if (responsiblePerson && !p.responsiblePerson) p.responsiblePerson = responsiblePerson;
+      if (accountOwner && !p.accountOwner) p.accountOwner = accountOwner;
       if (idConexa && !p.idConexa) p.idConexa = idConexa;
       if (partnerDocument && !p.document) p.document = partnerDocument;
       if (partnerEmail && !p.email) p.email = partnerEmail;
