@@ -365,6 +365,8 @@ export default function PartnerModal({
                 <option value="">Nenhum</option>
                 {partners
                   .filter(p => p.id !== initialData?.id)
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
                   .map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name}{p.tier ? ` (${p.tier})` : ''}

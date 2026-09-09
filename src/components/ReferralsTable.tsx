@@ -193,9 +193,12 @@ export default function ReferralsTable({
               className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="all">Todos os parceiros</option>
-              {partners.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {partners
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                .map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
             </select>
           </div>
 

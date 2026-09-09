@@ -202,11 +202,14 @@ export default function PartnerCohortChart({
               className="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-hidden cursor-pointer pr-1"
             >
               <option value="all">Média de Todos os Parceiros</option>
-              {partners.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              {partners
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                .map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
 

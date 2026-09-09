@@ -434,9 +434,12 @@ export default function ReferralModal({
                 onChange={(e) => setPartnerId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
               >
-                {partners.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} {p.company ? `(${p.company})` : ''}</option>
-                ))}
+                {partners
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{p.name} {p.company ? `(${p.company})` : ''}</option>
+                  ))}
               </select>
             </div>
 
