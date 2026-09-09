@@ -1,0 +1,320 @@
+export type PartnerStatus = 'ativo' | 'onboarding' | 'inativo';
+
+export type PartnerProfile = 
+  | 'Contabilidade' 
+  | 'BPO DP/RH' 
+  | 'Representante de Softwares' 
+  | 'Consultor de Negócios';
+
+export interface Partner {
+  id: string;
+  idConexa?: string; // ID Conexa (ERP)
+  document?: string; // CNPJ ou CPF do parceiro (somente dígitos armazenados internamente)
+  name: string;
+  profile?: PartnerProfile; // Perfil do parceiro
+  responsiblePerson?: string; // Pessoa responsável / gestor do canal
+  email?: string;
+  phone?: string;
+  company?: string;
+  joinedDate?: string; // YYYY-MM-DD or missing
+  status: PartnerStatus;
+  notes?: string;
+
+  // Audit flags for missing data
+  hasMissingData?: boolean;
+  missingFields?: string[];
+}
+
+export type DealStatus = 
+  | 'novo'
+  | 'contato'
+  | 'qualificado'
+  | 'negociacao'
+  | 'ganho'
+  | 'perdido';
+
+export type CommissionStatus = 
+  | 'pendente_fechamento'
+  | 'a_pagar'
+  | 'paga'
+  | 'cancelada';
+
+export type InstallmentStatus =
+  | 'a_liberar'      // Elegível para liberação conforme vencimento da mensalidade do cliente (aguarda notificar parceiro e emitir NF)
+  | 'solicitada'     // Notificado / aguardando emissão da NF
+  | 'agendada'       // NF anexada, com data de pagamento agendada
+  | 'paga'           // Comprovante anexado, comissão quitada
+  | 'cancelada';
+
+export interface AttachedDocument {
+  name: string;
+  url?: string;             // Link direto para visualização imediata sem buscar na pasta
+  driveFolderId?: string;    // ID da pasta Google Drive
+  driveFolderName?: string;  // Nome amigável da pasta no Drive
+  uploadedAt: string;        // Data do anexo
+  fileData?: string;         // Base64 para download/preview local se arquivo físico foi carregado
+  fileType?: string;         // 'application/pdf', 'image/png', etc.
+}
+
+export interface CommissionInstallment {
+  id: string;
+  referralId: string;
+  partnerId: string;
+  partnerName: string;
+  clientName: string;
+  installmentNumber: number; // 1, 2, 3
+  totalInstallments: number; // 1, 2, 3
+  triggerDescription: string; // "1ª mensalidade", "3ª mensalidade", "5ª mensalidade", "À vista anual", "1ª parcela anual", etc.
+  value: number; // R$ valor da comissão desta parcela
+  releaseDate: string; // YYYY-MM-DD (vencimento da fatura do cliente)
+  status: InstallmentStatus;
+  partnerNotified?: boolean;
+  partnerNotifiedDate?: string;
+  invoiceDoc?: AttachedDocument;
+  scheduledPaymentDate?: string; // Data agendada para quitação
+  receiptDoc?: AttachedDocument;
+  paidDate?: string; // Data efetiva do pagamento
+  paymentMethod?: string;
+  notes?: string;
+}
+
+export interface Referral {
+  id: string;
+  idConexa?: string; // ID Conexa (Cliente / Contrato)
+  partnerId: string;
+  partnerName: string;
+  clientName: string;
+  clientDocument?: string; // CNPJ ou CPF do cliente indicado (somente dígitos armazenados internamente)
+  responsiblePerson?: string; // Pessoa responsável / Executivo comercial
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  referralDate?: string; // YYYY-MM-DD or missing
+  dealStatus: DealStatus;
+  
+  // Pricing plan & contract financial details
+  planId?: string;
+  planRecurrence?: 'mensal' | 'anual';
+  planInstallments?: '1x' | '2x' | '3x';
+  mrrGross?: number; // R$ MRR cheio de tabela
+  discountPercent?: number; // % desconto (default: 10% mensal, 15% anual)
+  discountValue?: number; // R$ desconto aplicado
+  mrrNet?: number; // R$ MRR líquido negociado
+  dealValue?: number; // R$ valor total do contrato (12x para anual, 1x mensal)
+  grossDealValue?: number; // R$ valor bruto total sem desconto
+  
+  closeDate?: string; // YYYY-MM-DD (data de fechamento)
+  invoiceDueDay?: number; // Dia de vencimento da fatura do cliente (1 a 31)
+  firstInvoiceDueDate?: string; // YYYY-MM-DD da 1ª fatura
+  
+  commissionPercent?: number; // % referencial se aplicável
+  commissionValue?: number; // R$ comissão total fixa por plano
+  commissionStatus: CommissionStatus;
+  commissionPaidDate?: string; // YYYY-MM-DD (quando totalmente quitada)
+  paymentMethod?: string;
+  notes?: string;
+  
+  // Installments generated upon deal closure
+  commissionInstallments?: CommissionInstallment[];
+
+  // Indicação registrada apenas como número (sem empresa/cliente vinculado).
+  // Criada em lote pelo acesso master para preservar taxa de conversão e contagem de perdidos.
+  // Deve ser exibida para o executivo completar o cadastro da empresa depois.
+  isPlaceholder?: boolean;
+
+  // Audit flags for spreadsheet imported items with missing data
+  hasMissingData?: boolean;
+  missingFields?: string[];
+}
+
+// Acesso (nível de UX enquanto a persistência é local; vira RLS real ao migrar para Supabase).
+export type UserRole = 'master' | 'executivo';
+
+export interface AccessState {
+  role: UserRole;
+  executive: string | null; // Nome do executivo (responsiblePerson) quando role === 'executivo'
+}
+
+export type PeriodPreset =
+  | 'all' 
+  | 'mensal' 
+  | 'trimestral' 
+  | 'anual' 
+  | 'custom'
+  | 'today' 
+  | 'last_7_days' 
+  | 'last_30_days' 
+  | 'this_month' 
+  | 'this_quarter' 
+  | 'this_year';
+
+export interface PeriodFilter {
+  preset: PeriodPreset;
+  selectedMonth?: string; // e.g. "2026-03" (YYYY-MM)
+  selectedQuarter?: number; // 1, 2, 3, 4
+  selectedYear?: number; // e.g. 2026
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface FilterState {
+  period: PeriodFilter;
+  partnerId: string;
+  dealStatus: DealStatus | 'all';
+  commissionStatus: CommissionStatus | 'all';
+  onlyMissingData: boolean;
+  searchQuery: string;
+}
+
+export type RankingSortKey = 'wonDeals' | 'referrals' | 'volume' | 'conversion' | 'speed';
+
+export type NotificationType = 
+  | 'nova_indicacao' 
+  | 'mudanca_status' 
+  | 'comissao_a_pagar' 
+  | 'comissao_paga'
+  | 'comissao_liberada_hoje'
+  | 'comissao_vencendo_hoje'
+  | 'corte_safra_alerta';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: string; // ISO string
+  read: boolean;
+  referralId?: string;
+  installmentId?: string;
+  partnerId?: string;
+  partnerName?: string;
+  dealValue?: number;
+  commissionValue?: number;
+  emailSent?: boolean;
+  emailRecipient?: string;
+}
+
+export interface NotificationSettings {
+  emailEnabled: boolean;
+  emailAddress: string;
+  notifyNewReferral: boolean;
+  notifyStatusChange: boolean;
+  notifyCommissionToPay: boolean;
+}
+
+export interface ChannelKPIs {
+  totalReferrals: number;
+  totalWonDeals: number;
+  conversionRate: number; // percentage
+  totalWonVolume: number; // R$ líquido
+  grossWonVolume: number; // R$ bruto
+  totalDiscountVolume: number; // R$ concedido em descontos
+  avgDiscountPercent: number; // % médio de desconto concedido
+  pipelineVolume: number; // R$ in progress
+  commissionsToPay: number; // R$ pendente
+  commissionsPaid: number; // R$ pago
+  pendingCommissionCount: number;
+
+  // Performance Consolidada & Rentabilidade do Canal:
+  avgTicket: number; // Ticket Médio de Vendas (Volume ganho / Negócios fechados)
+  avgCommissionCost: number; // Custo Médio de Comissão (Comissões ganhas / Negócios fechados)
+  totalCommissionsWon: number; // Total de comissões geradas pelos negócios fechados
+  netChannelMargin: number; // Margem líquida retida por venda (avgTicket - avgCommissionCost)
+  commissionSharePercent: number; // % do ticket médio consumido por comissão (avgCommissionCost / avgTicket * 100)
+  revenueMultiplier: number; // Retorno em receita para cada R$ 1 de comissão (avgTicket / avgCommissionCost)
+  
+  // Cycle KPIs:
+  avgDaysPartnerToFirstReferral: number | null; // Média tempo entrada parceiro -> indicação
+  avgDaysReferralToClose: number | null; // Média tempo indicação -> fechamento
+  activePartnersCount: number;
+  partnerActivationRate: number; // % partners that referred at least once
+  incompleteDataCount: number;
+}
+
+export interface PartnerRankingItem {
+  partnerId: string;
+  idConexa?: string;
+  document?: string;
+  partnerName: string;
+  profile?: string;
+  responsiblePerson?: string;
+  status?: PartnerStatus;
+  joinedDate?: string;
+  totalReferrals: number;
+  wonReferrals: number;
+  wonVolume: number;
+  totalCommissions: number;
+  conversionRate: number;
+  daysToFirstReferral: number | null;
+}
+
+export interface DataAuditMetrics {
+  totalRecords: number;
+  totalFieldsAudited: number;
+  totalFieldsCompleted: number;
+  totalFieldsMissing: number;
+  completionPercentage: number;
+  missingPercentage: number;
+  partnersWithMissingCount: number;
+  referralsWithMissingCount: number;
+}
+
+export interface PartnerTenureCohortMetric {
+  monthIndex: number; // 1, 2, 3...
+  monthLabel: string; // "Mês 1", "Mês 2", etc.
+  referrals: number; // Quantidade de indicações (ou média por parceiro no modo médio)
+  closedDeals: number; // Quantidade de fechamentos (ou média por parceiro no modo médio)
+  conversionRate: number; // Taxa de conversão % (fechadas ÷ indicações * 100)
+  totalReferralsRaw: number; // Total absoluto de indicações
+  totalClosedRaw: number; // Total absoluto de fechadas
+  activePartnersInTenure: number; // Quantidade de parceiros considerados neste mês de maturação
+}
+
+export interface MonthlyClosedBreakdown {
+  monthKey: string; // '2026-01', '2026-02', etc.
+  monthLabel: string; // 'Jan/26', 'Fev/26', etc.
+  relativeMonthIndex: number; // 0 = mesmo mês da safra (M0), 1 = M+1, 2 = M+2, etc.
+  closedCount: number;
+  wonVolume: number;
+}
+
+export interface ReferralVintage {
+  vintageId: string; // '2026-08'
+  year: number; // 2026
+  month: number; // 8 (1-indexed)
+  label: string; // 'Agosto/2026'
+  shortLabel: string; // 'Ago/26'
+  startDate: string; // '2026-08-01'
+  endDate: string; // '2026-08-31'
+  cutoffDate: string; // '2026-09-15'
+  cutoffLabel: string; // '15/09/2026'
+  isCutoffReached: boolean; // se data atual >= cutoffDate
+  daysUntilCutoff: number; // quantos dias faltam para o corte (ou negativo se já passou)
+  isCutoffApproaching: boolean; // se faltam entre 0 e 7 dias para o corte
+  
+  // Métricas de Indicações da Safra
+  totalReferrals: number; // Indicações totais recebidas entre dia 01 e último dia do mês
+  pipelineReferrals: number; // Indicações ainda em negociação/abertas
+  potentialMRR: number; // MRR total em negociação (pipeline)
+  
+  // Métricas de Fechamento no Corte (D+15 pós-mês)
+  closedAtCutoff: number; // Negócios fechados até o dia 15 do mês seguinte
+  conversionAtCutoff: number; // (closedAtCutoff / totalReferrals) * 100
+  wonVolumeAtCutoff: number; // MRR dos fechados até o corte
+  
+  // Métricas Atuais (Acumulado até hoje)
+  closedTotal: number; // Total de negócios fechados da safra até hoje
+  conversionCurrent: number; // (closedTotal / totalReferrals) * 100
+  wonVolumeTotal: number; // MRR total ganho
+  
+  // Desempenho Pós-Corte
+  closedPostCutoff: number; // Fechadas após a data de corte (closeDate > cutoffDate)
+  postCutoffGainPercent: number; // conversionCurrent - conversionAtCutoff
+  hasPostCutoffSales: boolean; // closedPostCutoff > 0
+  
+  // Fechamentos mês a mês ao longo dos meses subsequentes (M0, M1, M2...)
+  monthlyBreakdown: MonthlyClosedBreakdown[];
+  
+  // Lista de referências desta safra
+  referrals: Referral[];
+}
