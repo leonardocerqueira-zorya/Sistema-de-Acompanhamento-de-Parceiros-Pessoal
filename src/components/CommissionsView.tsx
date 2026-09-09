@@ -714,9 +714,13 @@ export default function CommissionsView({
                     {filteredToRelease.map((item) => {
                       const isPastOrToday = item.installment.releaseDate <= todayStr;
                       const isToday = item.installment.releaseDate === todayStr;
+                      // Parcela sintética (não gravada no parceiro/embaixador): a indicação está "ganho" com
+                      // comissão definida, mas sem Data de Fechamento/Vencimento — sem isso, ensureCommissionInstallmentsForReferral
+                      // nunca gera parcelas reais e qualquer ação aqui (Anexar NF, Notificar) não teria onde persistir.
+                      const isIncomplete = item.installment.id.startsWith('legacy-');
 
                       return (
-                        <tr key={item.installment.id} className="hover:bg-slate-50/70 transition">
+                        <tr key={item.installment.id} className={`hover:bg-slate-50/70 transition ${isIncomplete ? 'bg-amber-50/40' : ''}`}>
                           <td className="py-3.5 px-4">
                             <div className="font-bold text-slate-900 flex items-center gap-1.5">
                               <span>{item.installment.partnerName}</span>
@@ -763,7 +767,12 @@ export default function CommissionsView({
                             )}
                           </td>
                           <td className="py-3.5 px-4">
-                            {item.installment.status === 'solicitada' ? (
+                            {isIncomplete ? (
+                              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-md text-[11px]" title="Faltam Data de Fechamento e/ou Dia de Vencimento da Fatura na indicação">
+                                <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                <span>Cadastro incompleto</span>
+                              </span>
+                            ) : item.installment.status === 'solicitada' ? (
                               <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 font-semibold px-2 py-0.5 rounded-md text-[11px]">
                                 <Clock className="w-3 h-3 text-amber-600" />
                                 <span>NF Solicitada ao Parceiro</span>
@@ -780,33 +789,44 @@ export default function CommissionsView({
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                            {isIncomplete ? (
                               <button
-                                onClick={() => handleOpenNotifyModal(item)}
-                                className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2.5 py-1.5 rounded-xl transition"
-                                title="Gerar mensagem de aviso para o parceiro emitir NF"
+                                onClick={() => onEditReferral(item.referral)}
+                                className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs ml-auto"
+                                title="Preencha Data de Fechamento e Dia de Vencimento da Fatura para gerar as parcelas de comissão"
                               >
-                                <MessageSquare className="w-3 h-3 text-slate-600" />
-                                <span>Avisar Parceiro</span>
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>Completar Fechamento p/ Liberar</span>
                               </button>
+                            ) : (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleOpenNotifyModal(item)}
+                                  className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2.5 py-1.5 rounded-xl transition"
+                                  title="Gerar mensagem de aviso para o parceiro emitir NF"
+                                >
+                                  <MessageSquare className="w-3 h-3 text-slate-600" />
+                                  <span>Avisar Parceiro</span>
+                                </button>
 
-                              <button
-                                onClick={() => handleOpenAttachInvoiceModal(item)}
-                                className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs"
-                              >
-                                <Upload className="w-3 h-3" />
-                                <span>Anexar NF</span>
-                              </button>
+                                <button
+                                  onClick={() => handleOpenAttachInvoiceModal(item)}
+                                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs"
+                                >
+                                  <Upload className="w-3 h-3" />
+                                  <span>Anexar NF</span>
+                                </button>
 
-                              <button
-                                onClick={() => handleOpenDefaultModal(item)}
-                                className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl transition border border-rose-200"
-                                title="Marcar como não liberada por inadimplência do cliente"
-                              >
-                                <ShieldAlert className="w-3 h-3" />
-                                <span>Inadimplência</span>
-                              </button>
-                            </div>
+                                <button
+                                  onClick={() => handleOpenDefaultModal(item)}
+                                  className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl transition border border-rose-200"
+                                  title="Marcar como não liberada por inadimplência do cliente"
+                                >
+                                  <ShieldAlert className="w-3 h-3" />
+                                  <span>Inadimplência</span>
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );

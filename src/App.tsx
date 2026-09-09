@@ -57,6 +57,7 @@ import PartnerModal from './components/PartnerModal';
 import BulkReferralModal from './components/BulkReferralModal';
 import NotificationCenterModal from './components/NotificationCenterModal';
 import NotificationSettingsModal from './components/NotificationSettingsModal';
+import SetPasswordModal from './components/SetPasswordModal';
 import { RotateCcw, ShieldCheck, Check, Trash2, Mail, Download, Upload } from 'lucide-react';
 
 export default function App() {
@@ -147,6 +148,7 @@ export default function App() {
 
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [isSetPasswordOpen, setIsSetPasswordOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -626,6 +628,7 @@ export default function App() {
         onChangeAccess={handleChangeAccess}
         authProfile={authProfile}
         onLogout={isSupabaseConfigured ? handleLogout : undefined}
+        onOpenSetPassword={isSupabaseConfigured ? () => setIsSetPasswordOpen(true) : undefined}
       />
 
       {/* Main Container */}
@@ -835,7 +838,7 @@ export default function App() {
         }}
         onSave={handleSaveReferral}
         initialData={editingReferral}
-        partners={partners}
+        partners={visiblePartners}
       />
 
       {/* Partner Modal */}
@@ -890,6 +893,13 @@ export default function App() {
         onSavedSettings={() => {
           showToast('Configurações de alertas atualizadas com sucesso!');
         }}
+      />
+
+      {/* Set Password Modal */}
+      <SetPasswordModal
+        isOpen={isSetPasswordOpen}
+        onClose={() => setIsSetPasswordOpen(false)}
+        userEmail={authProfile?.email}
       />
 
       {/* Toast Feedback */}

@@ -42,6 +42,7 @@ interface NavbarProps {
   onChangeAccess: (access: AccessState) => void;
   authProfile?: UserProfile | null;
   onLogout?: () => void;
+  onOpenSetPassword?: () => void;
 }
 
 export default function Navbar({
@@ -56,7 +57,8 @@ export default function Navbar({
   executives,
   onChangeAccess,
   authProfile = null,
-  onLogout
+  onLogout,
+  onOpenSetPassword
 }: NavbarProps) {
   const [user, setUser] = useState<User | null>(null);
   const [hasToken, setHasToken] = useState<boolean>(false);
@@ -269,13 +271,22 @@ export default function Navbar({
                   {authProfile.role === 'master' ? 'Master' : authProfile.executiveName || 'Executivo'}
                 </span>
                 <span className="text-[10px] text-slate-500 max-w-[110px] truncate hidden xl:inline">{authProfile.email}</span>
+                {onOpenSetPassword && (
+                  <button
+                    onClick={onOpenSetPassword}
+                    title="Definir senha de acesso"
+                    className="text-slate-400 hover:text-indigo-400 p-0.5 rounded transition border-l border-slate-700 pl-1.5 ml-0.5"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 {onLogout && (
                   <button
                     onClick={onLogout}
                     title="Sair"
-                    className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition border-l border-slate-700 pl-1.5 ml-0.5"
+                    className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition"
                   >
-                    <KeyRound className="w-3.5 h-3.5" />
+                    <LogOut className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>

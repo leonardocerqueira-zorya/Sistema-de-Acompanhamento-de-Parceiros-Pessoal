@@ -16,6 +16,25 @@ export async function sendMagicLink(email: string): Promise<{ error: string | nu
   return { error: error?.message ?? null };
 }
 
+// Login alternativo com senha — só funciona se a pessoa já definiu uma senha
+// antes (ver setOwnPassword). Quem nunca definiu continua usando o link mágico.
+export async function signInWithPassword(email: string, password: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase não configurado.' };
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password
+  });
+  return { error: error?.message ?? null };
+}
+
+// Define/troca a senha do usuário já logado (via link mágico ou senha antiga).
+// Depois disso a pessoa pode escolher entrar por link ou por senha à vontade.
+export async function setOwnPassword(newPassword: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase não configurado.' };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: error?.message ?? null };
+}
+
 export async function signOut(): Promise<void> {
   if (!supabase) return;
   await supabase.auth.signOut();

@@ -7,8 +7,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend
+  Tooltip
 } from 'recharts';
 import type { Referral, Partner } from '../types';
 import { calculatePartnerTenureCohortMetrics } from '../utils/analytics';

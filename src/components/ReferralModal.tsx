@@ -298,8 +298,9 @@ export default function ReferralModal({
     // Generate or preserve installments
     let finalInstallments: CommissionInstallment[] | undefined = undefined;
     if (dealStatus === 'ganho') {
-      if (existingInstallments.length > 0 && !initialData?.hasMissingData) {
-        // If installments already existed and had invoices/receipts, preserve them or update values
+      if (existingInstallments.length > 0) {
+        // Parcelas já existentes podem ter NF/comprovante anexados — nunca regenerar
+        // por aqui, mesmo que o cadastro tenha outros campos pendentes (ex: ID Conexa).
         finalInstallments = existingInstallments;
       } else if (activeFirstDueDate && numCommValue) {
         finalInstallments = generateCommissionInstallments(
