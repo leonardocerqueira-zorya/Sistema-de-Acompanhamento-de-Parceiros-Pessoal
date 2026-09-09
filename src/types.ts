@@ -12,6 +12,8 @@ export interface Partner {
   document?: string; // CNPJ ou CPF do parceiro (somente dígitos armazenados internamente)
   name: string;
   profile?: PartnerProfile; // Perfil do parceiro
+  tier?: string; // Tier do parceiro no programa (ex: Parceiro Zorya, Growth, Estratégico, Embaixador Zorya) — ver tiersData.ts
+  ambassadorId?: string; // ID do parceiro (tier Embaixador) que trouxe este parceiro pro programa — dispara comissão de embaixador nas indicações dele
   responsiblePerson?: string; // Contato dentro do parceiro (ex: DP, contador) — NÃO é o executivo interno
   accountOwner?: string; // Executivo interno da Zorya/QRPoint dono do relacionamento (define a carteira)
   email?: string;
@@ -62,6 +64,7 @@ export interface CommissionInstallment {
   referralId: string;
   partnerId: string;
   partnerName: string;
+  kind?: 'parceiro' | 'embaixador'; // Quem recebe: o parceiro indicador (padrão) ou o embaixador que trouxe o parceiro
   clientName: string;
   installmentNumber: number; // 1, 2, 3
   totalInstallments: number; // 1, 2, 3
@@ -117,6 +120,15 @@ export interface Referral {
   
   // Installments generated upon deal closure
   commissionInstallments?: CommissionInstallment[];
+
+  // Comissão de embaixador: gerada quando o parceiro indicador (partnerId) tem um
+  // accountOwner... na verdade um Partner.ambassadorId preenchido. Snapshot do
+  // embaixador no momento da geração (não muda retroativamente se o vínculo do
+  // parceiro mudar depois, para preservar o histórico).
+  ambassadorId?: string;
+  ambassadorName?: string;
+  ambassadorCommissionStatus?: CommissionStatus;
+  ambassadorCommissionInstallments?: CommissionInstallment[];
 
   // Indicação registrada apenas como número (sem empresa/cliente vinculado).
   // Criada em lote pelo acesso master para preservar taxa de conversão e contagem de perdidos.

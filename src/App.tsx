@@ -40,7 +40,7 @@ import {
 import type { SheetImportResult } from './services/sheetsService';
 import { formatCurrency, normalizeDocument } from './utils/analytics';
 import { calculateReferralVintages, checkAndTriggerVintageCutoffNotifications } from './utils/vintageAnalytics';
-import { generateCommissionInstallments, updateReferralCommissionStatusFromInstallments } from './utils/commissionLogic';
+import { updateReferralCommissionStatusFromInstallments, backfillAllCommissions } from './utils/commissionLogic';
 import Navbar, { type AppTab } from './components/Navbar';
 import Login from './components/Login';
 import UsersView from './components/UsersView';
@@ -161,40 +161,12 @@ export default function App() {
     const loadedPartners = loadStoredPartners();
     const loadedReferrals = loadStoredReferrals();
     const loadedNotifications = loadNotifications();
-    const today = new Date().toISOString().slice(0, 10);
 
-    // Auto-generate installments for any won referrals lacking them
-    let hasChanges = false;
-    const initializedReferrals = loadedReferrals.map(ref => {
-      if (ref.dealStatus === 'ganho' && (!ref.commissionInstallments || ref.commissionInstallments.length === 0) && ref.commissionValue && ref.commissionValue > 0) {
-        hasChanges = true;
-        const insts = generateCommissionInstallments(
-          ref.id,
-          ref.partnerId,
-          ref.partnerName,
-          ref.clientName,
-          ref.commissionValue,
-          ref.planRecurrence || 'mensal',
-          ref.planInstallments || '1x',
-          ref.firstInvoiceDueDate || ref.closeDate || today
-        );
-        // If referral was already marked paga, mark installments as paga
-        if (ref.commissionStatus === 'paga') {
-          insts.forEach(i => {
-            i.status = 'paga';
-            i.paidDate = ref.commissionPaidDate || today;
-            i.paymentMethod = ref.paymentMethod || 'PIX';
-          });
-        }
-        return {
-          ...ref,
-          commissionInstallments: insts
-        };
-      }
-      return ref;
-    });
+    // Auto-generate commission installments (parceiro + embaixador, se houver) for
+    // any won referrals lacking them — cobre backfills feitos fora da tela de edição.
+    const { referrals: initializedReferrals, changed } = backfillAllCommissions(loadedReferrals, loadedPartners);
 
-    if (hasChanges) {
+    if (changed) {
       saveStoredReferrals(initializedReferrals);
     }
 
@@ -269,8 +241,9 @@ export default function App() {
       setNotifications(loadNotifications());
     }
 
-    setReferrals(updated);
-    saveStoredReferrals(updated);
+    const { referrals: finalReferrals } = backfillAllCommissions(updated, partners);
+    setReferrals(finalReferrals);
+    saveStoredReferrals(finalReferrals);
   };
 
   const handleDeleteReferral = (id: string) => {
@@ -292,6 +265,14 @@ export default function App() {
     }
     setPartners(updated);
     saveStoredPartners(updated);
+
+    // Se um embaixador foi associado agora, gera comissão de embaixador retroativa
+    // para indicações já ganhas desse parceiro.
+    const { referrals: finalReferrals, changed } = backfillAllCommissions(referrals, updated);
+    if (changed) {
+      setReferrals(finalReferrals);
+      saveStoredReferrals(finalReferrals);
+    }
   };
 
   const handleDeletePartner = (id: string) => {
@@ -359,18 +340,30 @@ export default function App() {
     const updated = referrals.map(r => {
       if (r.id !== referralId) return r;
 
-      const insts = (r.commissionInstallments || []).map(i => {
-        if (i.id !== installmentId) return i;
-        targetInstallment = { ...i, ...updates };
-        return targetInstallment;
-      });
+      // A parcela pode ser do parceiro indicador ou do embaixador — procura nos dois.
+      const isInPartnerInsts = (r.commissionInstallments || []).some(i => i.id === installmentId);
 
-      const newCommStatus = updateReferralCommissionStatusFromInstallments(insts);
-      targetRef = {
+      const commissionInstallments = isInPartnerInsts
+        ? (r.commissionInstallments || []).map(i => {
+            if (i.id !== installmentId) return i;
+            targetInstallment = { ...i, ...updates };
+            return targetInstallment;
+          })
+        : r.commissionInstallments;
+
+      const ambassadorCommissionInstallments = isInPartnerInsts
+        ? r.ambassadorCommissionInstallments
+        : (r.ambassadorCommissionInstallments || []).map(i => {
+            if (i.id !== installmentId) return i;
+            targetInstallment = { ...i, ...updates };
+            return targetInstallment;
+          });
+
+      targetRef = updateReferralCommissionStatusFromInstallments({
         ...r,
-        commissionInstallments: insts,
-        commissionStatus: newCommStatus
-      };
+        commissionInstallments,
+        ambassadorCommissionInstallments
+      });
       return targetRef;
     });
 
@@ -461,7 +454,9 @@ export default function App() {
       };
     });
 
-    const newReferrals = [...remappedReferrals, ...referrals];
+    const mergedReferrals = [...remappedReferrals, ...referrals];
+    // Garante comissões (parceiro + embaixador) para indicações importadas já "ganho".
+    const { referrals: newReferrals } = backfillAllCommissions(mergedReferrals, newPartners);
     setPartners(newPartners);
     setReferrals(newReferrals);
     saveStoredPartners(newPartners);
@@ -850,6 +845,7 @@ export default function App() {
         }}
         onSave={handleSavePartner}
         initialData={editingPartner}
+        partners={partners}
       />
 
       {/* Bulk (number-only) Referral Modal — master only */}

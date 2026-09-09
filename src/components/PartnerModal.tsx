@@ -1,14 +1,16 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import type { Partner, PartnerStatus, PartnerProfile } from '../types';
-import { Users, Calendar, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
+import { Users, Calendar, AlertTriangle, ShieldCheck, Tag, Award } from 'lucide-react';
 import { evaluatePartnerMissingFields } from '../services/sheetsService';
 import { normalizeDocument, formatDocument } from '../utils/analytics';
+import { loadStoredPartnerTiers } from '../data/tiersData';
 
 interface PartnerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (partner: Partner) => void;
   initialData?: Partner | null;
+  partners?: Partner[];
 }
 
 const PARTNER_PROFILES: PartnerProfile[] = [
@@ -22,12 +24,16 @@ export default function PartnerModal({
   isOpen,
   onClose,
   onSave,
-  initialData
+  initialData,
+  partners = []
 }: PartnerModalProps) {
+  const partnerTiers = loadStoredPartnerTiers();
   const [name, setName] = useState('');
   const [idConexa, setIdConexa] = useState('');
   const [document, setDocument] = useState('');
   const [profile, setProfile] = useState<PartnerProfile | ''>('Contabilidade');
+  const [tier, setTier] = useState('');
+  const [ambassadorId, setAmbassadorId] = useState('');
   const [responsiblePerson, setResponsiblePerson] = useState('');
   const [accountOwner, setAccountOwner] = useState('');
   const [company, setCompany] = useState('');
@@ -45,6 +51,8 @@ export default function PartnerModal({
       setIdConexa(initialData.idConexa || '');
       setDocument(initialData.document ? formatDocument(initialData.document) : '');
       setProfile((initialData.profile as PartnerProfile) || 'Contabilidade');
+      setTier(initialData.tier || '');
+      setAmbassadorId(initialData.ambassadorId || '');
       setResponsiblePerson(initialData.responsiblePerson || '');
       setAccountOwner(initialData.accountOwner || '');
       setCompany(initialData.company || '');
@@ -58,6 +66,8 @@ export default function PartnerModal({
       setIdConexa('');
       setDocument('');
       setProfile('Contabilidade');
+      setTier('');
+      setAmbassadorId('');
       setResponsiblePerson('');
       setAccountOwner('');
       setCompany('');
@@ -82,6 +92,8 @@ export default function PartnerModal({
       document: normalizeDocument(document) || undefined,
       name: name.trim(),
       profile: (profile as PartnerProfile) || undefined,
+      tier: tier || undefined,
+      ambassadorId: ambassadorId || undefined,
       responsiblePerson: responsiblePerson.trim() || undefined,
       accountOwner: accountOwner.trim() || undefined,
       company: company.trim() || undefined,
@@ -249,6 +261,47 @@ export default function PartnerModal({
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
               />
               <p className="text-[10px] text-slate-400 mt-1">Define a carteira exibida quando esse executivo faz login.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-amber-500" />
+                <span>Tier do Parceiro</span>
+              </label>
+              <select
+                value={tier}
+                onChange={(e) => setTier(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Sem tier definido</option>
+                {partnerTiers.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">Editável em Configurações.</p>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Embaixador Associado</label>
+              <select
+                value={ambassadorId}
+                onChange={(e) => setAmbassadorId(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Nenhum</option>
+                {partners
+                  .filter(p => p.id !== initialData?.id)
+                  .map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.tier ? ` (${p.tier})` : ''}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Quem trouxe este parceiro pro programa — gera comissão pra ele nas indicações fechadas deste parceiro.
+              </p>
             </div>
           </div>
 

@@ -78,6 +78,10 @@ export default function CommissionsView({
   // Document Viewer Modal
   const [viewingDoc, setViewingDoc] = useState<{ doc: AttachedDocument; title: string; folderUrl: string } | null>(null);
 
+  // Inadimplência do Cliente: marca a parcela como não liberada (cancelada), com motivo.
+  const [defaultingInstallment, setDefaultingInstallment] = useState<{ referral: Referral; installment: CommissionInstallment } | null>(null);
+  const [defaultReason, setDefaultReason] = useState('Inadimplência do cliente');
+
   // Search filter
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -115,6 +119,14 @@ export default function CommissionsView({
       };
       allFlatInstallments.push({ installment: inst, referral: ref });
     }
+
+    // Comissões do embaixador (parceiro que trouxe o parceiro indicador) — mesma
+    // mecânica de liberação/NF/pagamento, só que pra outra pessoa e outro cronograma.
+    if (ref.ambassadorCommissionInstallments && ref.ambassadorCommissionInstallments.length > 0) {
+      ref.ambassadorCommissionInstallments.forEach(inst => {
+        allFlatInstallments.push({ installment: inst, referral: ref });
+      });
+    }
   });
 
   // Calculate Alerts:
@@ -131,9 +143,17 @@ export default function CommissionsView({
   );
 
   // 3. Aguardando anexo de NF (notificadas ou já vencidas aguardando NF)
-  const awaitingInvoiceList = allFlatInstallments.filter(item => 
+  const awaitingInvoiceList = allFlatInstallments.filter(item =>
     ['a_liberar', 'solicitada'].includes(item.installment.status) &&
     item.installment.releaseDate <= todayStr
+  );
+
+  // 4. Atrasadas: agendadas com data de pagamento já vencida e ainda sem comprovante (não quitadas)
+  const overdueList = allFlatInstallments.filter(item =>
+    item.installment.status === 'agendada' &&
+    !!item.installment.scheduledPaymentDate &&
+    item.installment.scheduledPaymentDate < todayStr &&
+    !item.installment.receiptDoc
   );
 
   // Tab 1: Comissões a Liberar no Mês
@@ -195,6 +215,21 @@ export default function CommissionsView({
       partnerNotifiedDate: todayStr
     });
     setNotifyingInstallment(null);
+  };
+
+  // Handlers for Inadimplência do Cliente (marca a parcela como não liberada / cancelada)
+  const handleOpenDefaultModal = (item: FlatInstallment) => {
+    setDefaultingInstallment(item);
+    setDefaultReason('Inadimplência do cliente');
+  };
+
+  const handleConfirmDefault = () => {
+    if (!defaultingInstallment) return;
+    onUpdateInstallment(defaultingInstallment.referral.id, defaultingInstallment.installment.id, {
+      status: 'cancelada',
+      notes: defaultReason.trim() || 'Inadimplência do cliente'
+    });
+    setDefaultingInstallment(null);
   };
 
   // Handlers for Attaching Invoice
@@ -477,7 +512,7 @@ export default function CommissionsView({
       </div>
 
       {/* Real-time Alerts Banner */}
-      {(dueTodayList.length > 0 || releasingTodayList.length > 0 || awaitingInvoiceList.length > 0) && (
+      {(dueTodayList.length > 0 || releasingTodayList.length > 0 || awaitingInvoiceList.length > 0 || overdueList.length > 0) && (
         <div className="bg-amber-500/10 border border-amber-300 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0">
@@ -501,6 +536,11 @@ export default function CommissionsView({
                     📄 {awaitingInvoiceList.length} aguardando emissão/anexo de NF
                   </span>
                 )}
+                {overdueList.length > 0 && (
+                  <span className="bg-rose-200 text-rose-900 font-bold px-2 py-0.5 rounded-md border border-rose-300">
+                    ⏰ {overdueList.length} agendada(s) atrasada(s) (sem comprovante)
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -519,6 +559,14 @@ export default function CommissionsView({
                 className="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs"
               >
                 Ver Liberadas Hoje ({releasingTodayList.length})
+              </button>
+            )}
+            {overdueList.length > 0 && (
+              <button
+                onClick={() => setActiveTab('agendadas')}
+                className="bg-rose-800 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs"
+              >
+                Ver Atrasadas ({overdueList.length})
               </button>
             )}
           </div>
@@ -670,7 +718,14 @@ export default function CommissionsView({
                       return (
                         <tr key={item.installment.id} className="hover:bg-slate-50/70 transition">
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900">{item.installment.partnerName}</div>
+                            <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                              <span>{item.installment.partnerName}</span>
+                              {item.installment.kind === 'embaixador' && (
+                                <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
+                                  Embaixador
+                                </span>
+                              )}
+                            </div>
                             {item.referral.clientCompany && (
                               <div className="text-[11px] text-slate-500">{item.referral.clientCompany}</div>
                             )}
@@ -742,6 +797,15 @@ export default function CommissionsView({
                                 <Upload className="w-3 h-3" />
                                 <span>Anexar NF</span>
                               </button>
+
+                              <button
+                                onClick={() => handleOpenDefaultModal(item)}
+                                className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl transition border border-rose-200"
+                                title="Marcar como não liberada por inadimplência do cliente"
+                              >
+                                <ShieldAlert className="w-3 h-3" />
+                                <span>Inadimplência</span>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -803,7 +867,14 @@ export default function CommissionsView({
                       return (
                         <tr key={item.installment.id} className="hover:bg-slate-50/70 transition">
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900">{item.installment.partnerName}</div>
+                            <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                              <span>{item.installment.partnerName}</span>
+                              {item.installment.kind === 'embaixador' && (
+                                <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
+                                  Embaixador
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[11px] text-slate-600">Cliente: {item.installment.clientName}</div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -854,13 +925,23 @@ export default function CommissionsView({
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => handleOpenPaymentModal(item)}
-                              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs ml-auto"
-                            >
-                              <Receipt className="w-3.5 h-3.5" />
-                              <span>Anexar Comprovante & Marcar Paga</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleOpenDefaultModal(item)}
+                                className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl transition border border-rose-200"
+                                title="Marcar como não liberada por inadimplência do cliente"
+                              >
+                                <ShieldAlert className="w-3 h-3" />
+                                <span>Inadimplência</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenPaymentModal(item)}
+                                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl transition shadow-xs"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>Anexar Comprovante & Marcar Paga</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1010,7 +1091,13 @@ export default function CommissionsView({
                     return (
                       <tr key={ref.id} className="hover:bg-slate-50/70 transition">
                         <td className="py-3.5 px-4 font-bold text-slate-900">
-                          {ref.partnerName}
+                          <div>{ref.partnerName}</div>
+                          {ref.ambassadorName && (
+                            <div className="text-[10px] font-semibold text-amber-700 flex items-center gap-1 mt-0.5">
+                              <span className="bg-amber-100 px-1.5 py-0.2 rounded-full border border-amber-200">Embaixador</span>
+                              <span>{ref.ambassadorName}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-slate-800">{ref.clientName}</div>
@@ -1035,6 +1122,7 @@ export default function CommissionsView({
                                     title={`${i.triggerDescription}: ${i.status}`}
                                     className={`w-3 h-3 rounded-full ${
                                       i.status === 'paga' ? 'bg-emerald-500' :
+                                      i.status === 'cancelada' ? 'bg-rose-400' :
                                       i.status === 'agendada' ? 'bg-amber-400' :
                                       i.status === 'solicitada' ? 'bg-blue-400' : 'bg-slate-200'
                                     }`}
@@ -1381,6 +1469,62 @@ export default function CommissionsView({
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-xs transition"
               >
                 Confirmar Liquidação & Marcar como Paga
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: INADIMPLÊNCIA DO CLIENTE (marca parcela como não liberada) */}
+      {defaultingInstallment && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Marcar como Não Liberada</h3>
+                  <p className="text-xs text-slate-500">
+                    {defaultingInstallment.installment.partnerName} • {defaultingInstallment.installment.triggerDescription}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setDefaultingInstallment(null)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
+            </div>
+
+            <div className="bg-rose-50 p-3 rounded-xl border border-rose-200 text-xs text-rose-900">
+              <span className="font-bold">Valor da Parcela:</span> {formatCurrency(defaultingInstallment.installment.value)}
+              <p className="mt-1 text-rose-800">
+                Esta parcela será marcada como <strong>cancelada</strong> (não liberada) e sai das listas de "A Liberar" e "Agendadas". Use quando o cliente ficar inadimplente e a comissão não for devida.
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1 text-xs">Motivo</label>
+              <input
+                type="text"
+                value={defaultReason}
+                onChange={(e) => setDefaultReason(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 text-xs focus:ring-1 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDefaultingInstallment(null)}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDefault}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs shadow-xs transition"
+              >
+                Confirmar Não Liberação
               </button>
             </div>
           </div>

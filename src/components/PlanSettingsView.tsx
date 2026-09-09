@@ -1,22 +1,31 @@
 import React, { useState } from 'react';
 import type { PricingPlan } from '../data/plansData';
-import { 
-  recalculatePlanValues, 
-  resetStoredPricingPlans, 
-  saveStoredPricingPlans, 
-  loadStoredPricingPlans 
+import {
+  recalculatePlanValues,
+  resetStoredPricingPlans,
+  saveStoredPricingPlans,
+  loadStoredPricingPlans
 } from '../data/plansData';
+import {
+  loadStoredPartnerTiers,
+  saveStoredPartnerTiers,
+  resetStoredPartnerTiers
+} from '../data/tiersData';
+import { AMBASSADOR_ACTIVATION_BONUS_VALUE } from '../utils/commissionLogic';
 import { formatCurrency } from '../utils/analytics';
-import { 
-  Sliders, 
-  Save, 
-  RotateCcw, 
-  CheckCircle2, 
-  Info, 
-  DollarSign, 
-  Sparkles, 
+import {
+  Sliders,
+  Save,
+  RotateCcw,
+  CheckCircle2,
+  Info,
+  DollarSign,
+  Sparkles,
   Layers,
-  Percent
+  Percent,
+  Award,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 interface PlanSettingsViewProps {
@@ -29,6 +38,43 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
   const [editablePlans, setEditablePlans] = useState<PricingPlan[]>(() => plans || loadStoredPricingPlans());
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [activePlanEdit, setActivePlanEdit] = useState<string | null>(null);
+
+  const [editableTiers, setEditableTiers] = useState<string[]>(() => loadStoredPartnerTiers());
+  const [newTierName, setNewTierName] = useState('');
+  const [tiersSaved, setTiersSaved] = useState(false);
+
+  const handleAddTier = () => {
+    const name = newTierName.trim();
+    if (!name || editableTiers.includes(name)) return;
+    setEditableTiers(prev => [...prev, name]);
+    setNewTierName('');
+    setTiersSaved(false);
+  };
+
+  const handleRenameTier = (index: number, value: string) => {
+    setEditableTiers(prev => prev.map((t, i) => (i === index ? value : t)));
+    setTiersSaved(false);
+  };
+
+  const handleRemoveTier = (index: number) => {
+    setEditableTiers(prev => prev.filter((_, i) => i !== index));
+    setTiersSaved(false);
+  };
+
+  const handleSaveTiers = () => {
+    const cleaned = editableTiers.map(t => t.trim()).filter(Boolean);
+    saveStoredPartnerTiers(cleaned);
+    setEditableTiers(cleaned);
+    setTiersSaved(true);
+    setTimeout(() => setTiersSaved(false), 3500);
+  };
+
+  const handleResetTiers = () => {
+    if (confirm('Restaurar os tiers para o padrão (Parceiro Zorya, Growth, Estratégico, Embaixador Zorya)?')) {
+      setEditableTiers(resetStoredPartnerTiers());
+      setTiersSaved(false);
+    }
+  };
 
   const handlePriceChange = (planId: string, field: 'monthlyPrice' | 'commissionAmount', value: string) => {
     const numValue = Math.max(0, parseFloat(value) || 0);
@@ -223,6 +269,97 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Partner Tiers Editor */}
+      <div className="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="p-2 bg-amber-100 text-amber-700 rounded-xl">
+                <Award className="w-5 h-5" />
+              </span>
+              <h2 className="text-xl font-bold text-slate-900">Tiers de Parceiros</h2>
+            </div>
+            <p className="text-sm text-slate-500 max-w-2xl">
+              Categorias exibidas no cadastro do parceiro. O tier <strong>Embaixador Zorya</strong> é só uma convenção de nome —
+              o que realmente gera comissão de embaixador é o campo "Embaixador Associado" no cadastro de cada parceiro.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={handleResetTiers}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Restaurar Padrão
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveTiers}
+              className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm rounded-xl transition"
+            >
+              <Save className="w-4 h-4" />
+              Salvar Tiers
+            </button>
+          </div>
+        </div>
+
+        {tiersSaved && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 rounded-2xl flex items-center gap-3 text-sm shadow-xs">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span className="font-semibold">Tiers atualizados com sucesso!</span>
+          </div>
+        )}
+
+        <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 text-xs text-amber-950 flex items-start gap-3">
+          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <p>
+            Bônus único de ativação do embaixador: <strong>{formatCurrency(AMBASSADOR_ACTIVATION_BONUS_VALUE)}</strong> por
+            parceiro indicado, pago na primeira indicação fechada desse parceiro.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {editableTiers.map((t, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={t}
+                onChange={(e) => handleRenameTier(idx, e.target.value)}
+                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveTier(idx)}
+                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition"
+                title="Remover tier"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <input
+            type="text"
+            placeholder="Novo tier..."
+            value={newTierName}
+            onChange={(e) => setNewTierName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTier(); } }}
+            className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          />
+          <button
+            type="button"
+            onClick={handleAddTier}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition"
+          >
+            <Plus className="w-4 h-4" />
+            Adicionar
+          </button>
         </div>
       </div>
     </div>
