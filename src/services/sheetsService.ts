@@ -332,6 +332,8 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   const partnerEmailIdx = headers.findIndex(h => h.includes('email') || h.includes('e-mail'));
   const partnerPhoneIdx = headers.findIndex(h => h.includes('telefone') || h.includes('celular') || h.includes('fone') || h.includes('whatsapp'));
   const partnerCompanyIdx = headers.findIndex(h => (h.includes('empresa') || h.includes('razao')) && !h.includes('cliente'));
+  const partnerCityIdx = headers.findIndex(h => h.includes('cidade') || h.includes('municipio'));
+  const partnerStateIdx = headers.findIndex(h => h === 'uf' || h.includes('estado'));
   const refDateIdx = headers.findIndex(h => h.includes('data') && (h.includes('indica') || h.includes('envio') || h.includes('registro')));
   const statusIdx = headers.findIndex(h => (h.includes('status') || h.includes('estagio') || h.includes('fase')) && !h.includes('comis') && !h.includes('pagamento'));
   const valueIdx = headers.findIndex(h => h.includes('valor') && (h.includes('neg') || h.includes('fech') || h.includes('contrat') || h.includes('venda') || h.includes('liquido') || h.includes('mrr')));
@@ -377,6 +379,8 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
     const partnerEmail = partnerEmailIdx >= 0 && row[partnerEmailIdx]?.trim() ? row[partnerEmailIdx].trim() : undefined;
     const partnerPhone = partnerPhoneIdx >= 0 && row[partnerPhoneIdx]?.trim() ? row[partnerPhoneIdx].trim() : undefined;
     const partnerCompany = partnerCompanyIdx >= 0 && row[partnerCompanyIdx]?.trim() ? row[partnerCompanyIdx].trim() : undefined;
+    const partnerCity = partnerCityIdx >= 0 && row[partnerCityIdx]?.trim() ? row[partnerCityIdx].trim() : undefined;
+    const partnerState = partnerStateIdx >= 0 && row[partnerStateIdx]?.trim() ? row[partnerStateIdx].trim().toUpperCase() : undefined;
 
     // Register partner if not existing
     const partnerKey = (partnerName || 'Parceiro Não Identificado').toLowerCase();
@@ -393,6 +397,8 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
         email: partnerEmail,
         phone: partnerPhone,
         company: partnerCompany,
+        city: partnerCity,
+        state: partnerState,
         status: 'ativo'
       };
       const partnerMissing = evaluatePartnerMissingFields(pObj);
@@ -410,6 +416,8 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
       if (partnerEmail && !p.email) p.email = partnerEmail;
       if (partnerPhone && !p.phone) p.phone = partnerPhone;
       if (partnerCompany && !p.company) p.company = partnerCompany;
+      if (partnerCity && !p.city) p.city = partnerCity;
+      if (partnerState && !p.state) p.state = partnerState;
       const partnerMissing = evaluatePartnerMissingFields(p);
       p.hasMissingData = partnerMissing.length > 0;
       p.missingFields = partnerMissing;

@@ -4,6 +4,7 @@ import { Users, Calendar, AlertTriangle, ShieldCheck, Tag, Award } from 'lucide-
 import { evaluatePartnerMissingFields } from '../services/sheetsService';
 import { normalizeDocument, formatDocument } from '../utils/analytics';
 import { loadStoredPartnerTiers } from '../data/tiersData';
+import { listProfiles } from '../services/authService';
 
 interface PartnerModalProps {
   isOpen: boolean;
@@ -37,6 +38,8 @@ export default function PartnerModal({
   const [responsiblePerson, setResponsiblePerson] = useState('');
   const [accountOwner, setAccountOwner] = useState('');
   const [company, setCompany] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [joinedDate, setJoinedDate] = useState('');
@@ -44,6 +47,25 @@ export default function PartnerModal({
   const [notes, setNotes] = useState('');
 
   const missingFieldsList = initialData ? evaluatePartnerMissingFields(initialData) : [];
+
+  // Executivos com login cadastrado (tela Usuários) — só o Master enxerga a lista
+  // completa via RLS; se vier vazio (sem Supabase, ou usuário sem acesso), cai
+  // pro campo de texto livre como fallback.
+  const [registeredExecutives, setRegisteredExecutives] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    listProfiles()
+      .then(profiles => {
+        const names = Array.from(new Set(
+          profiles
+            .filter(p => p.role === 'executivo' && p.executiveName)
+            .map(p => p.executiveName as string)
+        )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        setRegisteredExecutives(names);
+      })
+      .catch(() => setRegisteredExecutives([]));
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialData) {
@@ -56,6 +78,8 @@ export default function PartnerModal({
       setResponsiblePerson(initialData.responsiblePerson || '');
       setAccountOwner(initialData.accountOwner || '');
       setCompany(initialData.company || '');
+      setCity(initialData.city || '');
+      setState(initialData.state || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
       setJoinedDate(initialData.joinedDate || '');
@@ -71,6 +95,8 @@ export default function PartnerModal({
       setResponsiblePerson('');
       setAccountOwner('');
       setCompany('');
+      setCity('');
+      setState('');
       setEmail('');
       setPhone('');
       setJoinedDate(new Date().toISOString().slice(0, 10));
@@ -97,6 +123,8 @@ export default function PartnerModal({
       responsiblePerson: responsiblePerson.trim() || undefined,
       accountOwner: accountOwner.trim() || undefined,
       company: company.trim() || undefined,
+      city: city.trim() || undefined,
+      state: state.trim().toUpperCase() || undefined,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
       joinedDate: joinedDate || undefined,
@@ -218,6 +246,30 @@ export default function PartnerModal({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Cidade</label>
+              <input
+                type="text"
+                placeholder="Ex: São Paulo"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">UF</label>
+              <input
+                type="text"
+                maxLength={2}
+                placeholder="SP"
+                value={state}
+                onChange={(e) => setState(e.target.value.toUpperCase())}
+                className="w-20 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-center uppercase focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
@@ -253,14 +305,34 @@ export default function PartnerModal({
               <label className="block font-semibold text-slate-700 mb-1">
                 Executivo Responsável (Zorya / QRPoint)
               </label>
-              <input
-                type="text"
-                placeholder="Ex: Mariana Ramos ou Carlos Eduardo"
-                value={accountOwner}
-                onChange={(e) => setAccountOwner(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Define a carteira exibida quando esse executivo faz login.</p>
+              {registeredExecutives.length > 0 ? (
+                <select
+                  value={accountOwner}
+                  onChange={(e) => setAccountOwner(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="">Nenhum</option>
+                  {accountOwner && !registeredExecutives.includes(accountOwner) && (
+                    <option value={accountOwner}>{accountOwner} (não cadastrado)</option>
+                  )}
+                  {registeredExecutives.map(ex => (
+                    <option key={ex} value={ex}>{ex}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Ex: Mariana Ramos ou Carlos Eduardo"
+                  value={accountOwner}
+                  onChange={(e) => setAccountOwner(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+                />
+              )}
+              <p className="text-[10px] text-slate-400 mt-1">
+                {registeredExecutives.length > 0
+                  ? 'Lista vem dos executivos cadastrados em Usuários. Define a carteira exibida quando esse executivo faz login.'
+                  : 'Nenhum executivo cadastrado em Usuários ainda — digite o nome livremente por enquanto.'}
+              </p>
             </div>
           </div>
 

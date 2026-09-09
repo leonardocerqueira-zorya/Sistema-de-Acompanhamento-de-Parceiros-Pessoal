@@ -19,6 +19,8 @@ export interface Partner {
   email?: string;
   phone?: string;
   company?: string;
+  city?: string; // Cidade do parceiro
+  state?: string; // UF (ex: SP, RJ, BA)
   joinedDate?: string; // YYYY-MM-DD or missing
   status: PartnerStatus;
   notes?: string;

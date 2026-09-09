@@ -11,6 +11,7 @@ import { calculateDataAuditMetrics } from '../services/sheetsService';
 import DataAuditView from './DataAuditView';
 import PartnerCohortChart from './PartnerCohortChart';
 import VintageCohortReport from './VintageCohortReport';
+import PartnerLocationMap from './PartnerLocationMap';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -747,6 +748,9 @@ export default function Dashboard({
         </div>
 
       </div>
+
+      {/* Distribuição Geográfica dos Parceiros */}
+      <PartnerLocationMap partners={partners} />
 
       {/* Relatório de Maturação e Conversão por Mês de Parceria (Mês 1, 2, 3...) */}
       <PartnerCohortChart

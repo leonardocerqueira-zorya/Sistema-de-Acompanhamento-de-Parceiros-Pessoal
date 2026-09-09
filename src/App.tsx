@@ -436,6 +436,8 @@ export default function App() {
         if (!existing.email && imported.email) existing.email = imported.email;
         if (!existing.phone && imported.phone) existing.phone = imported.phone;
         if (!existing.company && imported.company) existing.company = imported.company;
+        if (!existing.city && imported.city) existing.city = imported.city;
+        if (!existing.state && imported.state) existing.state = imported.state;
         partnerIdRemap.set(imported.id, existing.id);
       } else {
         newPartners.push(imported);
