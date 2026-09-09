@@ -322,7 +322,13 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   const docClientIdx = headers.findIndex(h => hasDocWord(h) && (h.includes('client') || h.includes('razao') || h.includes('empresa')));
   const docAnyIdx = headers.findIndex(h => hasDocWord(h));
 
-  const clientIdx = headers.findIndex(h => h.includes('cliente') || h.includes('empresa') || h.includes('lead') || h.includes('indica') || h.includes('razao'));
+  // "empresa"/"razao" sozinhos NÃO indicam cliente: a planilha de parceiros usa "empresa_razao_social"
+  // para a razão social do próprio parceiro. Só tratamos a linha como indicação se a coluna
+  // mencionar explicitamente "cliente", "lead" ou "indica" (ex: "razao_social_cliente").
+  const clientIdx = headers.findIndex(h => h.includes('cliente') || h.includes('lead') || h.includes('indica'));
+  const partnerEmailIdx = headers.findIndex(h => h.includes('email') || h.includes('e-mail'));
+  const partnerPhoneIdx = headers.findIndex(h => h.includes('telefone') || h.includes('celular') || h.includes('fone') || h.includes('whatsapp'));
+  const partnerCompanyIdx = headers.findIndex(h => (h.includes('empresa') || h.includes('razao')) && !h.includes('cliente'));
   const refDateIdx = headers.findIndex(h => h.includes('data') && (h.includes('indica') || h.includes('envio') || h.includes('registro')));
   const statusIdx = headers.findIndex(h => (h.includes('status') || h.includes('estagio') || h.includes('fase')) && !h.includes('comis') && !h.includes('pagamento'));
   const valueIdx = headers.findIndex(h => h.includes('valor') && (h.includes('neg') || h.includes('fech') || h.includes('contrat') || h.includes('venda') || h.includes('liquido') || h.includes('mrr')));
@@ -364,6 +370,9 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
     const clientDocRaw = rawDocClient || (docClientIdx < 0 && docPartnerIdx < 0 && clientName ? rawDocAny : undefined);
     const partnerDocument = partnerDocRaw ? normalizeDocument(partnerDocRaw) || undefined : undefined;
     const clientDocument = clientDocRaw ? normalizeDocument(clientDocRaw) || undefined : undefined;
+    const partnerEmail = partnerEmailIdx >= 0 && row[partnerEmailIdx]?.trim() ? row[partnerEmailIdx].trim() : undefined;
+    const partnerPhone = partnerPhoneIdx >= 0 && row[partnerPhoneIdx]?.trim() ? row[partnerPhoneIdx].trim() : undefined;
+    const partnerCompany = partnerCompanyIdx >= 0 && row[partnerCompanyIdx]?.trim() ? row[partnerCompanyIdx].trim() : undefined;
 
     // Register partner if not existing
     const partnerKey = (partnerName || 'Parceiro Não Identificado').toLowerCase();
@@ -376,6 +385,9 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
         profile: partnerProfile,
         responsiblePerson: responsiblePerson,
         joinedDate: partnerJoinDate,
+        email: partnerEmail,
+        phone: partnerPhone,
+        company: partnerCompany,
         status: 'ativo'
       };
       const partnerMissing = evaluatePartnerMissingFields(pObj);
@@ -389,6 +401,9 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
       if (responsiblePerson && !p.responsiblePerson) p.responsiblePerson = responsiblePerson;
       if (idConexa && !p.idConexa) p.idConexa = idConexa;
       if (partnerDocument && !p.document) p.document = partnerDocument;
+      if (partnerEmail && !p.email) p.email = partnerEmail;
+      if (partnerPhone && !p.phone) p.phone = partnerPhone;
+      if (partnerCompany && !p.company) p.company = partnerCompany;
       const partnerMissing = evaluatePartnerMissingFields(p);
       p.hasMissingData = partnerMissing.length > 0;
       p.missingFields = partnerMissing;

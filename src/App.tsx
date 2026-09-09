@@ -369,6 +369,9 @@ export default function App() {
         if (!existing.joinedDate && imported.joinedDate) existing.joinedDate = imported.joinedDate;
         if (!existing.profile && imported.profile) existing.profile = imported.profile;
         if (!existing.responsiblePerson && imported.responsiblePerson) existing.responsiblePerson = imported.responsiblePerson;
+        if (!existing.email && imported.email) existing.email = imported.email;
+        if (!existing.phone && imported.phone) existing.phone = imported.phone;
+        if (!existing.company && imported.company) existing.company = imported.company;
         partnerIdRemap.set(imported.id, existing.id);
       } else {
         newPartners.push(imported);
@@ -393,8 +396,14 @@ export default function App() {
     saveStoredPartners(newPartners);
     saveStoredReferrals(newReferrals);
 
-    showToast(`Planilha processada: ${result.referrals.length} linhas importadas.`);
-    setActiveTab('referrals');
+    const newPartnersCount = newPartners.length - partners.length;
+    if (result.referrals.length > 0) {
+      showToast(`Planilha processada: ${newPartnersCount} parceiro(s) novo(s) e ${result.referrals.length} indicação(ões) importada(s).`);
+      setActiveTab('referrals');
+    } else {
+      showToast(`Planilha processada: ${newPartnersCount} parceiro(s) novo(s) importado(s) (${result.partners.length} linha(s) reconciliada(s)).`);
+      setActiveTab('partners');
+    }
   };
 
   const handleChangeAccess = (next: AccessState) => {

@@ -141,7 +141,7 @@ export default function SheetsView({
       });
 
       const parsed = parseSpreadsheetRows(matrix);
-      if (parsed.referrals.length === 0) {
+      if (parsed.partners.length === 0 && parsed.referrals.length === 0) {
         setErrorMsg('Não foi possível identificar colunas válidas no texto colado.');
         return;
       }
@@ -150,10 +150,15 @@ export default function SheetsView({
       setShowPasteModal(false);
       setPastedData('');
       setSuccessMsg(
-        `Dados do Excel importados: ${parsed.referrals.length} indicações processadas com sucesso! ` +
-        (parsed.rowsWithMissingData > 0 
-          ? `(${parsed.rowsWithMissingData} registros possuem dados pendentes sinalizados).` 
-          : '')
+        parsed.referrals.length > 0
+          ? `Dados do Excel importados: ${parsed.referrals.length} indicações processadas com sucesso! ` +
+            (parsed.rowsWithMissingData > 0
+              ? `(${parsed.rowsWithMissingData} registros possuem dados pendentes sinalizados).`
+              : '')
+          : `Dados do Excel importados: ${parsed.partners.length} parceiros processados com sucesso! ` +
+            (parsed.rowsWithMissingData > 0
+              ? `(${parsed.rowsWithMissingData} registros possuem dados pendentes sinalizados).`
+              : '')
       );
     } catch (err: unknown) {
       console.error(err);
