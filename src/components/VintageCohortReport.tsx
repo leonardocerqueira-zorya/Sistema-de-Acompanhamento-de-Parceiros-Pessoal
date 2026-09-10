@@ -103,32 +103,32 @@ export default function VintageCohortReport({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-slate-900 text-white rounded-xl p-3.5 shadow-xl border border-slate-700 text-xs space-y-2 min-w-[220px] pointer-events-none">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 font-bold text-slate-200">
+        <div className="bg-zry-roxo text-white rounded-xl p-3.5 shadow-xl border border-zry-border-strong text-xs space-y-2 min-w-[220px] pointer-events-none">
+          <div className="flex items-center justify-between border-b border-zry-border-strong pb-1.5 font-bold text-zry-text-2">
             <span>Safra {data.label}</span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-zry-text-2">
               {data.isCutoffReached ? `Corte ${data.cutoffLabel}` : `Corte em ${data.cutoffLabel}`}
             </span>
           </div>
 
           <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-slate-300">
+            <div className="flex items-center justify-between text-zry-text-2">
               <span>Total de Indicações:</span>
               <span className="font-extrabold text-white">{data.totalReferrals}</span>
             </div>
 
             {chartMode === 'conversion_comparison' ? (
               <>
-                <div className="flex items-center justify-between text-amber-300">
+                <div className="flex items-center justify-between text-zry-warning">
                   <span>Fechadas no Corte (15 m+1):</span>
                   <span className="font-bold">{data.closedAtCutoff} ({data.conversionAtCutoff}%)</span>
                 </div>
-                <div className="flex items-center justify-between text-emerald-300">
+                <div className="flex items-center justify-between text-zry-positive">
                   <span>Fechadas Total (Atual):</span>
                   <span className="font-extrabold">{data.closedTotal} ({data.conversionCurrent}%)</span>
                 </div>
                 {data.closedPostCutoff > 0 && (
-                  <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-blue-300 font-semibold">
+                  <div className="pt-1 border-t border-zry-border-strong flex items-center justify-between text-zry-info font-semibold">
                     <span>Vendas Pós-Corte:</span>
                     <span>+{data.closedPostCutoff} (+{data.postCutoffGainPercent}%)</span>
                   </div>
@@ -136,25 +136,25 @@ export default function VintageCohortReport({
               </>
             ) : (
               <>
-                <div className="flex items-center justify-between text-slate-300">
+                <div className="flex items-center justify-between text-zry-text-2">
                   <span>Fechadas no Mês 0 (mesmo mês):</span>
                   <span className="font-bold text-white">{data.m0}</span>
                 </div>
-                <div className="flex items-center justify-between text-amber-300">
+                <div className="flex items-center justify-between text-zry-warning">
                   <span>Fechadas no Mês 1 (+30d):</span>
                   <span className="font-bold">{data.m1}</span>
                 </div>
-                <div className="flex items-center justify-between text-blue-300">
+                <div className="flex items-center justify-between text-zry-info">
                   <span>Fechadas no Mês 2 (+60d):</span>
                   <span className="font-bold">{data.m2}</span>
                 </div>
                 {data.m3plus > 0 && (
-                  <div className="flex items-center justify-between text-purple-300">
+                  <div className="flex items-center justify-between text-zry-info">
                     <span>Fechadas no Mês 3+ (+90d+):</span>
                     <span className="font-bold">{data.m3plus}</span>
                   </div>
                 )}
-                <div className="pt-1 border-t border-slate-800 flex items-center justify-between font-semibold text-emerald-400">
+                <div className="pt-1 border-t border-zry-border-strong flex items-center justify-between font-semibold text-zry-positive">
                   <span>Total Fechado:</span>
                   <span>{data.closedTotal} de {data.totalReferrals} ({data.conversionCurrent}%)</span>
                 </div>
@@ -172,23 +172,23 @@ export default function VintageCohortReport({
       
       {/* 1. Banner de Notificação & Alerta de Proximidade de Corte */}
       {activeSpotlight && activeSpotlight.isCutoffApproaching && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-l-4 border-amber-500 p-4 sm:p-5 rounded-2xl bg-white shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-zry-warning-bg/10 via-zry-warning-bg/5 to-transparent border-l-4 border-zry-warning p-4 sm:p-5 rounded-2xl bg-zry-surface shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5 md:mt-0">
+            <div className="p-2.5 bg-zry-warning-bg text-zry-warning rounded-xl shrink-0 mt-0.5 md:mt-0">
               <Clock className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider">
+                <span className="bg-zry-warning-bg text-zry-warning text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider">
                   Alerta de Corte de Safra
                 </span>
-                <span className="text-xs font-bold text-slate-800">
+                <span className="text-xs font-bold text-zry-text">
                   Safra {activeSpotlight.label} encerra em {activeSpotlight.cutoffLabel}
                 </span>
               </div>
-              <p className="text-xs text-slate-600 mt-1">
-                Faltam <strong className="text-amber-900 font-bold">{activeSpotlight.daysUntilCutoff} dias</strong> para o registro oficial do corte (15 do mês seguinte). 
-                Existem <strong className="text-slate-900 font-bold">{activeSpotlight.pipelineReferrals} indicação(ões)</strong> em negociação com <strong className="text-emerald-700 font-bold">{formatCurrency(activeSpotlight.potentialMRR)}</strong> de MRR potencial para fechamento antes da trava da safra.
+              <p className="text-xs text-zry-text-2 mt-1">
+                Faltam <strong className="text-zry-warning font-bold">{activeSpotlight.daysUntilCutoff} dias</strong> para o registro oficial do corte (15 do mês seguinte). 
+                Existem <strong className="text-zry-text font-bold">{activeSpotlight.pipelineReferrals} indicação(ões)</strong> em negociação com <strong className="text-zry-positive font-bold">{formatCurrency(activeSpotlight.potentialMRR)}</strong> de MRR potencial para fechamento antes da trava da safra.
               </p>
             </div>
           </div>
@@ -196,7 +196,7 @@ export default function VintageCohortReport({
             <button
               type="button"
               onClick={() => setSelectedVintageId(activeSpotlight.vintageId)}
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              className="px-3.5 py-1.5 bg-zry-warning hover:bg-zry-warning text-white text-xs font-bold rounded-xl shadow-xs transition"
             >
               Ver Indicações da Safra
             </button>
@@ -206,26 +206,26 @@ export default function VintageCohortReport({
 
       {/* 2. Card de Destaque da Safra no Dashboard: Taxa no Corte vs Taxa Atual */}
       {activeSpotlight && (
-        <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="bg-zry-surface rounded-3xl p-6 sm:p-7 border border-zry-border/90 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zry-border pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-50 text-blue-700 rounded-2xl">
+              <div className="p-3 bg-zry-lilas-30 text-zry-roxo rounded-2xl">
                 <Calendar className="w-6 h-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base font-bold text-slate-900">
+                  <h2 className="text-base font-bold text-zry-text">
                     Safra em Destaque: {activeSpotlight.label}
                   </h2>
                   <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
                     activeSpotlight.isCutoffReached 
-                      ? 'bg-slate-100 text-slate-700' 
-                      : 'bg-amber-100 text-amber-800 animate-pulse'
+                      ? 'bg-zry-lilas-30 text-zry-text-2' 
+                      : 'bg-zry-warning-bg text-zry-warning animate-pulse'
                   }`}>
                     {activeSpotlight.isCutoffReached ? 'Corte Oficial Registrado' : `Corte em ${activeSpotlight.daysUntilCutoff} dias (${activeSpotlight.cutoffLabel})`}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-zry-text-2 mt-0.5">
                   Indicações geradas entre {formatDateBR(activeSpotlight.startDate)} e {formatDateBR(activeSpotlight.endDate)}. Corte oficial: {activeSpotlight.cutoffLabel}.
                 </p>
               </div>
@@ -234,16 +234,16 @@ export default function VintageCohortReport({
             <button
               type="button"
               onClick={() => setShowInfo(!showInfo)}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition self-start sm:self-center"
+              className="flex items-center gap-1.5 text-xs text-zry-text-2 hover:text-zry-text transition self-start sm:self-center"
             >
-              <Info className="w-4 h-4 text-slate-400" />
+              <Info className="w-4 h-4 text-zry-text-2" />
               <span>Regra do Corte (D+15)</span>
             </button>
           </div>
 
           {showInfo && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-700 space-y-1.5 animate-in fade-in duration-150">
-              <p className="font-semibold text-slate-900">
+            <div className="bg-zry-lilas-30 border border-zry-border rounded-2xl p-4 text-xs text-zry-text-2 space-y-1.5 animate-in fade-in duration-150">
+              <p className="font-semibold text-zry-text">
                 📌 Como funciona a regra de corte de safras?
               </p>
               <p className="leading-relaxed">
@@ -257,86 +257,86 @@ export default function VintageCohortReport({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* Total de Indicações */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
+              <span className="text-[11px] font-semibold text-zry-text-2 uppercase tracking-wider block">
                 Total da Safra
               </span>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black text-slate-900">
+                <span className="text-2xl font-black text-zry-text">
                   {activeSpotlight.totalReferrals}
                 </span>
-                <span className="text-xs text-slate-500">indicações</span>
+                <span className="text-xs text-zry-text-2">indicações</span>
               </div>
-              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-600">
+              <div className="mt-2 pt-2 border-t border-zry-border/60 flex items-center justify-between text-[11px] text-zry-text-2">
                 <span>Em negociação:</span>
-                <span className="font-bold text-slate-900">{activeSpotlight.pipelineReferrals}</span>
+                <span className="font-bold text-zry-text">{activeSpotlight.pipelineReferrals}</span>
               </div>
             </div>
 
             {/* Taxa de Conversão no Corte (15 do mês seguinte) */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
+              <span className="text-[11px] font-semibold text-zry-text-2 uppercase tracking-wider block">
                 Tx. Conversão no Corte ({activeSpotlight.cutoffLabel})
               </span>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black text-amber-600">
+                <span className="text-2xl font-black text-zry-warning">
                   {activeSpotlight.conversionAtCutoff}%
                 </span>
-                <span className="text-xs font-semibold text-slate-600">
+                <span className="text-xs font-semibold text-zry-text-2">
                   ({activeSpotlight.closedAtCutoff} fechadas)
                 </span>
               </div>
-              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-600">
+              <div className="mt-2 pt-2 border-t border-zry-border/60 flex items-center justify-between text-[11px] text-zry-text-2">
                 <span>Receita no corte:</span>
-                <span className="font-bold text-slate-900">{formatCurrency(activeSpotlight.wonVolumeAtCutoff)}</span>
+                <span className="font-bold text-zry-text">{formatCurrency(activeSpotlight.wonVolumeAtCutoff)}</span>
               </div>
             </div>
 
             {/* Taxa de Conversão Atual (Acumulada) */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
+              <span className="text-[11px] font-semibold text-zry-text-2 uppercase tracking-wider block">
                 Tx. Conversão Atual (Hoje)
               </span>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-black text-emerald-600">
+                <span className="text-2xl font-black text-zry-positive">
                   {activeSpotlight.conversionCurrent}%
                 </span>
-                <span className="text-xs font-semibold text-slate-600">
+                <span className="text-xs font-semibold text-zry-text-2">
                   ({activeSpotlight.closedTotal} fechadas)
                 </span>
               </div>
-              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-600">
+              <div className="mt-2 pt-2 border-t border-zry-border/60 flex items-center justify-between text-[11px] text-zry-text-2">
                 <span>Receita ganha total:</span>
-                <span className="font-bold text-emerald-700">{formatCurrency(activeSpotlight.wonVolumeTotal)}</span>
+                <span className="font-bold text-zry-positive">{formatCurrency(activeSpotlight.wonVolumeTotal)}</span>
               </div>
             </div>
 
             {/* Vendas Pós-Corte */}
             <div className={`rounded-2xl p-4 border ${
               activeSpotlight.hasPostCutoffSales
-                ? 'bg-blue-50/60 border-blue-200 text-blue-950'
-                : 'bg-slate-50 border-slate-200/80 text-slate-700'
+                ? 'bg-zry-info-bg/60 border-zry-info/30 text-zry-info'
+                : 'bg-zry-lilas-30 border-zry-border/80 text-zry-text-2'
             }`}>
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+              <span className="text-[11px] font-semibold text-zry-text-2 uppercase tracking-wider block">
                 Vendas Pós-Corte
               </span>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className={`text-2xl font-black ${activeSpotlight.hasPostCutoffSales ? 'text-blue-600' : 'text-slate-400'}`}>
+                <span className={`text-2xl font-black ${activeSpotlight.hasPostCutoffSales ? 'text-zry-info' : 'text-zry-text-2'}`}>
                   +{activeSpotlight.closedPostCutoff}
                 </span>
-                <span className="text-xs font-semibold text-slate-600">
+                <span className="text-xs font-semibold text-zry-text-2">
                   {activeSpotlight.hasPostCutoffSales ? `(+${activeSpotlight.postCutoffGainPercent}%)` : 'fechadas após 15'}
                 </span>
               </div>
-              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500">Status:</span>
+              <div className="mt-2 pt-2 border-t border-zry-border/60 flex items-center justify-between text-[11px]">
+                <span className="text-zry-text-2">Status:</span>
                 <span className="font-bold">
                   {activeSpotlight.hasPostCutoffSales ? (
-                    <span className="text-blue-700 flex items-center gap-1">
+                    <span className="text-zry-info flex items-center gap-1">
                       <Sparkles className="w-3 h-3" /> Clientes maturados após corte
                     </span>
                   ) : (
-                    <span className="text-slate-500">Sem vendas tardias</span>
+                    <span className="text-zry-text-2">Sem vendas tardias</span>
                   )}
                 </span>
               </div>
@@ -347,19 +347,19 @@ export default function VintageCohortReport({
       )}
 
       {/* 3. Gráfico de Fechamentos das Indicações por Safra (Últimos 12 Meses) */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
+      <div className="bg-zry-surface rounded-3xl p-6 sm:p-7 border border-zry-border/90 shadow-xs space-y-6">
         
         {/* Header com Modos de Gráfico e Exportação CSV */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zry-border pb-5">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="p-3 bg-emerald-50 text-emerald-700 rounded-2xl shrink-0">
+            <div className="p-3 bg-zry-lilas-30 text-zry-roxo rounded-2xl shrink-0">
               <TrendingUp className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+              <h3 className="text-base font-bold text-zry-text tracking-tight">
                 Evolução &amp; Fechamentos por Safra nos Últimos 12 Meses
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-zry-text-2 mt-0.5">
                 Acompanhe o fechamento das indicações de cada mês de entrada (M0 no mês da safra, M1 no mês seguinte, M2, M3...).
               </p>
             </div>
@@ -367,14 +367,14 @@ export default function VintageCohortReport({
 
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Toggle de Visualização do Gráfico */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold">
+            <div className="flex items-center bg-zry-lilas-30 p-1 rounded-xl border border-zry-border/80 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setChartMode('conversion_comparison')}
                 className={`px-3 py-1.5 rounded-lg transition ${
                   chartMode === 'conversion_comparison'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-zry-surface text-zry-text shadow-2xs'
+                    : 'text-zry-text-2 hover:text-zry-text'
                 }`}
               >
                 Corte vs Atual
@@ -384,8 +384,8 @@ export default function VintageCohortReport({
                 onClick={() => setChartMode('monthly_closed')}
                 className={`px-3 py-1.5 rounded-lg transition ${
                   chartMode === 'monthly_closed'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-zry-surface text-zry-text shadow-2xs'
+                    : 'text-zry-text-2 hover:text-zry-text'
                 }`}
               >
                 Fechamento Mês a Mês
@@ -396,10 +396,10 @@ export default function VintageCohortReport({
             <button
               type="button"
               onClick={() => exportVintageReportCSV(vintages)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-zry-lilas-30 hover:bg-zry-lilas text-zry-text-2 text-xs font-bold rounded-xl border border-zry-border transition"
               title="Exportar Relatório Completo de Safras em CSV"
             >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <Download className="w-3.5 h-3.5 text-zry-text-2" />
               <span>Exportar CSV</span>
             </button>
           </div>
@@ -413,13 +413,13 @@ export default function VintageCohortReport({
                 data={chartData}
                 margin={{ top: 20, right: 30, left: 0, bottom: 25 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EFEBE4" />
                 
                 <XAxis
                   dataKey="shortLabel"
                   tickLine={false}
-                  axisLine={{ stroke: '#E2E8F0' }}
-                  tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                  axisLine={{ stroke: '#EDE6F7' }}
+                  tick={{ fill: '#8B84A0', fontSize: 12, fontWeight: 500 }}
                   dy={10}
                 />
                 
@@ -428,8 +428,8 @@ export default function VintageCohortReport({
                   yAxisId="left"
                   orientation="left"
                   tickLine={false}
-                  axisLine={{ stroke: '#E2E8F0' }}
-                  tick={{ fill: '#64748B', fontSize: 12 }}
+                  axisLine={{ stroke: '#EDE6F7' }}
+                  tick={{ fill: '#8B84A0', fontSize: 12 }}
                   domain={[0, 'auto']}
                   allowDecimals={false}
                 />
@@ -439,8 +439,8 @@ export default function VintageCohortReport({
                   yAxisId="right"
                   orientation="right"
                   tickLine={false}
-                  axisLine={{ stroke: '#E2E8F0' }}
-                  tick={{ fill: '#2563EB', fontSize: 12, fontWeight: 600 }}
+                  axisLine={{ stroke: '#EDE6F7' }}
+                  tick={{ fill: '#2A1F45', fontSize: 12, fontWeight: 600 }}
                   domain={[0, 100]}
                   ticks={[0, 20, 40, 60, 80, 100]}
                   unit="%"
@@ -455,7 +455,7 @@ export default function VintageCohortReport({
                       yAxisId="left"
                       dataKey="totalReferrals"
                       name="Indicações Totais"
-                      fill="#E2E8F0"
+                      fill="#EDE6F7"
                       radius={[4, 4, 0, 0]}
                       maxBarSize={32}
                     />
@@ -465,7 +465,7 @@ export default function VintageCohortReport({
                       yAxisId="left"
                       dataKey="closedAtCutoff"
                       name="Fechadas no Corte (15 m+1)"
-                      fill="#F59E0B"
+                      fill="#FDA17B"
                       radius={[4, 4, 0, 0]}
                       maxBarSize={32}
                     />
@@ -475,7 +475,7 @@ export default function VintageCohortReport({
                       yAxisId="left"
                       dataKey="closedTotal"
                       name="Fechadas Total (Atual)"
-                      fill="#10B981"
+                      fill="#2E7D5B"
                       radius={[4, 4, 0, 0]}
                       maxBarSize={32}
                     />
@@ -486,10 +486,10 @@ export default function VintageCohortReport({
                       type="monotone"
                       dataKey="conversionAtCutoff"
                       name="Tx. no Corte (%)"
-                      stroke="#D97706"
+                      stroke="#F4855A"
                       strokeWidth={2}
                       strokeDasharray="4 4"
-                      dot={{ r: 3, fill: '#D97706' }}
+                      dot={{ r: 3, fill: '#F4855A' }}
                     />
 
                     {/* Linha: Conversão Atual (%) */}
@@ -498,10 +498,10 @@ export default function VintageCohortReport({
                       type="monotone"
                       dataKey="conversionCurrent"
                       name="Tx. Atual (%)"
-                      stroke="#2563EB"
+                      stroke="#2A1F45"
                       strokeWidth={3}
-                      dot={{ r: 4.5, fill: '#2563EB', stroke: '#FFFFFF', strokeWidth: 2 }}
-                      activeDot={{ r: 7, fill: '#1D4ED8' }}
+                      dot={{ r: 4.5, fill: '#2A1F45', stroke: '#FFFFFF', strokeWidth: 2 }}
+                      activeDot={{ r: 7, fill: '#3A2E5C' }}
                     />
                   </>
                 ) : (
@@ -512,7 +512,7 @@ export default function VintageCohortReport({
                       dataKey="m0"
                       name="Fechadas no Mês 0 (Safra)"
                       stackId="closed"
-                      fill="#3B82F6"
+                      fill="#4B3F7A"
                       radius={[0, 0, 0, 0]}
                       maxBarSize={36}
                     />
@@ -521,7 +521,7 @@ export default function VintageCohortReport({
                       dataKey="m1"
                       name="Fechadas no Mês 1 (+30d)"
                       stackId="closed"
-                      fill="#F59E0B"
+                      fill="#FDA17B"
                       radius={[0, 0, 0, 0]}
                       maxBarSize={36}
                     />
@@ -530,7 +530,7 @@ export default function VintageCohortReport({
                       dataKey="m2"
                       name="Fechadas no Mês 2 (+60d)"
                       stackId="closed"
-                      fill="#10B981"
+                      fill="#2E7D5B"
                       radius={[0, 0, 0, 0]}
                       maxBarSize={36}
                     />
@@ -539,7 +539,7 @@ export default function VintageCohortReport({
                       dataKey="m3plus"
                       name="Fechadas no Mês 3+ (+90d+)"
                       stackId="closed"
-                      fill="#8B5CF6"
+                      fill="#C9B8E8"
                       radius={[4, 4, 0, 0]}
                       maxBarSize={36}
                     />
@@ -550,20 +550,20 @@ export default function VintageCohortReport({
                       type="monotone"
                       dataKey="conversionCurrent"
                       name="Conversão Acumulada (%)"
-                      stroke="#0F172A"
+                      stroke="#2A1F45"
                       strokeWidth={3}
-                      dot={{ r: 4.5, fill: '#0F172A', stroke: '#FFFFFF', strokeWidth: 2 }}
+                      dot={{ r: 4.5, fill: '#2A1F45', stroke: '#FFFFFF', strokeWidth: 2 }}
                     />
                   </>
                 )}
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center space-y-3">
-              <div className="p-3 bg-slate-100 text-slate-400 rounded-full">
+            <div className="h-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-zry-border rounded-2xl text-center space-y-3">
+              <div className="p-3 bg-zry-lilas-30 text-zry-text-2 rounded-full">
                 <Calendar className="w-8 h-8" />
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-zry-text-2">
                 Nenhuma indicação cadastrada nos últimos 12 meses para cálculo de safras.
               </p>
             </div>
@@ -571,51 +571,51 @@ export default function VintageCohortReport({
         </div>
 
         {/* Legenda Customizada */}
-        <div className="flex items-center justify-center gap-5 pt-2 pb-1 border-t border-slate-100 flex-wrap text-xs">
+        <div className="flex items-center justify-center gap-5 pt-2 pb-1 border-t border-zry-border flex-wrap text-xs">
           {chartMode === 'conversion_comparison' ? (
             <>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-slate-200 border border-slate-300"></span>
-                <span className="text-slate-600">Total Indicações</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-lilas border border-zry-border"></span>
+                <span className="text-zry-text-2">Total Indicações</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-amber-500"></span>
-                <span className="text-slate-700 font-medium">Fechadas no Corte (15 m+1)</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-warning"></span>
+                <span className="text-zry-text-2 font-medium">Fechadas no Corte (15 m+1)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-emerald-500"></span>
-                <span className="text-slate-700 font-medium">Fechadas Total (Atual)</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-positive"></span>
+                <span className="text-zry-text-2 font-medium">Fechadas Total (Atual)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-4 h-0.5 border-t-2 border-dashed border-amber-600"></span>
-                <span className="text-amber-800 font-semibold">% no Corte</span>
+                <span className="w-4 h-0.5 border-t-2 border-dashed border-zry-warning"></span>
+                <span className="text-zry-warning font-semibold">% no Corte</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-4 h-1 bg-blue-600 rounded-full"></span>
-                <span className="text-blue-800 font-bold">% Atual</span>
+                <span className="w-4 h-1 bg-zry-roxo rounded-full"></span>
+                <span className="text-zry-info font-bold">% Atual</span>
               </div>
             </>
           ) : (
             <>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-blue-500"></span>
-                <span className="text-slate-700 font-medium">Mês 0 (Safra)</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-roxo"></span>
+                <span className="text-zry-text-2 font-medium">Mês 0 (Safra)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-amber-500"></span>
-                <span className="text-slate-700 font-medium">Mês 1 (+30d)</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-warning"></span>
+                <span className="text-zry-text-2 font-medium">Mês 1 (+30d)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-emerald-500"></span>
-                <span className="text-slate-700 font-medium">Mês 2 (+60d)</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-positive"></span>
+                <span className="text-zry-text-2 font-medium">Mês 2 (+60d)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-purple-500"></span>
-                <span className="text-slate-700 font-medium">Mês 3+ (+90d+)</span>
+                <span className="w-3 h-3 rounded-xs bg-zry-roxo"></span>
+                <span className="text-zry-text-2 font-medium">Mês 3+ (+90d+)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-4 h-1 bg-slate-900 rounded-full"></span>
-                <span className="text-slate-900 font-bold">% Conversão Final</span>
+                <span className="w-4 h-1 bg-zry-roxo rounded-full"></span>
+                <span className="text-zry-text font-bold">% Conversão Final</span>
               </div>
             </>
           )}
@@ -624,25 +624,25 @@ export default function VintageCohortReport({
       </div>
 
       {/* 4. Tabela & Relatório de Indicações por Safra */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className="bg-zry-surface rounded-3xl p-6 border border-zry-border/90 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zry-border pb-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
+            <h3 className="text-base font-bold text-zry-text">
               Relatório de Indicações por Safra
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-zry-text-2 mt-0.5">
               Clique em uma safra para abrir a lista individual de indicações e clientes.
             </p>
           </div>
-          <span className="text-xs font-semibold text-slate-500">
+          <span className="text-xs font-semibold text-zry-text-2">
             {vintages.length} safras analisadas
           </span>
         </div>
 
         {/* Tabela de Safras */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+          <table className="w-full text-left text-xs text-zry-text-2">
+            <thead className="bg-zry-lilas-30 text-zry-text-2 font-semibold border-b border-zry-border uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="py-3 px-3">Safra</th>
                 <th className="py-3 px-3">Data de Corte</th>
@@ -657,69 +657,69 @@ export default function VintageCohortReport({
                 <th className="py-3 px-3 text-center">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-zry-border">
               {vintages.slice().reverse().map(v => {
                 const isSelected = selectedVintageId === v.vintageId;
                 return (
                   <React.Fragment key={v.vintageId}>
-                    <tr className={`hover:bg-slate-50/80 transition cursor-pointer ${
-                      isSelected ? 'bg-blue-50/40 font-medium' : ''
+                    <tr className={`hover:bg-zry-lilas-30/80 transition cursor-pointer ${
+                      isSelected ? 'bg-zry-info-bg/40 font-medium' : ''
                     }`}
                     onClick={() => setSelectedVintageId(isSelected ? null : v.vintageId)}
                     >
-                      <td className="py-3 px-3 font-bold text-slate-900">
+                      <td className="py-3 px-3 font-bold text-zry-text">
                         {v.label}
                       </td>
-                      <td className="py-3 px-3 text-slate-500">
+                      <td className="py-3 px-3 text-zry-text-2">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] ${
                           v.isCutoffReached 
-                            ? 'bg-slate-100 text-slate-700 font-medium' 
-                            : 'bg-amber-100 text-amber-800 font-bold'
+                            ? 'bg-zry-lilas-30 text-zry-text-2 font-medium' 
+                            : 'bg-zry-warning-bg text-zry-warning font-bold'
                         }`}>
                           {v.cutoffLabel}
                           {!v.isCutoffReached && ` (${v.daysUntilCutoff}d)`}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-center font-bold text-slate-900">
+                      <td className="py-3 px-3 text-center font-bold text-zry-text">
                         {v.totalReferrals}
                       </td>
-                      <td className="py-3 px-3 text-center font-semibold text-amber-700">
+                      <td className="py-3 px-3 text-center font-semibold text-zry-warning">
                         {v.closedAtCutoff}
                       </td>
-                      <td className="py-3 px-3 text-center font-bold text-amber-600">
+                      <td className="py-3 px-3 text-center font-bold text-zry-warning">
                         {v.conversionAtCutoff}%
                       </td>
-                      <td className="py-3 px-3 text-center font-extrabold text-emerald-700">
+                      <td className="py-3 px-3 text-center font-extrabold text-zry-positive">
                         {v.closedTotal}
                       </td>
-                      <td className="py-3 px-3 text-center font-black text-emerald-600">
+                      <td className="py-3 px-3 text-center font-black text-zry-positive">
                         {v.conversionCurrent}%
                       </td>
                       <td className="py-3 px-3 text-center">
                         {v.hasPostCutoffSales ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-md font-bold text-[11px]">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-zry-info-bg text-zry-info rounded-md font-bold text-[11px]">
                             +{v.closedPostCutoff} (+{v.postCutoffGainPercent}%)
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-zry-text-2">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-right font-bold text-slate-900">
+                      <td className="py-3 px-3 text-right font-bold text-zry-text">
                         {formatCurrency(v.wonVolumeTotal)}
                       </td>
-                      <td className="py-3 px-3 text-right text-slate-600">
+                      <td className="py-3 px-3 text-right text-zry-text-2">
                         {v.pipelineReferrals > 0 ? (
-                          <span className="text-amber-700 font-medium" title={`MRR Potencial: ${formatCurrency(v.potentialMRR)}`}>
+                          <span className="text-zry-warning font-medium" title={`MRR Potencial: ${formatCurrency(v.potentialMRR)}`}>
                             {v.pipelineReferrals} ({formatCurrency(v.potentialMRR)})
                           </span>
                         ) : (
-                          <span className="text-slate-400">0</span>
+                          <span className="text-zry-text-2">0</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-center">
                         <button
                           type="button"
-                          className="text-slate-400 hover:text-slate-700 p-1"
+                          className="text-zry-text-2 hover:text-zry-text-2 p-1"
                         >
                           {isSelected ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
@@ -729,22 +729,22 @@ export default function VintageCohortReport({
                     {/* Linha Expandida com as Indicações da Safra */}
                     {isSelected && (
                       <tr>
-                        <td colSpan={11} className="p-4 bg-slate-50/70 border-y border-slate-200">
+                        <td colSpan={11} className="p-4 bg-zry-lilas-30/70 border-y border-zry-border">
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                <Calendar className="w-4 h-4 text-blue-600" />
+                              <h4 className="font-bold text-xs text-zry-text flex items-center gap-1.5">
+                                <Calendar className="w-4 h-4 text-zry-info" />
                                 Indicações da Safra {v.label} ({v.referrals.length} registradas)
                               </h4>
-                              <span className="text-[11px] text-slate-500">
+                              <span className="text-[11px] text-zry-text-2">
                                 Corte: <strong>{v.cutoffLabel}</strong>
                               </span>
                             </div>
 
                             {v.referrals.length > 0 ? (
-                              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                              <div className="bg-zry-surface rounded-xl border border-zry-border overflow-hidden">
                                 <table className="w-full text-left text-xs">
-                                  <thead className="bg-slate-100 text-slate-600 font-semibold text-[10px] uppercase">
+                                  <thead className="bg-zry-lilas-30 text-zry-text-2 font-semibold text-[10px] uppercase">
                                     <tr>
                                       <th className="py-2 px-3">Cliente Indicado</th>
                                       <th className="py-2 px-3">Data Indicação</th>
@@ -754,7 +754,7 @@ export default function VintageCohortReport({
                                       <th className="py-2 px-3 text-right">Valor MRR</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-slate-100">
+                                  <tbody className="divide-y divide-zry-border">
                                     {v.referrals.map(r => {
                                       const isWon = r.dealStatus === 'ganho';
                                       const closeDateStr = (r.closeDate || '').slice(0, 10);
@@ -764,43 +764,43 @@ export default function VintageCohortReport({
                                       return (
                                         <tr
                                           key={r.id}
-                                          className="hover:bg-slate-50 transition cursor-pointer"
+                                          className="hover:bg-zry-lilas-30 transition cursor-pointer"
                                           onClick={() => onSelectReferral && onSelectReferral(r.id)}
                                         >
-                                          <td className="py-2 px-3 font-semibold text-slate-900">
+                                          <td className="py-2 px-3 font-semibold text-zry-text">
                                             {r.clientName}
                                           </td>
-                                          <td className="py-2 px-3 text-slate-600">
+                                          <td className="py-2 px-3 text-zry-text-2">
                                             {formatDateBR(r.referralDate)}
                                           </td>
                                           <td className="py-2 px-3">
                                             <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                              isWon ? 'bg-emerald-100 text-emerald-800' :
-                                              r.dealStatus === 'perdido' ? 'bg-rose-100 text-rose-800' :
-                                              'bg-amber-100 text-amber-800'
+                                              isWon ? 'bg-zry-positive-bg text-zry-positive' :
+                                              r.dealStatus === 'perdido' ? 'bg-zry-danger-bg text-zry-danger' :
+                                              'bg-zry-warning-bg text-zry-warning'
                                             }`}>
                                               {r.dealStatus ? r.dealStatus.toUpperCase() : 'NOVO'}
                                             </span>
                                           </td>
-                                          <td className="py-2 px-3 text-slate-600">
+                                          <td className="py-2 px-3 text-zry-text-2">
                                             {formatDateBR(r.closeDate) || '—'}
                                           </td>
                                           <td className="py-2 px-3">
                                             {isClosedAtCutoff && (
-                                              <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-[11px]">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" /> No Corte (até 15)
+                                              <span className="inline-flex items-center gap-1 text-zry-warning font-medium text-[11px]">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-zry-warning" /> No Corte (até 15)
                                               </span>
                                             )}
                                             {isClosedPostCutoff && (
-                                              <span className="inline-flex items-center gap-1 text-blue-700 font-bold text-[11px]">
-                                                <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Pós-Corte (+venda tardia)
+                                              <span className="inline-flex items-center gap-1 text-zry-info font-bold text-[11px]">
+                                                <Sparkles className="w-3.5 h-3.5 text-zry-info" /> Pós-Corte (+venda tardia)
                                               </span>
                                             )}
                                             {!isWon && (
-                                              <span className="text-slate-400 text-[11px]">Em aberto / não fechada</span>
+                                              <span className="text-zry-text-2 text-[11px]">Em aberto / não fechada</span>
                                             )}
                                           </td>
-                                          <td className="py-2 px-3 text-right font-bold text-slate-900">
+                                          <td className="py-2 px-3 text-right font-bold text-zry-text">
                                             {formatCurrency(r.dealValue)}
                                           </td>
                                         </tr>
@@ -810,7 +810,7 @@ export default function VintageCohortReport({
                                 </table>
                               </div>
                             ) : (
-                              <p className="text-xs text-slate-400 italic">
+                              <p className="text-xs text-zry-text-2 italic">
                                 Nenhuma indicação gravada para esta safra.
                               </p>
                             )}

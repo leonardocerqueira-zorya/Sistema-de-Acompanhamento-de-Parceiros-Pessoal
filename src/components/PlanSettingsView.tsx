@@ -115,35 +115,31 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Page Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
-              <Sliders className="w-5 h-5" />
-            </span>
-            <h2 className="text-xl font-bold text-slate-900">Configuração de Planos & Valores de Comissão</h2>
-          </div>
-          <p className="text-sm text-slate-500 max-w-2xl">
-            Edite o MRR padrão e o valor fixo de comissão por indicação de cada plano. 
-            Ao selecionar um plano no fechamento de negócio, os valores são auto-preenchidos com base nesta tabela.
+          <h1 className="text-[28px] font-bold tracking-tight text-zry-text leading-none">
+            Configuração de Planos &amp; Comissões
+          </h1>
+          <p className="text-[13px] text-zry-text-2 mt-1.5">
+            MRR padrão e comissão fixa por indicação — usados para auto-preencher o fechamento de negócio.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={handleResetDefaults}
-            className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+            className="flex items-center gap-1.5 border border-zry-border-strong text-zry-roxo font-semibold px-3.5 py-[7px] rounded-full text-[12px] hover:bg-zry-lilas-30 transition"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5" />
             Restaurar Padrão
           </button>
 
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm rounded-xl transition"
+            className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-[18px] py-2.5 rounded-full text-[12.5px] transition"
           >
             <Save className="w-4 h-4" />
             Salvar Alterações
@@ -152,8 +148,8 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
       </div>
 
       {savedSuccess && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 rounded-2xl flex items-center gap-3 text-sm animate-fade-in shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="bg-zry-positive-bg border border-zry-positive/30 text-zry-positive p-4 rounded-zry-lg flex items-center gap-2.5 text-[12.5px] animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-zry-positive shrink-0" />
           <span className="font-semibold">
             Tabela de planos e comissões atualizada com sucesso! Todas as novas indicações e simulações utilizarão os novos valores.
           </span>
@@ -161,106 +157,117 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
       )}
 
       {/* Rules Information Box */}
-      <div className="bg-linear-to-r from-indigo-50/70 to-purple-50/70 border border-indigo-100 rounded-2xl p-4 text-xs text-indigo-950 flex items-start gap-3">
-        <Info className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <span className="font-bold text-indigo-900">Cálculo Automático em Tempo Real:</span>
-          <p className="text-indigo-800 leading-relaxed">
-            Ao alterar o <strong>MRR Mensal</strong> ou a <strong>Comissão Fixa</strong>, o sistema recalcula instantaneamente os preços com 10% de desconto mensal, 
+      <div className="bg-zry-lilas-30 border border-zry-border rounded-zry-lg p-4 text-[12.5px] text-zry-text-2 flex items-start gap-2.5">
+        <Info className="w-4 h-4 text-zry-roxo shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold text-zry-text">Cálculo Automático em Tempo Real:</span>
+          <p className="leading-relaxed mt-1">
+            Ao alterar o <strong className="text-zry-text">MRR Mensal</strong> ou a <strong className="text-zry-text">Comissão Fixa</strong>, o sistema recalcula instantaneamente os preços com 10% de desconto mensal,
             os valores de planos anuais (-15% à vista, -10% em 2x e -5% em 3x) e as parcelas liberadas para os parceiros indicadores (1/3 a cada 1ª, 3ª e 5ª mensalidade).
           </p>
         </div>
       </div>
 
       {/* Pricing Table */}
-      <div className="bg-white rounded-3xl shadow-xs border border-slate-200 overflow-hidden">
+      <div className="bg-zry-surface border border-zry-border rounded-zry-lg shadow-sm overflow-hidden">
+        <div className="px-[22px] py-[18px] border-b border-zry-border flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-full bg-zry-lilas-30 text-zry-roxo flex items-center justify-center shrink-0">
+            <Sliders className="w-[18px] h-[18px]" />
+          </span>
+          <div>
+            <h2 className="text-[15px] font-bold text-zry-text leading-none">Tabela de Planos &amp; Valores de Comissão</h2>
+            <p className="text-[12.5px] text-zry-text-2 mt-1.5">
+              {editablePlans.length} planos configurados — edite o MRR base e a comissão fixa diretamente na tabela.
+            </p>
+          </div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4">Plano & Faixa</th>
-                <th className="py-3.5 px-4 text-right">MRR Base (R$/mês)</th>
-                <th className="py-3.5 px-4 text-right">Com 10% Desc.</th>
-                <th className="py-3.5 px-4 text-right">Comissão Fixa (R$)</th>
-                <th className="py-3.5 px-4 text-right">Liberado (1/3 Parcela)</th>
-                <th className="py-3.5 px-4 text-right">Anual Cheio (12x)</th>
-                <th className="py-3.5 px-4 text-right">Anual À Vista (-15%)</th>
-                <th className="py-3.5 px-4 text-right">Anual 3x (-5%)</th>
+              <tr>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Plano &amp; Faixa</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">MRR Base (R$/mês)</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Com 10% Desc.</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Comissão Fixa (R$)</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Liberado (1/3 Parcela)</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Anual Cheio (12x)</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Anual À Vista (-15%)</th>
+                <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Anual 3x (-5%)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody>
               {editablePlans.map((plan) => {
                 const thirdInstallment = plan.commissionAmount / 3;
                 const isEditing = activePlanEdit === plan.id;
 
                 return (
-                  <tr 
+                  <tr
                     key={plan.id}
-                    className="hover:bg-slate-50/80 transition-colors"
+                    className="border-t border-zry-border hover:bg-zry-lilas-30 transition-colors"
                   >
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 text-sm">{plan.commercialName}</div>
-                      <div className="text-[11px] text-slate-500 font-medium">
+                    <td className="py-3.5 px-[22px] text-[13px]">
+                      <div className="font-bold text-zry-text text-[13px]">{plan.commercialName}</div>
+                      <div className="text-[12px] text-zry-text-2 mt-0.5">
                         {plan.collaboratorsRange} colaboradores
                       </div>
                     </td>
 
                     {/* Editable MRR */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <span className="text-slate-400 font-semibold">R$</span>
+                    <td className="py-3.5 px-[22px] text-[13px] text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="text-zry-text-2 font-semibold text-[12px]">R$</span>
                         <input
                           type="number"
                           step="0.10"
                           value={plan.monthlyPrice}
                           onChange={(e) => handlePriceChange(plan.id, 'monthlyPrice', e.target.value)}
                           onFocus={() => setActivePlanEdit(plan.id)}
-                          className="w-24 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-right font-bold text-slate-900 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-xs"
+                          className="w-24 bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-1.5 text-right text-[13px] font-semibold text-zry-text focus:outline-none focus:border-zry-border-strong"
                         />
                       </div>
                     </td>
 
                     {/* Monthly with 10% discount */}
-                    <td className="py-3.5 px-4 text-right font-semibold text-emerald-700">
+                    <td className="py-3.5 px-[22px] text-[13px] text-right font-semibold text-zry-text">
                       {formatCurrency(plan.monthly10PercentDiscountPrice)}
                     </td>
 
                     {/* Editable Commission */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <span className="text-slate-400 font-semibold">R$</span>
+                    <td className="py-3.5 px-[22px] text-[13px] text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="text-zry-text-2 font-semibold text-[12px]">R$</span>
                         <input
                           type="number"
                           step="10.00"
                           value={plan.commissionAmount}
                           onChange={(e) => handlePriceChange(plan.id, 'commissionAmount', e.target.value)}
                           onFocus={() => setActivePlanEdit(plan.id)}
-                          className="w-24 px-2 py-1.5 bg-emerald-50/50 border border-emerald-300 rounded-lg text-right font-bold text-emerald-800 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-xs"
+                          className="w-24 bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-1.5 text-right text-[13px] font-semibold text-zry-text focus:outline-none focus:border-zry-border-strong"
                         />
                       </div>
                     </td>
 
                     {/* Commission 1/3 portion */}
-                    <td className="py-3.5 px-4 text-right">
-                      <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold text-[11px]">
+                    <td className="py-3.5 px-[22px] text-[13px] text-right">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-positive-bg text-zry-positive">
                         {formatCurrency(thirdInstallment)}
                       </span>
                     </td>
 
                     {/* Annual Full Price */}
-                    <td className="py-3.5 px-4 text-right text-slate-500">
+                    <td className="py-3.5 px-[22px] text-[13px] text-right text-zry-text-2">
                       {formatCurrency(plan.annualFullPrice)}
                     </td>
 
                     {/* Annual Cash Price */}
-                    <td className="py-3.5 px-4 text-right font-bold text-indigo-700">
+                    <td className="py-3.5 px-[22px] text-[13px] text-right font-bold text-zry-text">
                       {formatCurrency(plan.annualCashPrice)}
                     </td>
 
                     {/* Annual 3x Price */}
-                    <td className="py-3.5 px-4 text-right font-medium text-slate-600">
+                    <td className="py-3.5 px-[22px] text-[13px] text-right font-medium text-zry-text-2">
                       {formatCurrency(plan.annual3xPrice)}
-                      <span className="text-[10px] text-slate-400 block">
+                      <span className="text-[11px] text-zry-text-2 block mt-0.5">
                         (3x de {formatCurrency(plan.annual3xInstallment)})
                       </span>
                     </td>
@@ -273,16 +280,16 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
       </div>
 
       {/* Partner Tiers Editor */}
-      <div className="bg-white rounded-3xl p-6 shadow-xs border border-slate-200 space-y-4">
+      <div className="bg-zry-surface rounded-3xl p-6 shadow-xs border border-zry-border space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="p-2 bg-amber-100 text-amber-700 rounded-xl">
+              <span className="p-2 bg-zry-warning-bg text-zry-warning rounded-xl">
                 <Award className="w-5 h-5" />
               </span>
-              <h2 className="text-xl font-bold text-slate-900">Tiers de Parceiros</h2>
+              <h2 className="text-xl font-bold text-zry-text">Tiers de Parceiros</h2>
             </div>
-            <p className="text-sm text-slate-500 max-w-2xl">
+            <p className="text-sm text-zry-text-2 max-w-2xl">
               Categorias exibidas no cadastro do parceiro. O tier <strong>Embaixador Zorya</strong> é só uma convenção de nome —
               o que realmente gera comissão de embaixador é o campo "Embaixador Associado" no cadastro de cada parceiro.
             </p>
@@ -291,7 +298,7 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
             <button
               type="button"
               onClick={handleResetTiers}
-              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-zry-text-2 hover:text-zry-text bg-zry-lilas-30 hover:bg-zry-lilas rounded-xl transition"
             >
               <RotateCcw className="w-4 h-4" />
               Restaurar Padrão
@@ -299,7 +306,7 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
             <button
               type="button"
               onClick={handleSaveTiers}
-              className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm rounded-xl transition"
+              className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-zry-roxo hover:bg-zry-roxo shadow-sm rounded-xl transition"
             >
               <Save className="w-4 h-4" />
               Salvar Tiers
@@ -308,14 +315,14 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
         </div>
 
         {tiersSaved && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 rounded-2xl flex items-center gap-3 text-sm shadow-xs">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <div className="bg-zry-positive-bg border border-zry-positive/30 text-zry-positive px-4 py-3 rounded-2xl flex items-center gap-3 text-sm shadow-xs">
+            <CheckCircle2 className="w-5 h-5 text-zry-positive shrink-0" />
             <span className="font-semibold">Tiers atualizados com sucesso!</span>
           </div>
         )}
 
-        <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 text-xs text-amber-950 flex items-start gap-3">
-          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="bg-zry-warning-bg/70 border border-zry-warning/30 rounded-2xl p-4 text-xs text-zry-warning flex items-start gap-3">
+          <Info className="w-4 h-4 text-zry-warning shrink-0 mt-0.5" />
           <p>
             Bônus único de ativação do embaixador: <strong>{formatCurrency(AMBASSADOR_ACTIVATION_BONUS_VALUE)}</strong> por
             parceiro indicado, pago na primeira indicação fechada desse parceiro.
@@ -329,12 +336,12 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
                 type="text"
                 value={t}
                 onChange={(e) => handleRenameTier(idx, e.target.value)}
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 px-3 py-2 bg-zry-lilas-30 border border-zry-border rounded-xl text-zry-text font-medium text-sm focus:bg-zry-surface focus:border-zry-roxo focus:ring-1 focus:ring-zry-roxo"
               />
               <button
                 type="button"
                 onClick={() => handleRemoveTier(idx)}
-                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition"
+                className="p-2 text-zry-danger hover:text-zry-danger hover:bg-zry-danger-bg rounded-xl transition"
                 title="Remover tier"
               >
                 <Trash2 className="w-4 h-4" />
@@ -343,19 +350,19 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
           ))}
         </div>
 
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-2 pt-2 border-t border-zry-border">
           <input
             type="text"
             placeholder="Novo tier..."
             value={newTierName}
             onChange={(e) => setNewTierName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTier(); } }}
-            className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="flex-1 px-3 py-2 bg-zry-lilas-30 border border-zry-border rounded-xl text-zry-text text-sm focus:bg-zry-surface focus:border-zry-roxo focus:ring-1 focus:ring-zry-roxo"
           />
           <button
             type="button"
             onClick={handleAddTier}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition"
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-zry-info bg-zry-info-bg hover:bg-zry-info-bg rounded-xl transition"
           >
             <Plus className="w-4 h-4" />
             Adicionar

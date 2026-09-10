@@ -63,40 +63,41 @@ export default function NotificationCenterModal({
   };
 
   const getIcon = (type: AppNotification['type']) => {
+    const box = 'w-9 h-9 rounded-xl bg-zry-lilas-30 text-zry-roxo flex items-center justify-center shrink-0';
     switch (type) {
       case 'nova_indicacao':
         return (
-          <div className="p-2 bg-blue-100 text-blue-700 rounded-xl shrink-0">
+          <div className={box}>
             <Bell className="w-4 h-4" />
           </div>
         );
       case 'mudanca_status':
         return (
-          <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl shrink-0">
+          <div className={box}>
             <CheckCircle2 className="w-4 h-4" />
           </div>
         );
       case 'comissao_a_pagar':
         return (
-          <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+          <div className={box}>
             <AlertTriangle className="w-4 h-4" />
           </div>
         );
       case 'comissao_paga':
         return (
-          <div className="p-2 bg-purple-100 text-purple-700 rounded-xl shrink-0">
+          <div className={box}>
             <DollarSign className="w-4 h-4" />
           </div>
         );
       case 'corte_safra_alerta':
         return (
-          <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+          <div className={box}>
             <Clock className="w-4 h-4" />
           </div>
         );
       default:
         return (
-          <div className="p-2 bg-slate-100 text-slate-600 rounded-xl shrink-0">
+          <div className={box}>
             <Bell className="w-4 h-4" />
           </div>
         );
@@ -104,43 +105,43 @@ export default function NotificationCenterModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-        
+    <div className="fixed inset-0 z-50 bg-zry-roxo/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-zry-surface rounded-zry-xl border border-zry-border shadow-lg max-w-xl w-full max-h-[85vh] flex flex-col">
+
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-2xl">
-              <Bell className="w-5 h-5" />
+        <div className="p-6 border-b border-zry-border flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-zry-lilas-30 text-zry-roxo flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-[16px] font-bold text-zry-text">
                   Central de Alertas & Notificações
                 </h3>
                 {unreadCount > 0 && (
-                  <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-zry-coral text-zry-roxo text-[10px] font-bold px-2 py-0.5 rounded-full">
                     {unreadCount} nova(s)
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-[12px] text-zry-text-2 mt-0.5">
                 Novas indicações, alterações de status e comissões liberadas
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={onOpenSettings}
               title="Configurações de Alertas e Notificações por E-mail"
-              className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition"
+              className="w-8 h-8 flex items-center justify-center text-zry-text-2 hover:text-zry-text hover:bg-zry-lilas-30 rounded-full transition"
             >
               <Settings className="w-4 h-4" />
             </button>
-            <button 
-              onClick={onClose} 
-              className="p-2 text-slate-400 hover:text-slate-600 rounded-xl transition"
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center text-zry-text-2 hover:text-zry-text hover:bg-zry-lilas-30 rounded-full transition"
             >
               <X className="w-4 h-4" />
             </button>
@@ -148,35 +149,35 @@ export default function NotificationCenterModal({
         </div>
 
         {/* Filters and Actions Bar */}
-        <div className="px-5 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+        <div className="px-6 py-3 border-b border-zry-border flex items-center justify-between gap-3 text-[12px]">
+          <div className="flex items-center gap-1 bg-zry-lilas-30 p-1 rounded-full">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-1 rounded-lg font-medium transition ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition ${
                 filterType === 'all'
-                  ? 'bg-slate-800 text-white font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Todas ({notifications.length})
             </button>
             <button
               onClick={() => setFilterType('unread')}
-              className={`px-3 py-1 rounded-lg font-medium transition ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition ${
                 filterType === 'unread'
-                  ? 'bg-emerald-600 text-white font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Não lidas ({unreadCount})
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <button
                 onClick={onMarkAllAsRead}
-                className="text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1"
+                className="text-zry-text-2 hover:text-zry-text font-semibold flex items-center gap-1 transition"
               >
                 <Check className="w-3.5 h-3.5" />
                 <span>Marcar lidas</span>
@@ -185,7 +186,7 @@ export default function NotificationCenterModal({
             {notifications.length > 0 && (
               <button
                 onClick={onClearAll}
-                className="text-slate-400 hover:text-rose-600 transition flex items-center gap-1"
+                className="text-zry-text-2 hover:text-zry-danger transition flex items-center gap-1"
                 title="Limpar histórico de notificações"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -196,11 +197,11 @@ export default function NotificationCenterModal({
         </div>
 
         {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+        <div className="flex-1 overflow-y-auto p-6 space-y-3">
           {displayed.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              <Bell className="w-8 h-8 mx-auto text-slate-300 mb-2 opacity-50" />
-              <p className="font-semibold text-slate-600">Nenhum alerta para exibir.</p>
+            <div className="text-center py-12 text-zry-text-2 text-[12px]">
+              <Bell className="w-8 h-8 mx-auto text-zry-text-2 mb-2 opacity-50" />
+              <p className="font-semibold text-zry-text-2">Nenhum alerta para exibir.</p>
               <p className="mt-0.5">Novas indicações e comissões registradas aparecerão aqui automaticamente.</p>
             </div>
           ) : (
@@ -211,45 +212,46 @@ export default function NotificationCenterModal({
                   onClick={() => {
                     if (!item.read) onMarkAsRead(item.id);
                   }}
-                  className={`p-4 rounded-2xl border transition-all text-xs flex items-start gap-3 ${
+                  className={`bg-zry-surface rounded-zry-lg p-4 border transition-all text-[12px] flex items-start gap-3 ${
                     item.read
-                      ? 'bg-white border-slate-200/80 opacity-80 hover:opacity-100'
-                      : 'bg-emerald-50/40 border-emerald-200 shadow-xs'
+                      ? 'border-zry-border opacity-80 hover:opacity-100'
+                      : 'border-zry-coral'
                   }`}
                 >
                   {getIcon(item.type)}
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-bold text-slate-900 leading-tight truncate">
-                        {item.title}
+                      <h4 className="font-bold text-zry-text leading-tight truncate flex items-center gap-2">
+                        {!item.read && <span className="w-1.5 h-1.5 rounded-full bg-zry-coral shrink-0" />}
+                        <span className="truncate">{item.title}</span>
                       </h4>
-                      <span className="text-[10px] text-slate-400 shrink-0">
+                      <span className="text-[10px] text-zry-text-2 shrink-0">
                         {formatTimestamp(item.timestamp)}
                       </span>
                     </div>
 
-                    <p className="text-slate-600 mt-1 leading-relaxed">
+                    <p className="text-zry-text-2 mt-1 leading-relaxed">
                       {item.message}
                     </p>
 
                     {/* Metadata tags */}
-                    <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100/80">
+                    <div className="flex flex-wrap items-center gap-2 mt-2.5 pt-2.5 border-t border-zry-border">
                       {item.dealValue !== undefined && item.dealValue > 0 && (
-                        <span className="font-bold text-emerald-800 bg-emerald-100/60 px-2 py-0.5 rounded text-[10px]">
+                        <span className="font-bold text-zry-positive bg-zry-positive-bg px-2 py-0.5 rounded-full text-[10px]">
                           Contrato: {formatCurrency(item.dealValue)}
                         </span>
                       )}
 
                       {item.commissionValue !== undefined && item.commissionValue > 0 && (
-                        <span className="font-bold text-purple-800 bg-purple-100/60 px-2 py-0.5 rounded text-[10px]">
+                        <span className="font-bold text-zry-info bg-zry-info-bg px-2 py-0.5 rounded-full text-[10px]">
                           Comissão: {formatCurrency(item.commissionValue)}
                         </span>
                       )}
 
                       {item.emailSent && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                          <Mail className="w-3 h-3 text-emerald-600" />
+                        <span className="inline-flex items-center gap-1 text-[10px] text-zry-text-2 bg-zry-lilas-30 px-2 py-0.5 rounded-full">
+                          <Mail className="w-3 h-3 text-zry-text-2" />
                           E-mail despachado ({item.emailRecipient})
                         </span>
                       )}
@@ -262,7 +264,7 @@ export default function NotificationCenterModal({
                             onNavigateToCommissions();
                             onClose();
                           }}
-                          className="text-[10px] font-bold text-amber-700 hover:text-amber-900 hover:underline flex items-center gap-0.5 ml-auto"
+                          className="text-[10px] font-bold text-zry-roxo hover:underline flex items-center gap-0.5 ml-auto"
                         >
                           Ir para Comissões &rarr;
                         </button>
@@ -275,7 +277,7 @@ export default function NotificationCenterModal({
                             onNavigateToReferral(item.referralId);
                             onClose();
                           }}
-                          className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-0.5 ml-auto"
+                          className="text-[10px] font-bold text-zry-roxo hover:underline flex items-center gap-0.5 ml-auto"
                         >
                           Ver no Pipeline &rarr;
                         </button>
@@ -289,18 +291,18 @@ export default function NotificationCenterModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+        <div className="px-6 py-4 border-t border-zry-border flex items-center justify-between gap-3 text-[12px]">
           <button
             onClick={onOpenSettings}
-            className="text-slate-600 hover:text-slate-900 flex items-center gap-1.5 font-medium"
+            className="text-zry-text-2 hover:text-zry-text flex items-center gap-1.5 font-semibold transition"
           >
-            <Mail className="w-3.5 h-3.5 text-emerald-600" />
+            <Mail className="w-3.5 h-3.5" />
             <span>Configurar E-mail & Alertas</span>
           </button>
 
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition"
+            className="bg-zry-roxo hover:bg-zry-roxo-hover text-zry-creme font-bold px-5 py-2.5 rounded-full text-[12.5px] transition"
           >
             Fechar
           </button>

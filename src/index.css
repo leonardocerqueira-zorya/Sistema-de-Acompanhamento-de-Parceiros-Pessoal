@@ -1,1 +1,78 @@
 @import "tailwindcss";
+
+/*
+ * Design system Zorya — Canal de Parcerias.
+ *
+ * Valores amostrados pixel a pixel do design renderizado
+ * (sistema-de-gest-o-de-parceiros/project/.thumbnail), já que o bundle de tokens
+ * do design system (_ds/.../tokens/colors.css) não veio no pacote de handoff.
+ * Cores de estado (positivo/atenção/negativo) foram derivadas para harmonizar
+ * com o creme e o roxo da marca.
+ *
+ * Geram utilitários Tailwind: bg-zry-roxo, text-zry-coral, border-zry-border...
+ */
+@theme {
+  /* Marca */
+  --color-zry-roxo: #2a1f45;
+  --color-zry-roxo-soft: #3a2e5c;
+  --color-zry-roxo-hover: #453873;
+  --color-zry-coral: #fda17b;
+  --color-zry-coral-dark: #f4855a;
+
+  /* Superfícies */
+  --color-zry-creme: #fefdf9;
+  --color-zry-surface: #ffffff;
+  --color-zry-lilas: #f1eafb;
+  --color-zry-lilas-30: #f8f3fd;
+
+  /* Traços e texto */
+  --color-zry-border: #e4e1da;
+  --color-zry-border-strong: #cfc9c0;
+  --color-zry-text: #2a1f45;
+  --color-zry-text-2: #8b84a0;
+
+  /* Estados */
+  --color-zry-positive: #2e7d5b;
+  --color-zry-positive-bg: #e8f3ee;
+  --color-zry-warning: #b4761f;
+  --color-zry-warning-bg: #fbf1e0;
+  --color-zry-danger: #c0483f;
+  --color-zry-danger-bg: #fae9e7;
+  --color-zry-info: #4b3f7a;
+  --color-zry-info-bg: #efeafb;
+
+  /* Raios */
+  --radius-zry-md: 12px;
+  --radius-zry-lg: 20px;
+  --radius-zry-xl: 24px;
+}
+
+/* Base da página: fundo creme e tipografia da marca em todo o app. */
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-zry-creme);
+  color: var(--color-zry-text);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Barras de rolagem discretas, como no design. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-zry-border-strong);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

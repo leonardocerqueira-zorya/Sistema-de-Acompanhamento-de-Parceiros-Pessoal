@@ -373,34 +373,34 @@ export default function ReferralModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 my-8">
+    <div className="fixed inset-0 z-50 bg-zry-roxo/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-zry-surface rounded-zry-xl max-w-3xl w-full p-6 shadow-lg border border-zry-border my-8">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-center justify-between border-b border-zry-border pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+            <div className="p-2 bg-zry-lilas-30 text-zry-roxo rounded-xl">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-base font-bold text-zry-text">
                 {initialData ? 'Editar Indicação & Contrato' : 'Registrar Nova Indicação'}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-zry-text-2">
                 Tabela oficial de planos 2026, comissões em 3 etapas (1/3) e regras de desconto
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
+          <button onClick={onClose} className="text-zry-text-2 hover:text-zry-text font-bold text-sm">✕</button>
         </div>
 
         {/* Placeholder completion banner (indicação registrada apenas como número) */}
         {initialData?.isPlaceholder && (
-          <div className="mt-4 bg-slate-900 text-slate-100 text-xs p-3 rounded-xl flex items-start gap-2">
-            <Sparkles className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+          <div className="mt-4 bg-zry-roxo text-zry-text-2 text-xs p-3 rounded-xl flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-zry-warning shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-amber-300">Indicação sem empresa — complete o cadastro.</span>
-              <p className="text-slate-300 mt-0.5">
+              <span className="font-bold text-zry-warning">Indicação sem empresa — complete o cadastro.</span>
+              <p className="text-zry-text-2 mt-0.5">
                 Esta indicação foi registrada apenas como número (backfill). Preencha a Razão Social / CNPJ e os
                 demais dados do cliente para transformá-la em um cadastro completo, mantendo o histórico e a safra originais.
               </p>
@@ -410,11 +410,11 @@ export default function ReferralModal({
 
         {/* Missing Data Warning if editing an incomplete record */}
         {!initialData?.isPlaceholder && initialData?.hasMissingData && initialData.missingFields && initialData.missingFields.length > 0 && (
-          <div className="mt-4 bg-amber-50 border border-amber-200 text-amber-900 text-xs p-3 rounded-xl flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="mt-4 bg-zry-warning-bg border border-zry-warning/30 text-zry-warning text-[12px] p-3.5 rounded-zry-lg flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-zry-warning shrink-0 mt-0.5" />
             <div>
               <span className="font-bold">Campos pendentes identificados na planilha:</span>
-              <ul className="list-disc list-inside mt-1 font-medium text-amber-800">
+              <ul className="list-disc list-inside mt-1 font-medium text-zry-warning">
                 {initialData.missingFields.map((f, i) => (
                   <li key={i}>{f}</li>
                 ))}
@@ -429,11 +429,11 @@ export default function ReferralModal({
           {/* Section 1: Partner, Referral Date, ID Conexa, Responsável */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div className="md:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Parceiro Indicador *</label>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Parceiro Indicador *</label>
               <select
                 value={partnerId}
                 onChange={(e) => setPartnerId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               >
                 {partners
                   .slice()
@@ -445,29 +445,29 @@ export default function ReferralModal({
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>Data da Indicação *</span>
-                {!referralDate && <span className="text-[10px] text-amber-600 font-bold">Pendente</span>}
+                {!referralDate && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
               </label>
               <input
                 type="date"
                 value={referralDate}
                 onChange={(e) => setReferralDate(e.target.value)}
-                className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500 ${!referralDate ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300'}`}
+                className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!referralDate ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>ID Conexa</span>
-                {!idConexa && <span className="text-[10px] text-amber-600 font-bold">Pendente</span>}
+                {!idConexa && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
               </label>
               <input
                 type="text"
                 placeholder="Ex: CX-IND-101"
                 value={idConexa}
                 onChange={(e) => setIdConexa(e.target.value)}
-                className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-slate-900 font-mono text-xs focus:ring-1 focus:ring-emerald-500 ${!idConexa ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300'}`}
+                className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text font-mono text-xs focus:outline-none focus:border-zry-border-strong ${!idConexa ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
               />
             </div>
           </div>
@@ -475,9 +475,9 @@ export default function ReferralModal({
           {/* Section 2: Client Info & Responsible Person */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>Razão Social / Nome do Cliente Indicado *</span>
-                {!clientName && <span className="text-[10px] text-amber-600 font-bold">Pendente</span>}
+                {!clientName && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
               </label>
               <input
                 type="text"
@@ -485,30 +485,30 @@ export default function ReferralModal({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 required
-                className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500 ${!clientName ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300'}`}
+                className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!clientName ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>Pessoa Responsável (Executivo)</span>
-                {!responsiblePerson && <span className="text-[10px] text-amber-600 font-bold">Pendente</span>}
+                {!responsiblePerson && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
               </label>
               <input
                 type="text"
                 placeholder="Ex: Mariana Ramos"
                 value={responsiblePerson}
                 onChange={(e) => setResponsiblePerson(e.target.value)}
-                className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500 ${!responsiblePerson ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300'}`}
+                className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!responsiblePerson ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>CNPJ / CPF do Cliente Indicado *</span>
-                {!clientDocument && <span className="text-[10px] text-amber-600 font-bold">Pendente</span>}
+                {!clientDocument && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
               </label>
               <input
                 type="text"
@@ -517,54 +517,54 @@ export default function ReferralModal({
                 value={clientDocument}
                 onChange={(e) => setClientDocument(e.target.value)}
                 onBlur={(e) => { const f = formatDocument(e.target.value); if (f !== '—') setClientDocument(f); }}
-                className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-slate-900 font-mono text-xs focus:ring-1 focus:ring-emerald-500 ${!clientDocument ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300'}`}
+                className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text font-mono text-xs focus:outline-none focus:border-zry-border-strong ${!clientDocument ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Empresa / Razão Social (se pessoa física)</label>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Empresa / Razão Social (se pessoa física)</label>
               <input
                 type="text"
                 placeholder="Ex: Rocha Logística Ltda"
                 value={clientCompany}
                 onChange={(e) => setClientCompany(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">E-mail do Cliente</label>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">E-mail do Cliente</label>
               <input
                 type="email"
                 placeholder="cliente@empresa.com"
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Telefone / WhatsApp</label>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Telefone / WhatsApp</label>
               <input
                 type="text"
                 placeholder="(11) 99999-8888"
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
           </div>
 
           {/* Section 3: Plan & Financial Configuration (Tabela zorya. 2026) */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 space-y-4">
+          <div className="bg-zry-creme p-4 rounded-zry-lg border border-zry-border space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-indigo-600" />
+              <h4 className="font-bold text-zry-text flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-zry-info" />
                 <span>Plano & Regras Comerciais (Tabela zorya. 2026)</span>
               </h4>
-              <span className="text-[11px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md font-semibold">
+              <span className="text-[11px] bg-zry-info-bg text-zry-info px-2 py-0.5 rounded-md font-semibold">
                 Preenchimento Automático
               </span>
             </div>
@@ -572,11 +572,11 @@ export default function ReferralModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Plan selector */}
               <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-700 mb-1">Plano Comercial Selecionado *</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Plano Comercial Selecionado *</label>
                 <select
                   value={planId}
                   onChange={(e) => handlePlanSelect(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-zry-surface border border-zry-border rounded-xl px-3 py-2 text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
                 >
                   {plans.map(plan => (
                     <option key={plan.id} value={plan.id}>
@@ -588,19 +588,19 @@ export default function ReferralModal({
 
               {/* Recurrence */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Recorrência *</label>
-                <div className="grid grid-cols-2 gap-1 bg-slate-200 p-1 rounded-xl">
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Recorrência *</label>
+                <div className="grid grid-cols-2 gap-1 bg-zry-lilas p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => handleRecurrenceChange('mensal')}
-                    className={`py-1.5 rounded-lg font-bold text-xs transition ${planRecurrence === 'mensal' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`py-2 rounded-full font-bold text-[12px] transition ${planRecurrence === 'mensal' ? 'bg-zry-surface text-zry-text' : 'text-zry-text-2 hover:text-zry-text'}`}
                   >
                     Mensal
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRecurrenceChange('anual')}
-                    className={`py-1.5 rounded-lg font-bold text-xs transition ${planRecurrence === 'anual' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`py-2 rounded-full font-bold text-[12px] transition ${planRecurrence === 'anual' ? 'bg-zry-surface text-zry-text' : 'text-zry-text-2 hover:text-zry-text'}`}
                   >
                     Anual
                   </button>
@@ -610,10 +610,10 @@ export default function ReferralModal({
 
             {/* If Annual: Installment condition */}
             {planRecurrence === 'anual' && (
-              <div className="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="bg-zry-info-bg/70 p-3 rounded-xl border border-zry-info/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
-                  <span className="font-bold text-indigo-950">Condição de Pagamento do Cliente (Anual):</span>
-                  <p className="text-[11px] text-indigo-700 mt-0.5">
+                  <span className="font-bold text-zry-info">Condição de Pagamento do Cliente (Anual):</span>
+                  <p className="text-[11px] text-zry-info mt-0.5">
                     Benefício do programa: indicado mantém desconto de à vista (15%) mesmo parcelando em até 3x.
                   </p>
                 </div>
@@ -623,10 +623,10 @@ export default function ReferralModal({
                       key={inst}
                       type="button"
                       onClick={() => handleInstallmentsChange(inst)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition border ${
+                      className={`px-3.5 py-1.5 rounded-full text-[12px] font-bold transition border ${
                         planInstallments === inst 
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          ? 'bg-zry-roxo text-white border-zry-info' 
+                          : 'bg-zry-surface text-zry-text-2 border-zry-border hover:bg-zry-lilas-30'
                       }`}
                     >
                       {inst === '1x' ? 'À vista (1x)' : `Em ${inst}`}
@@ -637,20 +637,20 @@ export default function ReferralModal({
             )}
 
             {/* Financial auto-filled editable inputs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-200">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-zry-border">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">MRR Bruto Tabela</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">MRR Bruto Tabela</label>
                 <input
                   type="number"
                   step="0.01"
                   value={mrrGross}
                   onChange={(e) => setMrrGross(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-medium"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">
                   % Desconto ({planRecurrence === 'anual' ? '15% padrão' : '10% padrão'})
                 </label>
                 <input
@@ -658,51 +658,51 @@ export default function ReferralModal({
                   step="0.1"
                   value={discountPercent}
                   onChange={(e) => handleDiscountPercentChange(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-medium"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Desconto (R$)</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Desconto (R$)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-medium"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">MRR Líquido Final</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">MRR Líquido Final</label>
                 <input
                   type="number"
                   step="0.01"
                   value={mrrNet}
                   onChange={(e) => handleMrrNetChange(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-emerald-800 font-bold"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-roxo font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
               </div>
             </div>
 
             {/* Commission fixed value from table */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-zry-border">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Valor Contratado Total (R$)</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Valor Contratado Total (R$)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={dealValue}
                   onChange={(e) => setDealValue(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-semibold"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[10px] text-zry-text-2">
                   {planRecurrence === 'anual' ? 'Total anual líquido com desconto' : 'Assinatura mensal líquida'}
                 </span>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">
                   Comissão Fixa do Parceiro (R$) *
                 </label>
                 <input
@@ -710,9 +710,9 @@ export default function ReferralModal({
                   step="0.01"
                   value={commissionValue}
                   onChange={(e) => setCommissionValue(e.target.value)}
-                  className="w-full bg-white border border-emerald-300 rounded-xl px-2.5 py-1.5 font-extrabold text-emerald-800 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-zry-coral/15 border border-zry-coral/50 rounded-xl px-3 py-2 text-[13px] font-extrabold text-zry-roxo focus:outline-none focus:border-zry-coral transition"
                 />
-                <span className="text-[10px] text-emerald-700">
+                <span className="text-[10px] text-zry-roxo">
                   Preenchido de acordo com o plano. Editável pelo executivo.
                 </span>
               </div>
@@ -720,19 +720,19 @@ export default function ReferralModal({
           </div>
 
           {/* Section 4: Deal Status & Commission Release Schedule */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 space-y-4">
-            <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-              <DollarSign className="w-4 h-4 text-emerald-600" />
+          <div className="bg-zry-creme p-4 rounded-zry-lg border border-zry-border space-y-4">
+            <h4 className="font-bold text-zry-text flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-zry-roxo" />
               <span>Status Comercial & Geração das Parcelas de Comissão</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Status Comercial *</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Status Comercial *</label>
                 <select
                   value={dealStatus}
                   onChange={(e) => handleDealStatusChange(e.target.value as DealStatus)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition focus:outline-none focus:border-zry-border-strong"
                 >
                   <option value="novo">Novo Lead</option>
                   <option value="contato">Primeiro Contato</option>
@@ -746,24 +746,24 @@ export default function ReferralModal({
               {dealStatus === 'ganho' && (
                 <>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Data do Fechamento *</label>
+                    <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Data do Fechamento *</label>
                     <input
                       type="date"
                       value={closeDate}
                       onChange={(e) => handleCloseDateChange(e.target.value)}
                       required
-                      className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
+                      className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition focus:outline-none focus:border-zry-border-strong"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block text-[12px] font-semibold text-zry-text mb-1.5">
                       Dia de Vencimento da Fatura (Cliente) *
                     </label>
                     <select
                       value={invoiceDueDay}
                       onChange={(e) => handleDueDayChange(parseInt(e.target.value, 10))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-bold focus:ring-1 focus:ring-emerald-500"
+                      className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition focus:outline-none focus:border-zry-border-strong"
                     >
                       {[5, 10, 15, 20, 25, 28].map(day => (
                         <option key={day} value={day}>Todo dia {day}</option>
@@ -776,33 +776,33 @@ export default function ReferralModal({
 
             {/* Generated Installments Live Preview when closed */}
             {dealStatus === 'ganho' && previewInstallments.length > 0 && (
-              <div className="bg-emerald-50/80 border border-emerald-200 p-3.5 rounded-2xl space-y-2.5">
+              <div className="bg-zry-coral/10 border border-zry-coral/40 p-3.5 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <div className="flex items-center gap-1.5 text-zry-roxo font-bold">
+                    <Sparkles className="w-4 h-4 text-zry-roxo" />
                     <span>Cronograma de Liberação de Comissões (Regra 1/3 e Faturas)</span>
                   </div>
-                  <span className="text-[11px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                  <span className="text-[11px] font-bold text-zry-roxo bg-zry-surface px-2 py-0.5 rounded-md border border-zry-coral/40">
                     Total: {formatCurrency(totalCommNum)}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                   {previewInstallments.map((inst, idx) => (
-                    <div key={idx} className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
+                    <div key={idx} className="bg-zry-surface p-2.5 rounded-xl border border-zry-coral/40 shadow-2xs">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-slate-800">{inst.triggerDescription}</span>
-                        <span className="font-extrabold text-emerald-700">{formatCurrency(inst.value)}</span>
+                        <span className="font-bold text-zry-text">{inst.triggerDescription}</span>
+                        <span className="font-extrabold text-zry-roxo">{formatCurrency(inst.value)}</span>
                       </div>
-                      <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500">
-                        <Calendar className="w-3 h-3 text-slate-400" />
+                      <div className="flex items-center gap-1 mt-1 text-[10px] text-zry-text-2">
+                        <Calendar className="w-3 h-3 text-zry-text-2" />
                         <span>Liberação: <strong>{formatDateBR(inst.releaseDate)}</strong></span>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <p className="text-[10px] text-emerald-800 leading-relaxed">
+                <p className="text-[10px] text-zry-roxo leading-relaxed">
                   {planRecurrence === 'mensal' 
                     ? '💡 No plano mensal, a comissão é liberada em 3 partes (1/3 cada) nas 1ª, 3ª e 5ª mensalidades do cliente.'
                     : `💡 No plano anual ${planInstallments}, o pagamento acompanha as parcelas do cliente conforme quitação.`}
@@ -811,13 +811,13 @@ export default function ReferralModal({
             )}
 
             {/* Commission General Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-zry-border">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Status Geral da Comissão</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Status Geral da Comissão</label>
                 <select
                   value={commissionStatus}
                   onChange={(e) => setCommissionStatus(e.target.value as CommissionStatus)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 font-semibold focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition focus:outline-none focus:border-zry-border-strong"
                 >
                   <option value="pendente_fechamento">Pendente Fechamento</option>
                   <option value="a_pagar">A Pagar (Em liquidação por parcelas)</option>
@@ -827,13 +827,13 @@ export default function ReferralModal({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Forma de Pagamento ao Parceiro</label>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Forma de Pagamento ao Parceiro</label>
                 <input
                   type="text"
                   placeholder="Ex: Chave PIX CNPJ, Transferência PJ"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition focus:outline-none focus:border-zry-border-strong"
                 />
               </div>
             </div>
@@ -841,28 +841,28 @@ export default function ReferralModal({
 
           {/* Section 5: Notes */}
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Observações & Histórico</label>
+            <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Observações & Histórico</label>
             <textarea
               rows={2}
               placeholder="Detalhes adicionais da negociação, condições especiais de fechamento..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-1 focus:ring-emerald-500"
+              className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zry-border">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold"
+              className="px-4 py-2.5 text-[12.5px] text-zry-text-2 hover:text-zry-text font-semibold rounded-full"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-xs transition"
+              className="px-5 py-2.5 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo rounded-full font-bold text-[12.5px] transition"
             >
               {initialData ? 'Salvar Alterações' : 'Cadastrar Indicação'}
             </button>

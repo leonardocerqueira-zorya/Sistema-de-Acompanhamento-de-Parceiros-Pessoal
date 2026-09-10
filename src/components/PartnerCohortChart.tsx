@@ -106,18 +106,18 @@ export default function PartnerCohortChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-slate-900 text-white rounded-xl p-3.5 shadow-xl border border-slate-700 text-xs space-y-2 min-w-[210px] pointer-events-none">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 font-bold text-slate-200">
+        <div className="bg-zry-roxo text-white rounded-xl p-3.5 shadow-xl border border-zry-border-strong text-xs space-y-2 min-w-[210px] pointer-events-none">
+          <div className="flex items-center justify-between border-b border-zry-border-strong pb-1.5 font-bold text-zry-text-2">
             <span>{label} de Parceria</span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-zry-text-2">
               {isFiltered ? 'Individual' : `${data.activePartnersInTenure} parceiro(s)`}
             </span>
           </div>
 
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <span className="w-2.5 h-2.5 rounded-sm bg-slate-300 inline-block"></span>
+              <span className="flex items-center gap-1.5 text-zry-text-2">
+                <span className="w-2.5 h-2.5 rounded-sm bg-zry-lilas inline-block"></span>
                 {isFiltered || viewMode === 'total' ? 'Indicações:' : 'Média Indicações:'}
               </span>
               <span className="font-extrabold text-white">
@@ -126,30 +126,30 @@ export default function PartnerCohortChart({
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-amber-300">
-                <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span>
+              <span className="flex items-center gap-1.5 text-zry-warning">
+                <span className="w-2.5 h-2.5 rounded-sm bg-zry-warning inline-block"></span>
                 {isFiltered || viewMode === 'total' ? 'Fechadas:' : 'Média Fechadas:'}
               </span>
-              <span className="font-extrabold text-amber-400">
+              <span className="font-extrabold text-zry-warning">
                 {data.closedDeals} {isFiltered ? '' : viewMode === 'average' ? '/parceiro' : ''}
               </span>
             </div>
 
-            <div className="flex items-center justify-between pt-1 border-t border-slate-800">
-              <span className="flex items-center gap-1.5 text-blue-300 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+            <div className="flex items-center justify-between pt-1 border-t border-zry-border-strong">
+              <span className="flex items-center gap-1.5 text-zry-info font-semibold">
+                <span className="w-2.5 h-2.5 rounded-full bg-zry-roxo inline-block"></span>
                 Taxa de Conversão:
               </span>
-              <span className="font-black text-blue-400 text-sm">
+              <span className="font-black text-zry-info text-sm">
                 {data.conversionRate.toFixed(1)}%
               </span>
             </div>
           </div>
 
           {!isFiltered && viewMode === 'average' && (
-            <div className="pt-1.5 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
+            <div className="pt-1.5 border-t border-zry-border-strong text-[10px] text-zry-text-2 flex justify-between">
               <span>Total no mês:</span>
-              <span className="text-slate-300 font-medium">
+              <span className="text-zry-text-2 font-medium">
                 {data.totalClosedRaw} de {data.totalReferralsRaw}
               </span>
             </div>
@@ -161,30 +161,30 @@ export default function PartnerCohortChart({
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
+    <div className="bg-zry-surface rounded-3xl p-6 sm:p-7 border border-zry-border/90 shadow-xs space-y-6">
       
       {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zry-border pb-5">
         <div className="flex items-start sm:items-center gap-3.5">
-          <div className="p-3 bg-blue-50 text-blue-700 rounded-2xl shrink-0">
+          <div className="p-3 bg-zry-lilas-30 text-zry-roxo rounded-2xl shrink-0">
             <BarChart3 className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">
+              <h2 className="text-base font-bold text-zry-text tracking-tight">
                 Conversão por Mês de Parceria (fechadas ÷ indicações)
               </h2>
               <button
                 type="button"
                 onClick={() => setShowInfo(!showInfo)}
-                className="text-slate-400 hover:text-slate-600 transition"
+                className="text-zry-text-2 hover:text-zry-text-2 transition"
                 title="Entenda como funciona o cálculo por Mês 1, 2, 3..."
               >
                 <HelpCircle className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Curva de maturação normalizada: <strong className="text-slate-700">Mês 1</strong> é o mês de entrada de cada parceiro, permitindo calcular a média consolidada independente de quando ele entrou.
+            <p className="text-xs text-zry-text-2 mt-1">
+              Curva de maturação normalizada: <strong className="text-zry-text-2">Mês 1</strong> é o mês de entrada de cada parceiro, permitindo calcular a média consolidada independente de quando ele entrou.
             </p>
           </div>
         </div>
@@ -193,12 +193,12 @@ export default function PartnerCohortChart({
         <div className="flex flex-wrap items-center gap-2.5">
           
           {/* Partner Selector Dropdown */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex items-center gap-2 bg-zry-lilas-30 border border-zry-border rounded-xl px-2.5 py-1.5">
+            <Filter className="w-3.5 h-3.5 text-zry-text-2" />
             <select
               value={activePartnerId}
               onChange={(e) => handlePartnerChange(e.target.value)}
-              className="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-hidden cursor-pointer pr-1"
+              className="text-xs font-semibold text-zry-text bg-transparent border-none focus:outline-hidden cursor-pointer pr-1"
             >
               <option value="all">Média de Todos os Parceiros</option>
               {partners
@@ -214,14 +214,14 @@ export default function PartnerCohortChart({
 
           {/* Average vs Total Toggle (Only applicable when viewing all partners) */}
           {!isFiltered && (
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+            <div className="flex items-center bg-zry-lilas-30 p-1 rounded-xl border border-zry-border/80 text-xs">
               <button
                 type="button"
                 onClick={() => setViewMode('average')}
                 className={`px-2.5 py-1 rounded-lg font-semibold transition ${
                   viewMode === 'average'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-zry-surface text-zry-text shadow-2xs'
+                    : 'text-zry-text-2 hover:text-zry-text'
                 }`}
               >
                 Média / Parceiro
@@ -231,8 +231,8 @@ export default function PartnerCohortChart({
                 onClick={() => setViewMode('total')}
                 className={`px-2.5 py-1 rounded-lg font-semibold transition ${
                   viewMode === 'total'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-zry-surface text-zry-text shadow-2xs'
+                    : 'text-zry-text-2 hover:text-zry-text'
                 }`}
               >
                 Total do Canal
@@ -244,10 +244,10 @@ export default function PartnerCohortChart({
           <button
             type="button"
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zry-lilas-30 hover:bg-zry-lilas text-zry-text-2 text-xs font-semibold rounded-xl border border-zry-border transition"
             title="Exportar dados do gráfico em CSV"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <Download className="w-3.5 h-3.5 text-zry-text-2" />
             <span className="hidden sm:inline">CSV</span>
           </button>
 
@@ -256,9 +256,9 @@ export default function PartnerCohortChart({
 
       {/* Optional Contextual Info Box */}
       {showInfo && (
-        <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 text-xs text-blue-900 space-y-1.5 animate-in fade-in duration-200">
-          <div className="font-bold flex items-center gap-1.5 text-blue-950">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
+        <div className="bg-zry-info-bg/70 border border-zry-info/80 rounded-2xl p-4 text-xs text-zry-info space-y-1.5 animate-in fade-in duration-200">
+          <div className="font-bold flex items-center gap-1.5 text-zry-info">
+            <TrendingUp className="w-4 h-4 text-zry-info" />
             Como é medido o desempenho relativo (Mês 1, Mês 2, Mês 3...)?
           </div>
           <p className="leading-relaxed">
@@ -277,13 +277,13 @@ export default function PartnerCohortChart({
               data={metrics}
               margin={{ top: 20, right: 30, left: 0, bottom: 25 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EFEBE4" />
               
               <XAxis
                 dataKey="monthLabel"
                 tickLine={false}
-                axisLine={{ stroke: '#E2E8F0' }}
-                tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                axisLine={{ stroke: '#EDE6F7' }}
+                tick={{ fill: '#8B84A0', fontSize: 12, fontWeight: 500 }}
                 dy={10}
               />
               
@@ -292,8 +292,8 @@ export default function PartnerCohortChart({
                 yAxisId="left"
                 orientation="left"
                 tickLine={false}
-                axisLine={{ stroke: '#E2E8F0' }}
-                tick={{ fill: '#64748B', fontSize: 12 }}
+                axisLine={{ stroke: '#EDE6F7' }}
+                tick={{ fill: '#8B84A0', fontSize: 12 }}
                 domain={[0, 'auto']}
                 allowDecimals={!isFiltered && viewMode === 'average'}
               />
@@ -303,8 +303,8 @@ export default function PartnerCohortChart({
                 yAxisId="right"
                 orientation="right"
                 tickLine={false}
-                axisLine={{ stroke: '#E2E8F0' }}
-                tick={{ fill: '#2563EB', fontSize: 12, fontWeight: 600 }}
+                axisLine={{ stroke: '#EDE6F7' }}
+                tick={{ fill: '#2A1F45', fontSize: 12, fontWeight: 600 }}
                 domain={[0, 100]}
                 ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
                 unit="%"
@@ -317,7 +317,7 @@ export default function PartnerCohortChart({
                 yAxisId="left"
                 dataKey="referrals"
                 name="Indicações"
-                fill="#E2E8F0"
+                fill="#EDE6F7"
                 radius={[4, 4, 0, 0]}
                 maxBarSize={38}
               />
@@ -327,7 +327,7 @@ export default function PartnerCohortChart({
                 yAxisId="left"
                 dataKey="closedDeals"
                 name="Fechadas"
-                fill="#D97706"
+                fill="#F4855A"
                 radius={[4, 4, 0, 0]}
                 maxBarSize={38}
               />
@@ -338,23 +338,23 @@ export default function PartnerCohortChart({
                 type="monotone"
                 dataKey="conversionRate"
                 name="Conversão"
-                stroke="#2563EB"
+                stroke="#2A1F45"
                 strokeWidth={3}
-                dot={{ r: 4.5, fill: '#2563EB', stroke: '#FFFFFF', strokeWidth: 2 }}
-                activeDot={{ r: 7, fill: '#1D4ED8', stroke: '#FFFFFF', strokeWidth: 2 }}
+                dot={{ r: 4.5, fill: '#2A1F45', stroke: '#FFFFFF', strokeWidth: 2 }}
+                activeDot={{ r: 7, fill: '#3A2E5C', stroke: '#FFFFFF', strokeWidth: 2 }}
               />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center space-y-3">
-            <div className="p-3 bg-slate-100 text-slate-400 rounded-full">
+          <div className="h-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-zry-border rounded-2xl text-center space-y-3">
+            <div className="p-3 bg-zry-lilas-30 text-zry-text-2 rounded-full">
               <BarChart3 className="w-8 h-8" />
             </div>
             <div className="max-w-md">
-              <h3 className="text-sm font-bold text-slate-800">
+              <h3 className="text-sm font-bold text-zry-text">
                 Sem dados de indicações para maturação
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-zry-text-2 mt-1">
                 {isFiltered 
                   ? `O parceiro "${partnerName}" ainda não possui indicações ou fechamentos registrados com datas válidas.`
                   : 'Importe sua planilha de parceiros e indicações ou adicione novos registros para gerar o gráfico de maturação.'}
@@ -365,69 +365,69 @@ export default function PartnerCohortChart({
       </div>
 
       {/* Legend Styled Exactly Like the User's Image */}
-      <div className="flex items-center justify-center gap-6 pt-2 pb-1 border-t border-slate-100 flex-wrap text-xs">
+      <div className="flex items-center justify-center gap-6 pt-2 pb-1 border-t border-zry-border flex-wrap text-xs">
         <div className="flex items-center gap-2">
-          <span className="w-8 h-3 rounded-xs bg-blue-600 inline-block shadow-2xs"></span>
-          <span className="font-semibold text-slate-700">Conversão</span>
+          <span className="w-8 h-3 rounded-xs bg-zry-roxo inline-block shadow-2xs"></span>
+          <span className="font-semibold text-zry-text-2">Conversão</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-8 h-3 rounded-xs bg-amber-600 inline-block shadow-2xs"></span>
-          <span className="font-semibold text-slate-700">Fechadas</span>
+          <span className="w-8 h-3 rounded-xs bg-zry-warning inline-block shadow-2xs"></span>
+          <span className="font-semibold text-zry-text-2">Fechadas</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-8 h-3 rounded-xs bg-slate-200 inline-block border border-slate-300"></span>
-          <span className="font-semibold text-slate-700">Indicações</span>
+          <span className="w-8 h-3 rounded-xs bg-zry-lilas inline-block border border-zry-border"></span>
+          <span className="font-semibold text-zry-text-2">Indicações</span>
         </div>
       </div>
 
       {/* Highlights & Cohort Maturation Insights */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
         
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
-          <span className="text-[11px] font-medium text-slate-500 block">
+        <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
+          <span className="text-[11px] font-medium text-zry-text-2 block">
             Pico de Conversão
           </span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-xl font-extrabold text-blue-600">
+            <span className="text-xl font-extrabold text-zry-info">
               {highestConv.rate.toFixed(1)}%
             </span>
-            <span className="text-xs font-semibold text-slate-600">
+            <span className="text-xs font-semibold text-zry-text-2">
               em {highestConv.month}
             </span>
           </div>
-          <span className="text-[11px] text-slate-500 block mt-1">
+          <span className="text-[11px] text-zry-text-2 block mt-1">
             Maior eficiência de fechamento na esteira de relacionamento.
           </span>
         </div>
 
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
-          <span className="text-[11px] font-medium text-slate-500 block">
+        <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
+          <span className="text-[11px] font-medium text-zry-text-2 block">
             {isFiltered ? 'Rampa Inicial (Mês 1 &rarr; Mês 3)' : 'Evolução Média (Mês 1 &rarr; Mês 3)'}
           </span>
           <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-xl font-extrabold text-slate-900">
+            <span className="text-xl font-extrabold text-zry-text">
               {month1 ? `${month1.conversionRate.toFixed(0)}%` : '0%'}
             </span>
-            <span className="text-xs text-slate-400">&rarr;</span>
-            <span className="text-xl font-extrabold text-emerald-600">
+            <span className="text-xs text-zry-text-2">&rarr;</span>
+            <span className="text-xl font-extrabold text-zry-positive">
               {month3 ? `${month3.conversionRate.toFixed(0)}%` : '—'}
             </span>
           </div>
-          <span className="text-[11px] text-slate-500 block mt-1">
+          <span className="text-[11px] text-zry-text-2 block mt-1">
             Taxa de conversão no primeiro trimestre de onboarding.
           </span>
         </div>
 
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
-          <span className="text-[11px] font-medium text-slate-500 block">
+        <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
+          <span className="text-[11px] font-medium text-zry-text-2 block">
             Escopo Analisado
           </span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-xl font-extrabold text-slate-900 truncate max-w-[180px]">
+            <span className="text-xl font-extrabold text-zry-text truncate max-w-[180px]">
               {isFiltered ? partnerName : `${activePartnersCount} parceiros`}
             </span>
           </div>
-          <span className="text-[11px] text-slate-500 block mt-1">
+          <span className="text-[11px] text-zry-text-2 block mt-1">
             {isFiltered 
               ? 'Exibindo a curva individualizada deste parceiro.' 
               : 'Média de todos os parceiros consolidada por ciclo de entrada.'}

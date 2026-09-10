@@ -104,14 +104,14 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
 
   if (totalWithLocation === 0) {
     return (
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs">
+      <div className="bg-zry-surface rounded-zry-lg p-6 border border-zry-border">
         <div className="flex items-center gap-2 mb-3">
-          <span className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
+          <span className="p-1.5 bg-zry-lilas-30 text-zry-roxo rounded-lg">
             <MapPin className="w-4 h-4" />
           </span>
-          <h3 className="text-base font-bold text-slate-900">Distribuição Geográfica dos Parceiros</h3>
+          <h3 className="text-base font-bold text-zry-text">Distribuição Geográfica dos Parceiros</h3>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-zry-text-2">
           Nenhum parceiro com cidade/UF cadastrada ainda. Preencha esses campos no cadastro do parceiro
           (ou importe via planilha) para ver o mapa de distribuição.
         </p>
@@ -120,15 +120,15 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
   }
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs">
+    <div className="bg-zry-surface rounded-zry-lg p-6 border border-zry-border">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <span className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
+          <span className="p-1.5 bg-zry-lilas-30 text-zry-roxo rounded-lg">
             <MapPin className="w-4 h-4" />
           </span>
           <div>
-            <h3 className="text-base font-bold text-slate-900">Distribuição Geográfica dos Parceiros</h3>
-            <p className="text-[11px] text-slate-500">
+            <h3 className="text-base font-bold text-zry-text">Distribuição Geográfica dos Parceiros</h3>
+            <p className="text-[11px] text-zry-text-2">
               {totalWithLocation} parceiro(s) com localização{totalWithoutLocation > 0 ? ` · ${totalWithoutLocation} sem cidade/UF cadastrada` : ''}
             </p>
           </div>
@@ -137,7 +137,7 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-5">
         {/* Bubble map */}
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-center py-2">
+        <div className="bg-zry-lilas-30 rounded-2xl border border-zry-border flex items-center justify-center py-2">
           <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full max-w-[420px]" role="img" aria-label="Mapa de bolhas do Brasil por estado com número de parceiros">
             {bubbles.map(b => {
               const isHovered = hovered === b.uf;
@@ -152,7 +152,7 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
                     cx={b.x}
                     cy={b.y}
                     r={b.r}
-                    className={isHovered ? 'fill-indigo-600' : 'fill-indigo-500/80'}
+                    className={isHovered ? 'fill-zry-coral' : 'fill-zry-roxo/85'}
                     stroke="white"
                     strokeWidth={1.5}
                   >
@@ -163,7 +163,7 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
                     y={b.y}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    className="fill-white font-bold pointer-events-none select-none"
+                    className={isHovered ? "fill-zry-roxo font-bold pointer-events-none select-none" : "fill-white font-bold pointer-events-none select-none"}
                     style={{ fontSize: b.r > 16 ? 11 : 9 }}
                   >
                     {b.uf}
@@ -173,7 +173,7 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
                       x={b.x}
                       y={b.y + b.r + 12}
                       textAnchor="middle"
-                      className="fill-slate-500 pointer-events-none select-none"
+                      className="fill-zry-text-2 pointer-events-none select-none"
                       style={{ fontSize: 9, fontWeight: 700 }}
                     >
                       {b.count}
@@ -188,7 +188,7 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
         {/* Ranking lateral */}
         <div className="space-y-4">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+            <span className="text-[10px] font-bold text-zry-text-2 uppercase tracking-wider block mb-2">
               Estados com Mais Parceiros
             </span>
             <div className="space-y-1.5">
@@ -201,11 +201,11 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
                     onMouseEnter={() => setHovered(uf)}
                     onMouseLeave={() => setHovered(null)}
                     className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg transition ${
-                      hovered === uf ? 'bg-indigo-50 text-indigo-900' : 'text-slate-700'
+                      hovered === uf ? 'bg-zry-lilas-30 text-zry-roxo' : 'text-zry-text-2'
                     }`}
                   >
                     <span className="font-semibold">{STATE_COORDS[uf]?.name || uf}</span>
-                    <span className="font-bold bg-slate-100 px-1.5 py-0.5 rounded-full text-[11px]">{count}</span>
+                    <span className="font-bold bg-zry-lilas-30 px-1.5 py-0.5 rounded-full text-[11px]">{count}</span>
                   </div>
                 ))}
             </div>
@@ -213,14 +213,14 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
 
           {cityCounts.length > 0 && (
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              <span className="text-[10px] font-bold text-zry-text-2 uppercase tracking-wider block mb-2">
                 Cidades com Mais Parceiros
               </span>
               <div className="space-y-1.5">
                 {cityCounts.map(([city, count]) => (
-                  <div key={city} className="flex items-center justify-between text-xs px-2.5 py-1.5 text-slate-700">
+                  <div key={city} className="flex items-center justify-between text-xs px-2.5 py-1.5 text-zry-text-2">
                     <span className="truncate pr-2">{city}</span>
-                    <span className="font-bold bg-slate-100 px-1.5 py-0.5 rounded-full text-[11px] shrink-0">{count}</span>
+                    <span className="font-bold bg-zry-lilas-30 px-1.5 py-0.5 rounded-full text-[11px] shrink-0">{count}</span>
                   </div>
                 ))}
               </div>
@@ -230,8 +230,8 @@ export default function PartnerLocationMap({ partners }: PartnerLocationMapProps
       </div>
 
       {totalWithoutLocation > 0 && (
-        <div className="mt-4 bg-amber-50/70 border border-amber-100 rounded-xl p-2.5 text-[11px] text-amber-900 flex items-start gap-2">
-          <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="mt-4 bg-zry-warning-bg/70 border border-zry-warning/30 rounded-xl p-2.5 text-[11px] text-zry-warning flex items-start gap-2">
+          <Info className="w-3.5 h-3.5 text-zry-warning shrink-0 mt-0.5" />
           <span>{totalWithoutLocation} parceiro(s) sem cidade/UF preenchida não aparecem no mapa.</span>
         </div>
       )}

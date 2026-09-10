@@ -14,11 +14,15 @@ create table if not exists system_backups (
 
 alter table system_backups enable row level security;
 
--- Politica temporaria: permite leitura/escrita com a anon key (app ainda sem login).
--- Revisar/restringir quando a autenticação de usuarios for implementada.
+-- Politica temporaria: permite leitura/escrita tanto sem login (anon, modo antigo)
+-- quanto logado (authenticated, modo atual com Supabase Auth — ver schema_auth.sql).
+-- Sem isso, toda escrita autenticada era negada em silêncio pelo RLS e o
+-- espelho na nuvem nunca era gravado. Revisar/restringir por papel quando o
+-- multiusuário exigir escopo por executivo.
 drop policy if exists "anon full access" on system_backups;
-create policy "anon full access" on system_backups
+drop policy if exists "anon and authenticated full access" on system_backups;
+create policy "anon and authenticated full access" on system_backups
   for all
-  to anon
+  to anon, authenticated
   using (true)
   with check (true);

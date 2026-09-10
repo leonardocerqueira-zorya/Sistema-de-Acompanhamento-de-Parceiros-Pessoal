@@ -52,30 +52,30 @@ export default function Login({ deniedMessage }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 space-y-6">
+    <div className="min-h-screen bg-zry-roxo flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-zry-surface rounded-zry-xl border border-zry-border shadow-lg p-8 space-y-6">
         <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-zry-roxo text-zry-creme flex items-center justify-center">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900">Canal de Parcerias</h1>
-          <p className="text-xs text-slate-500">Entre com o e-mail cadastrado pelo Master.</p>
+          <h1 className="text-[16px] font-bold text-zry-text">Canal de Parcerias</h1>
+          <p className="text-[12px] text-zry-text-2">Entre com o e-mail cadastrado pelo Master.</p>
         </div>
 
         {deniedMessage && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3 rounded-xl flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+          <div className="bg-zry-danger-bg border border-zry-danger/30 text-zry-danger text-[12px] p-3.5 rounded-zry-lg flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-zry-danger mt-0.5" />
             <span>{deniedMessage}</span>
           </div>
         )}
 
         {/* Mode Toggle */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-zry-lilas-30 p-1 rounded-full text-[12px] font-semibold">
           <button
             type="button"
             onClick={() => setMode('link')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition ${
-              mode === 'link' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full transition ${
+              mode === 'link' ? 'bg-zry-roxo text-zry-creme' : 'text-zry-text-2 hover:text-zry-text'
             }`}
           >
             <Send className="w-3.5 h-3.5" />
@@ -84,8 +84,8 @@ export default function Login({ deniedMessage }: LoginProps) {
           <button
             type="button"
             onClick={() => setMode('password')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition ${
-              mode === 'password' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full transition ${
+              mode === 'password' ? 'bg-zry-roxo text-zry-creme' : 'text-zry-text-2 hover:text-zry-text'
             }`}
           >
             <KeyRound className="w-3.5 h-3.5" />
@@ -95,27 +95,30 @@ export default function Login({ deniedMessage }: LoginProps) {
 
         {mode === 'link' ? (
           linkStatus === 'sent' ? (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-4 rounded-xl flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+            <div className="bg-zry-positive-bg border border-zry-positive/30 text-zry-positive text-[12px] p-3.5 rounded-zry-lg flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-zry-positive mt-0.5" />
               <span>Link enviado para <strong>{email}</strong>. Abra seu e-mail e clique no link para entrar.</span>
             </div>
           ) : (
             <form onSubmit={handleSendLink} className="space-y-3">
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  placeholder="seu.email@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
+              <div>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">E-mail</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-zry-text-2 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="seu.email@empresa.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-zry-lilas-30 border border-transparent rounded-xl pl-10 pr-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                  />
+                </div>
               </div>
 
               {linkStatus === 'error' && linkError && (
-                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3 rounded-xl flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <div className="bg-zry-danger-bg border border-zry-danger/30 text-zry-danger text-[12px] p-3.5 rounded-zry-lg flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-zry-danger mt-0.5" />
                   <span>{linkError}</span>
                 </div>
               )}
@@ -123,46 +126,52 @@ export default function Login({ deniedMessage }: LoginProps) {
               <button
                 type="submit"
                 disabled={linkStatus === 'sending'}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-xs transition disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-5 py-2.5 rounded-full text-[12.5px] transition disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
                 <span>{linkStatus === 'sending' ? 'Enviando...' : 'Enviar link de acesso'}</span>
               </button>
 
-              <p className="text-[11px] text-slate-400 text-center">
+              <p className="text-[11px] text-zry-text-2 text-center leading-relaxed">
                 Sem senha configurada ainda? Use esta opção — depois de entrar, defina uma senha no menu superior.
               </p>
             </form>
           )
         ) : (
           <form onSubmit={handlePasswordLogin} className="space-y-3">
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                required
-                placeholder="seu.email@empresa.com"
-                value={pwEmail}
-                onChange={(e) => setPwEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
+            <div>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">E-mail</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-zry-text-2 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  placeholder="seu.email@empresa.com"
+                  value={pwEmail}
+                  onChange={(e) => setPwEmail(e.target.value)}
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl pl-10 pr-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                />
+              </div>
             </div>
 
-            <div className="relative">
-              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="password"
-                required
-                placeholder="Sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
+            <div>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Senha</label>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-zry-text-2 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  required
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl pl-10 pr-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                />
+              </div>
             </div>
 
             {pwStatus === 'error' && pwError && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3 rounded-xl flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <div className="bg-zry-danger-bg border border-zry-danger/30 text-zry-danger text-[12px] p-3.5 rounded-zry-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-zry-danger mt-0.5" />
                 <span>{pwError}</span>
               </div>
             )}
@@ -170,13 +179,13 @@ export default function Login({ deniedMessage }: LoginProps) {
             <button
               type="submit"
               disabled={pwStatus === 'sending'}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-xs transition disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-5 py-2.5 rounded-full text-[12.5px] transition disabled:opacity-50"
             >
               <LogIn className="w-4 h-4" />
               <span>{pwStatus === 'sending' ? 'Entrando...' : 'Entrar'}</span>
             </button>
 
-            <p className="text-[11px] text-slate-400 text-center">
+            <p className="text-[11px] text-zry-text-2 text-center leading-relaxed">
               Ainda não tem senha? Entre pelo Link por E-mail e defina uma depois no menu superior.
             </p>
           </form>

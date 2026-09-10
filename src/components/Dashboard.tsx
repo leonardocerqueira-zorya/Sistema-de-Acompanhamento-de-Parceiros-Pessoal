@@ -152,53 +152,66 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Mode Switcher & Export CSV Action Bar */}
-      <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 bg-slate-100/90 p-1 rounded-2xl w-full sm:w-auto">
-          <button
-            type="button"
-            id="btn-dash-tab-overview"
-            onClick={() => setDashboardTab('overview')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              dashboardTab === 'overview'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4 text-indigo-600" />
-            <span>Visão Geral & KPIs</span>
-          </button>
-
-          <button
-            type="button"
-            id="btn-dash-tab-audit"
-            onClick={() => setDashboardTab('audit')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              dashboardTab === 'audit'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4 text-amber-600" />
-            <span>Pendências & Auditoria</span>
-            {auditMetrics.totalFieldsMissing > 0 && (
-              <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[10px] font-black border border-amber-300">
-                {auditMetrics.totalFieldsMissing} dados nulos
-              </span>
-            )}
-          </button>
+      {/* Cabeçalho da página + alternância de modo + exportação */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[28px] font-bold tracking-tight text-zry-text leading-none">
+            Visão geral do canal
+          </h1>
+          <p className="text-[13px] text-zry-text-2 mt-1.5">
+            {partners.length} parceiro(s) e {referrals.length} indicação(ões) no escopo atual
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1 bg-zry-lilas-30 p-1 rounded-full">
+            <button
+              type="button"
+              id="btn-dash-tab-overview"
+              onClick={() => setDashboardTab('overview')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-bold transition ${
+                dashboardTab === 'overview'
+                  ? 'bg-zry-roxo text-zry-creme'
+                  : 'text-zry-text-2 hover:text-zry-roxo'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Visão geral</span>
+            </button>
+
+            <button
+              type="button"
+              id="btn-dash-tab-audit"
+              onClick={() => setDashboardTab('audit')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-bold transition ${
+                dashboardTab === 'audit'
+                  ? 'bg-zry-roxo text-zry-creme'
+                  : 'text-zry-text-2 hover:text-zry-roxo'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Auditoria</span>
+              {auditMetrics.totalFieldsMissing > 0 && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    dashboardTab === 'audit' ? 'bg-zry-coral text-zry-roxo' : 'bg-zry-warning-bg text-zry-warning'
+                  }`}
+                >
+                  {auditMetrics.totalFieldsMissing}
+                </span>
+              )}
+            </button>
+          </div>
+
           <button
             type="button"
             id="btn-export-kpis-csv"
             onClick={() => exportConsolidatedKPIsAndRankingsCSV(kpis, rankings, filter.period.preset)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-98"
+            className="flex items-center gap-2 px-[18px] py-2.5 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo text-[12.5px] font-bold rounded-full transition"
             title="Exportar indicadores consolidados de conversão, ciclo de ativação e ranking de parceiros em arquivo CSV estruturado"
           >
-            <Download className="w-4 h-4" />
-            <span>Exportar KPIs & Rankings (CSV)</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Exportar KPIs (CSV)</span>
           </button>
         </div>
       </div>
@@ -214,26 +227,15 @@ export default function Dashboard({
       ) : (
         <>
           {/* Dynamic Period Filter Toolbar */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          
-          <div className="flex items-center gap-2 text-slate-700">
-            <div className="p-2 bg-slate-100 rounded-xl text-slate-600">
-              <Calendar className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Filtros Dinâmicos</span>
-              <span className="text-sm font-semibold text-slate-900">Período de Análise</span>
-            </div>
-          </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
 
           {/* Primary Preset Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200">
+          <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: 'all', label: 'Todo o Histórico' },
-              { id: 'mensal', label: 'Mensal' },
-              { id: 'trimestral', label: 'Trimestral' },
-              { id: 'anual', label: 'Anual' },
+              { id: 'all', label: 'Tudo' },
+              { id: 'mensal', label: 'Este mês' },
+              { id: 'trimestral', label: 'Trimestre' },
+              { id: 'anual', label: 'Este ano' },
               { id: 'last_30_days', label: 'Últimos 30 dias' },
               { id: 'custom', label: 'Personalizado' },
             ].map(item => (
@@ -241,10 +243,10 @@ export default function Dashboard({
                 key={item.id}
                 id={`filter-preset-${item.id}`}
                 onClick={() => handlePeriodPreset(item.id as PeriodFilter['preset'])}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-4 py-2 rounded-full text-[12.5px] font-semibold border transition ${
                   filter.period.preset === item.id
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200 font-bold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    ? 'bg-zry-roxo text-zry-creme border-zry-roxo'
+                    : 'bg-zry-surface text-zry-text-2 border-zry-border hover:text-zry-roxo hover:border-zry-border-strong'
                 }`}
               >
                 {item.label}
@@ -254,38 +256,38 @@ export default function Dashboard({
 
           {/* Sub-selectors for Mensal / Trimestral / Anual / Custom */}
           {filter.period.preset === 'mensal' && (
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs">
-              <span className="text-slate-500 font-medium">Mês:</span>
+            <div className="flex items-center gap-2 bg-zry-lilas-30 p-1.5 rounded-xl border border-zry-border text-xs">
+              <span className="text-zry-text-2 font-medium">Mês:</span>
               <input
                 type="month"
                 value={filter.period.selectedMonth || currentMonth}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
+                className="bg-zry-surface border border-zry-border rounded-lg px-2.5 py-1 text-zry-text text-xs focus:ring-1 focus:ring-zry-roxo"
               />
             </div>
           )}
 
           {filter.period.preset === 'trimestral' && (
-            <div className="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs">
-              <span className="text-slate-500 font-medium">Trimestre:</span>
+            <div className="flex items-center gap-1.5 bg-zry-lilas-30 p-1.5 rounded-xl border border-zry-border text-xs">
+              <span className="text-zry-text-2 font-medium">Trimestre:</span>
               {[1, 2, 3, 4].map(q => (
                 <button
                   key={q}
                   onClick={() => handleQuarterChange(q)}
                   className={`px-2 py-1 rounded-md text-xs font-semibold ${
                     (filter.period.selectedQuarter || 1) === q
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                      ? 'bg-zry-roxo text-white'
+                      : 'bg-zry-surface text-zry-text-2 hover:bg-zry-lilas-30 border border-zry-border'
                   }`}
                 >
                   T{q}
                 </button>
               ))}
-              <span className="text-slate-400 ml-1">Ano:</span>
+              <span className="text-zry-text-2 ml-1">Ano:</span>
               <select
                 value={filter.period.selectedYear || currentYear}
                 onChange={(e) => handleYearChange(parseInt(e.target.value, 10))}
-                className="bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 text-xs"
+                className="bg-zry-surface border border-zry-border rounded px-2 py-1 text-zry-text text-xs"
               >
                 {[currentYear, currentYear - 1, currentYear - 2].map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -295,12 +297,12 @@ export default function Dashboard({
           )}
 
           {filter.period.preset === 'anual' && (
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs">
-              <span className="text-slate-500 font-medium">Ano Base:</span>
+            <div className="flex items-center gap-2 bg-zry-lilas-30 p-1.5 rounded-xl border border-zry-border text-xs">
+              <span className="text-zry-text-2 font-medium">Ano Base:</span>
               <select
                 value={filter.period.selectedYear || currentYear}
                 onChange={(e) => handleYearChange(parseInt(e.target.value, 10))}
-                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                className="bg-zry-surface border border-zry-border rounded-lg px-2.5 py-1 text-zry-text text-xs font-semibold focus:ring-1 focus:ring-zry-roxo"
               >
                 {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3].map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -310,43 +312,42 @@ export default function Dashboard({
           )}
 
           {filter.period.preset === 'custom' && (
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs">
+            <div className="flex items-center gap-2 bg-zry-lilas-30 p-1.5 rounded-xl border border-zry-border text-xs">
               <div className="flex items-center gap-1">
-                <span className="text-slate-400">De:</span>
+                <span className="text-zry-text-2">De:</span>
                 <input
                   type="date"
                   value={filter.period.startDate || ''}
                   onChange={(e) => handleCustomDate('startDate', e.target.value)}
-                  className="bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
+                  className="bg-zry-surface border border-zry-border rounded px-2 py-1 text-zry-text text-xs focus:ring-1 focus:ring-zry-roxo"
                 />
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-slate-400">Até:</span>
+                <span className="text-zry-text-2">Até:</span>
                 <input
                   type="date"
                   value={filter.period.endDate || ''}
                   onChange={(e) => handleCustomDate('endDate', e.target.value)}
-                  className="bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
+                  className="bg-zry-surface border border-zry-border rounded px-2 py-1 text-zry-text text-xs focus:ring-1 focus:ring-zry-roxo"
                 />
               </div>
             </div>
           )}
 
-        </div>
-      </div>
+          </div>
 
       {/* Missing Data Alert Callout */}
       {kpis.incompleteDataCount > 0 && (
-        <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="bg-zry-warning-bg/90 border border-zry-warning/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-xl text-amber-700 shrink-0">
+            <div className="p-2 bg-zry-warning-bg rounded-xl text-zry-warning shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-amber-900">
+              <h4 className="text-sm font-bold text-zry-warning">
                 Atenção: {kpis.incompleteDataCount} registro(s) com campos pendentes de preenchimento manual
               </h4>
-              <p className="text-xs text-amber-700 mt-0.5">
+              <p className="text-xs text-zry-warning mt-0.5">
                 Conforme solicitado, nenhum dado foi inventado. Preencha os campos vazios no frontend para calibrar 100% os indicadores.
               </p>
             </div>
@@ -354,7 +355,7 @@ export default function Dashboard({
           <button
             id="btn-audit-missing"
             onClick={() => onNavigateToReferrals(true)}
-            className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shrink-0 transition shadow-xs"
+            className="flex items-center gap-1.5 bg-zry-roxo hover:bg-zry-roxo-hover text-zry-creme text-[12.5px] font-bold px-4 py-2.5 rounded-full shrink-0 transition"
           >
             <span>Auditar e Preencher</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -364,13 +365,13 @@ export default function Dashboard({
 
       {/* Empty State Banner when no real data has been registered yet */}
       {hasZeroData && (
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-4 shadow-xs">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center">
+        <div className="bg-zry-surface rounded-zry-lg p-8 border border-zry-border text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-zry-positive-bg text-zry-positive mx-auto flex items-center justify-center">
             <Target className="w-6 h-6" />
           </div>
           <div className="max-w-md mx-auto">
-            <h3 className="text-lg font-bold text-slate-900">Nenhum dado fictício ativo</h3>
-            <p className="text-xs text-slate-500 mt-1">
+            <h3 className="text-lg font-bold text-zry-text">Nenhum dado fictício ativo</h3>
+            <p className="text-xs text-zry-text-2 mt-1">
               Todos os dados fictícios foram removidos. O sistema está pronto para você cadastrar seus parceiros reais, registrar indicações ou sincronizar sua planilha.
             </p>
           </div>
@@ -378,7 +379,7 @@ export default function Dashboard({
             {onOpenNewPartner && (
               <button
                 onClick={onOpenNewPartner}
-                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-xs"
+                className="flex items-center gap-1.5 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo text-[12.5px] font-bold px-[18px] py-2.5 rounded-full transition"
               >
                 <Users className="w-3.5 h-3.5" />
                 <span>Cadastrar 1º Parceiro</span>
@@ -387,7 +388,7 @@ export default function Dashboard({
             {onOpenNewReferral && (
               <button
                 onClick={onOpenNewReferral}
-                className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-xs"
+                className="flex items-center gap-1.5 bg-zry-roxo hover:bg-zry-roxo-hover text-zry-creme text-[12.5px] font-bold px-[18px] py-2.5 rounded-full transition"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Registrar 1ª Indicação</span>
@@ -396,9 +397,9 @@ export default function Dashboard({
             {onNavigateToSheets && (
               <button
                 onClick={onNavigateToSheets}
-                className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-4 py-2 rounded-xl transition"
+                className="flex items-center gap-1.5 bg-zry-surface hover:bg-zry-lilas-30 text-zry-text-2 border border-zry-border text-xs font-semibold px-4 py-2 rounded-xl transition"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-zry-positive" />
                 <span>Importar Planilha</span>
               </button>
             )}
@@ -410,117 +411,86 @@ export default function Dashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
         {/* KPI 1: Taxa de Conversão de Indicações em Negócios Fechados */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Taxa de Conversão do Canal</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
+        <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
+            <CheckCircle2 className="w-[18px] h-[18px] text-zry-creme" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {kpis.totalReferrals > 0 ? `${kpis.conversionRate.toFixed(1)}%` : '—'}
-            </h3>
-            <div className="flex items-center gap-2 mt-2 text-xs">
-              <span className="font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
-                {kpis.totalWonDeals} ganhos
-              </span>
-              <span className="text-slate-500">
-                de {kpis.totalReferrals} indicações
-              </span>
-            </div>
+          <div className="text-[26px] font-bold tracking-tight text-zry-text leading-none">
+            {kpis.totalReferrals > 0 ? `${kpis.conversionRate.toFixed(1)}%` : '—'}
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Taxa de conversão do canal</div>
+          <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
+            <span className="font-semibold text-zry-text">{kpis.totalWonDeals} ganhos</span> de {kpis.totalReferrals} indicações
           </div>
         </div>
 
         {/* KPI 2: Média de Tempo entre Entrada do Parceiro e a 1ª Indicação */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Tempo de Ativação do Parceiro</span>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-              <Clock className="w-4 h-4" />
-            </div>
+        <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
+            <Clock className="w-[18px] h-[18px] text-zry-creme" />
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {kpis.avgDaysPartnerToFirstReferral !== null ? kpis.avgDaysPartnerToFirstReferral : '—'}
-              </h3>
-              {kpis.avgDaysPartnerToFirstReferral !== null && (
-                <span className="text-xs font-bold text-slate-500">dias</span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Média: entrada &rarr; 1ª indicação
-            </p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[26px] font-bold tracking-tight text-zry-text leading-none">
+              {kpis.avgDaysPartnerToFirstReferral !== null ? kpis.avgDaysPartnerToFirstReferral : '—'}
+            </span>
+            {kpis.avgDaysPartnerToFirstReferral !== null && (
+              <span className="text-[12px] font-semibold text-zry-text-2">dias</span>
+            )}
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Tempo de ativação do parceiro</div>
+          <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
+            Média: entrada &rarr; 1ª indicação
           </div>
         </div>
 
         {/* KPI 3: Volume Fechado no Canal */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Volume Total Fechado</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-              <DollarSign className="w-4 h-4" />
-            </div>
+        <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
+            <DollarSign className="w-[18px] h-[18px] text-zry-creme" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {formatCurrency(kpis.totalWonVolume)}
-            </h3>
-            <div className="flex items-center gap-2 mt-2 text-xs">
-              <span className="font-semibold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
-                Pipeline: {formatCurrency(kpis.pipelineVolume)}
-              </span>
-            </div>
+          <div className="text-[22px] font-bold tracking-tight text-zry-text leading-none">
+            {formatCurrency(kpis.totalWonVolume)}
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Volume ganho (líquido)</div>
+          <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
+            Pipeline: <span className="font-semibold text-zry-text">{formatCurrency(kpis.pipelineVolume)}</span>
           </div>
         </div>
 
         {/* KPI 4: Descontos Aplicados (R$ e %) */}
-        <div className="bg-white rounded-2xl p-5 border border-purple-200/80 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-purple-900">Descontos Aplicados</span>
-            <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
-              <Percent className="w-4 h-4" />
-            </div>
+        <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
+            <Percent className="w-[18px] h-[18px] text-zry-creme" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold text-purple-950 tracking-tight">
-              {formatCurrency(kpis.totalDiscountVolume)}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-2 text-xs">
-              <span className="font-semibold text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-md">
-                {kpis.avgDiscountPercent.toFixed(1)}% médio
-              </span>
-              <span className="text-purple-600 text-[11px] truncate" title="10% padrão mensal / 15% anual">
-                (10% mens / 15% an.)
-              </span>
-            </div>
+          <div className="text-[22px] font-bold tracking-tight text-zry-text leading-none">
+            {formatCurrency(kpis.totalDiscountVolume)}
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Descontos aplicados</div>
+          <div
+            className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border"
+            title="10% padrão mensal / 15% anual"
+          >
+            <span className="font-semibold text-zry-text">{kpis.avgDiscountPercent.toFixed(1)}% médio</span> (10% mens / 15% an.)
           </div>
         </div>
 
         {/* KPI 5: Comissões a Pagar */}
-        <div 
+        <div
           onClick={onNavigateToCommissions}
-          className="bg-white rounded-2xl p-5 border border-amber-200 shadow-xs relative overflow-hidden cursor-pointer hover:border-amber-400 transition group"
+          className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border cursor-pointer hover:border-zry-coral transition group"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-800">Comissões a Pagar</span>
-            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl group-hover:scale-105 transition-transform">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-coral flex items-center justify-center mb-3.5">
+            <AlertTriangle className="w-[18px] h-[18px] text-zry-roxo" />
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold text-amber-900 tracking-tight">
-              {formatCurrency(kpis.commissionsToPay)}
-            </h3>
-            <div className="flex items-center justify-between mt-2 text-xs">
-              <span className="font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-md">
-                {kpis.pendingCommissionCount} parcela(s)
-              </span>
-              <span className="text-amber-800 flex items-center text-[11px] font-medium group-hover:translate-x-0.5 transition-transform">
-                Ver &rarr;
-              </span>
-            </div>
+          <div className="text-[22px] font-bold tracking-tight text-zry-text leading-none">
+            {formatCurrency(kpis.commissionsToPay)}
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Comissões a pagar</div>
+          <div className="flex items-center justify-between text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
+            <span>
+              <span className="font-semibold text-zry-text">{kpis.pendingCommissionCount}</span> parcela(s)
+            </span>
+            <span className="font-semibold text-zry-roxo group-hover:translate-x-0.5 transition-transform">Ver &rarr;</span>
           </div>
         </div>
 
@@ -538,24 +508,24 @@ export default function Dashboard({
       />
 
       {/* Card de Performance Consolidada: Ticket Médio de Vendas vs Custo Médio de Comissão */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
+      <div className="bg-zry-surface rounded-zry-lg p-6 sm:p-7 border border-zry-border/90 space-y-6">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zry-border pb-5">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="p-3 bg-indigo-50 text-indigo-700 rounded-2xl shrink-0">
+            <div className="p-3 bg-zry-lilas-30 text-zry-roxo rounded-2xl shrink-0">
               <Scale className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                <h2 className="text-base font-bold text-zry-text tracking-tight">
                   Performance Consolidada &amp; Rentabilidade do Canal
                 </h2>
-                <span className="bg-indigo-100 text-indigo-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider">
+                <span className="bg-zry-lilas text-zry-roxo text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider">
                   Eficiência
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-zry-text-2 mt-1">
                 Comparativo financeiro entre o Ticket Médio de Vendas e o Custo Médio de Comissão para aferir a margem e o ROI do canal de parceiros.
               </p>
             </div>
@@ -563,12 +533,12 @@ export default function Dashboard({
 
           <div className="flex flex-wrap items-center gap-2">
             {kpis.revenueMultiplier > 0 ? (
-              <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
-                <Coins className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="flex items-center gap-1.5 bg-zry-positive-bg text-zry-positive border border-zry-positive/80 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
+                <Coins className="w-3.5 h-3.5 text-zry-positive" />
                 <span>Retorno: {kpis.revenueMultiplier.toFixed(1)}x por R$ em comissão</span>
               </div>
             ) : (
-              <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-lg font-medium">
+              <span className="text-xs text-zry-text-2 bg-zry-lilas-30 px-3 py-1 rounded-lg font-medium">
                 Sem vendas ganhas no filtro
               </span>
             )}
@@ -579,70 +549,70 @@ export default function Dashboard({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           
           {/* Card A: Ticket Médio de Vendas */}
-          <div className="bg-gradient-to-br from-slate-50 to-indigo-50/20 rounded-2xl p-5 border border-slate-200/80 flex flex-col justify-between space-y-4">
+          <div className="bg-zry-lilas-30 rounded-zry-lg p-5 border border-zry-border flex flex-col justify-between space-y-4">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zry-roxo bg-zry-lilas px-2 py-0.5 rounded-md">
                   Receita do Canal
                 </span>
-                <span className="text-xs text-slate-400 font-medium">
+                <span className="text-xs text-zry-text-2 font-medium">
                   {kpis.totalWonDeals} negócio(s) fechado(s)
                 </span>
               </div>
               <div className="mt-3">
-                <span className="text-xs text-slate-500 block font-medium">Ticket Médio de Vendas (MRR / Contrato)</span>
+                <span className="text-xs text-zry-text-2 block font-medium">Ticket Médio de Vendas (MRR / Contrato)</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                  <span className="text-3xl sm:text-4xl font-black text-zry-text tracking-tight">
                     {formatCurrency(kpis.avgTicket)}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-xs font-semibold text-zry-text-2">
                     / venda
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-200/60 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
+            <div className="pt-3 border-t border-zry-border/60 flex flex-wrap items-center justify-between text-xs text-zry-text-2 gap-2">
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span>
-                Volume Total Fechado: <strong className="text-slate-900">{formatCurrency(kpis.totalWonVolume)}</strong>
+                <span className="w-1.5 h-1.5 rounded-full bg-zry-roxo inline-block"></span>
+                Volume Total Fechado: <strong className="text-zry-text">{formatCurrency(kpis.totalWonVolume)}</strong>
               </span>
-              <span className="text-slate-400">
-                Valor Bruto de Tabela: <strong className="text-slate-700">{formatCurrency(kpis.totalWonDeals > 0 ? kpis.grossWonVolume / kpis.totalWonDeals : 0)}</strong>
+              <span className="text-zry-text-2">
+                Valor Bruto de Tabela: <strong className="text-zry-text-2">{formatCurrency(kpis.totalWonDeals > 0 ? kpis.grossWonVolume / kpis.totalWonDeals : 0)}</strong>
               </span>
             </div>
           </div>
 
           {/* Card B: Custo Médio de Comissão */}
-          <div className="bg-gradient-to-br from-amber-50/40 to-orange-50/20 rounded-2xl p-5 border border-amber-200/80 flex flex-col justify-between space-y-4">
+          <div className="bg-zry-creme rounded-zry-lg p-5 border border-zry-coral/40 flex flex-col justify-between space-y-4">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zry-warning bg-zry-warning-bg px-2 py-0.5 rounded-md">
                   Custo de Parceria
                 </span>
-                <span className="text-xs font-semibold text-amber-700">
+                <span className="text-xs font-semibold text-zry-warning">
                   {kpis.commissionSharePercent > 0 ? `${kpis.commissionSharePercent.toFixed(1)}% do ticket médio` : '0%'}
                 </span>
               </div>
               <div className="mt-3">
-                <span className="text-xs text-amber-900 block font-medium">Custo Médio de Comissão por Fechamento</span>
+                <span className="text-xs text-zry-warning block font-medium">Custo Médio de Comissão por Fechamento</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl sm:text-4xl font-black text-amber-950 tracking-tight">
+                  <span className="text-3xl sm:text-4xl font-black text-zry-warning tracking-tight">
                     {formatCurrency(kpis.avgCommissionCost)}
                   </span>
-                  <span className="text-xs font-semibold text-amber-800">
+                  <span className="text-xs font-semibold text-zry-warning">
                     / comissão
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-amber-200/60 flex flex-wrap items-center justify-between text-xs text-amber-900 gap-2">
+            <div className="pt-3 border-t border-zry-warning/60 flex flex-wrap items-center justify-between text-xs text-zry-warning gap-2">
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
-                Comissões Geradas: <strong className="text-amber-950">{formatCurrency(kpis.totalCommissionsWon)}</strong>
+                <span className="w-1.5 h-1.5 rounded-full bg-zry-warning inline-block"></span>
+                Comissões Geradas: <strong className="text-zry-warning">{formatCurrency(kpis.totalCommissionsWon)}</strong>
               </span>
-              <span className="text-amber-800">
+              <span className="text-zry-warning">
                 Quitadas: <strong>{formatCurrency(kpis.commissionsPaid)}</strong> | A Pagar: <strong>{formatCurrency(kpis.commissionsToPay)}</strong>
               </span>
             </div>
@@ -651,12 +621,12 @@ export default function Dashboard({
         </div>
 
         {/* Visual Proportional Ratio Bar */}
-        <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 space-y-3">
+        <div className="bg-zry-lilas-30 rounded-2xl p-5 border border-zry-border/80 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1.5">
-            <span className="font-bold text-slate-700">
+            <span className="font-bold text-zry-text-2">
               Distribuição Proporcional do Ticket Médio por Venda
             </span>
-            <span className="text-slate-500">
+            <span className="text-zry-text-2">
               {kpis.totalWonDeals > 0 
                 ? `Base de cálculo: ${kpis.totalWonDeals} contrato(s) ganho(s)` 
                 : 'Nenhum contrato ganho registrado no filtro selecionado'}
@@ -665,11 +635,11 @@ export default function Dashboard({
 
           {kpis.totalWonDeals > 0 && kpis.avgTicket > 0 ? (
             <div className="space-y-2">
-              <div className="h-5 w-full bg-slate-200 rounded-xl overflow-hidden flex shadow-inner">
+              <div className="h-5 w-full bg-zry-lilas rounded-xl overflow-hidden flex shadow-inner">
                 {/* Net company retention */}
                 <div 
                   style={{ width: `${Math.max(5, 100 - kpis.commissionSharePercent)}%` }}
-                  className="bg-emerald-600 hover:bg-emerald-500 transition-colors flex items-center justify-start px-2.5 text-[10px] font-bold text-white truncate"
+                  className="bg-zry-roxo hover:bg-zry-roxo-hover transition-colors flex items-center justify-start px-2.5 text-[10px] font-bold text-white truncate"
                   title={`Margem Líquida Retida: ${formatCurrency(kpis.netChannelMargin)} (${(100 - kpis.commissionSharePercent).toFixed(1)}%)`}
                 >
                   {(100 - kpis.commissionSharePercent).toFixed(1)}% Margem Líquida
@@ -677,26 +647,26 @@ export default function Dashboard({
                 {/* Commission paid out */}
                 <div 
                   style={{ width: `${Math.min(95, kpis.commissionSharePercent)}%` }}
-                  className="bg-amber-500 hover:bg-amber-400 transition-colors flex items-center justify-end px-2.5 text-[10px] font-bold text-white truncate"
+                  className="bg-zry-warning hover:bg-zry-warning transition-colors flex items-center justify-end px-2.5 text-[10px] font-bold text-white truncate"
                   title={`Comissão do Parceiro: ${formatCurrency(kpis.avgCommissionCost)} (${kpis.commissionSharePercent.toFixed(1)}%)`}
                 >
                   {kpis.commissionSharePercent.toFixed(1)}% Comissão
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-600 pt-1">
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-zry-text-2 pt-1">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
-                  <span>Margem Retida: <strong className="text-emerald-700">{formatCurrency(kpis.netChannelMargin)}</strong> por cliente</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-zry-positive inline-block"></span>
+                  <span>Margem Retida: <strong className="text-zry-positive">{formatCurrency(kpis.netChannelMargin)}</strong> por cliente</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                  <span>Custo de Comissão: <strong className="text-amber-800">{formatCurrency(kpis.avgCommissionCost)}</strong> por cliente</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-zry-warning inline-block"></span>
+                  <span>Custo de Comissão: <strong className="text-zry-warning">{formatCurrency(kpis.avgCommissionCost)}</strong> por cliente</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+            <div className="p-3 bg-zry-surface rounded-xl border border-zry-border text-center text-xs text-zry-text-2">
               Registre contratos fechados no sistema para visualizar a régua visual de rentabilidade do canal.
             </div>
           )}
@@ -705,42 +675,42 @@ export default function Dashboard({
         {/* 4 Strategic Pillars of Channel Profitability */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
           
-          <div className="bg-white rounded-xl p-3.5 border border-slate-200">
-            <span className="text-[11px] font-medium text-slate-500 block">Margem Líquida por Venda</span>
-            <span className="text-lg font-bold text-slate-900 block mt-1">
+          <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
+            <span className="text-[11px] font-medium text-zry-text-2 block">Margem Líquida por Venda</span>
+            <span className="text-lg font-bold text-zry-text block mt-1">
               {formatCurrency(kpis.netChannelMargin)}
             </span>
-            <span className="text-[11px] text-emerald-600 font-semibold block mt-0.5">
+            <span className="text-[11px] text-zry-positive font-semibold block mt-0.5">
               {kpis.avgTicket > 0 ? `${(100 - kpis.commissionSharePercent).toFixed(1)}% retido` : '—'}
             </span>
           </div>
 
-          <div className="bg-white rounded-xl p-3.5 border border-slate-200">
-            <span className="text-[11px] font-medium text-slate-500 block">Take-Rate da Parceria</span>
-            <span className="text-lg font-bold text-slate-900 block mt-1">
+          <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
+            <span className="text-[11px] font-medium text-zry-text-2 block">Take-Rate da Parceria</span>
+            <span className="text-lg font-bold text-zry-text block mt-1">
               {kpis.commissionSharePercent > 0 ? `${kpis.commissionSharePercent.toFixed(1)}%` : '0%'}
             </span>
-            <span className="text-[11px] text-amber-700 font-medium block mt-0.5">
+            <span className="text-[11px] text-zry-warning font-medium block mt-0.5">
               Custo comissão s/ ticket
             </span>
           </div>
 
-          <div className="bg-white rounded-xl p-3.5 border border-slate-200">
-            <span className="text-[11px] font-medium text-slate-500 block">Múltiplo ROI do Canal</span>
-            <span className="text-lg font-bold text-slate-900 block mt-1">
+          <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
+            <span className="text-[11px] font-medium text-zry-text-2 block">Múltiplo ROI do Canal</span>
+            <span className="text-lg font-bold text-zry-text block mt-1">
               {kpis.revenueMultiplier > 0 ? `${kpis.revenueMultiplier.toFixed(1)}x` : '—'}
             </span>
-            <span className="text-[11px] text-slate-500 block mt-0.5">
+            <span className="text-[11px] text-zry-text-2 block mt-0.5">
               Receita por R$ 1 em comissão
             </span>
           </div>
 
-          <div className="bg-white rounded-xl p-3.5 border border-slate-200">
-            <span className="text-[11px] font-medium text-slate-500 block">Volume Líquido Consolidado</span>
-            <span className="text-lg font-bold text-slate-900 block mt-1">
+          <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
+            <span className="text-[11px] font-medium text-zry-text-2 block">Volume Líquido Consolidado</span>
+            <span className="text-lg font-bold text-zry-text block mt-1">
               {formatCurrency(kpis.totalWonVolume - kpis.totalCommissionsWon)}
             </span>
-            <span className="text-[11px] text-slate-500 block mt-0.5">
+            <span className="text-[11px] text-zry-text-2 block mt-0.5">
               Receita total livre de comissão
             </span>
           </div>
@@ -766,74 +736,74 @@ export default function Dashboard({
       />
 
       {/* Ciclo de Indicação do Programa Section */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-md border border-slate-800 relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="bg-zry-roxo text-zry-creme rounded-zry-lg p-6 border border-white/10 relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div>
             <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
+              <span className="p-1.5 bg-zry-coral/20 text-zry-coral rounded-lg">
                 <Zap className="w-4 h-4" />
               </span>
-              <h2 className="text-lg font-bold text-white tracking-tight">Ciclo de Indicação do Programa</h2>
+              <h2 className="text-lg font-bold text-zry-creme tracking-tight">Ciclo de Indicação do Programa</h2>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-zry-creme/60 mt-1">
               Indicadores de tempo e maturação comercial de ponta a ponta do canal.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
-            <span className="text-slate-400">Ativação do Canal:</span>
-            <span className="font-bold text-emerald-400">{kpis.partnerActivationRate.toFixed(0)}% com indicações</span>
+          <div className="flex items-center gap-2 text-xs bg-zry-surface/10 px-3 py-1.5 rounded-xl border border-white/15">
+            <span className="text-zry-creme/60">Ativação do Canal:</span>
+            <span className="font-bold text-zry-coral">{kpis.partnerActivationRate.toFixed(0)}% com indicações</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          
+
           {/* Card 1: Entrada -> 1ª Indicação */}
-          <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/60">
-            <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="bg-zry-surface/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center justify-between text-xs text-zry-creme/60">
               <span>Ativação de Parceiro</span>
-              <span className="text-emerald-400 font-medium">Entrada &rarr; 1ª Indicação</span>
+              <span className="text-zry-coral font-medium">Entrada &rarr; 1ª Indicação</span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-white tracking-tight">
+              <span className="text-3xl font-extrabold text-zry-creme tracking-tight">
                 {kpis.avgDaysPartnerToFirstReferral !== null ? `${kpis.avgDaysPartnerToFirstReferral}` : '—'}
               </span>
-              <span className="text-sm font-semibold text-slate-300">dias em média</span>
+              <span className="text-sm font-semibold text-zry-creme/80">dias em média</span>
             </div>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            <p className="text-xs text-zry-creme/60 mt-2 leading-relaxed">
               Média entre a data de cadastro do parceiro e sua primeira indicação registrada no sistema.
             </p>
           </div>
 
           {/* Card 2: Indicação -> Fechamento Ganho */}
-          <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/60">
-            <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="bg-zry-surface/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center justify-between text-xs text-zry-creme/60">
               <span>Velocidade de Fechamento</span>
-              <span className="text-blue-400 font-medium">Lead &rarr; Ganho</span>
+              <span className="text-zry-coral font-medium">Lead &rarr; Ganho</span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-white tracking-tight">
+              <span className="text-3xl font-extrabold text-zry-creme tracking-tight">
                 {kpis.avgDaysReferralToClose !== null ? `${kpis.avgDaysReferralToClose}` : '—'}
               </span>
-              <span className="text-sm font-semibold text-slate-300">dias em média</span>
+              <span className="text-sm font-semibold text-zry-creme/80">dias em média</span>
             </div>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            <p className="text-xs text-zry-creme/60 mt-2 leading-relaxed">
               Tempo médio decorrido entre a indicação recebida e a assinatura/fechamento do contrato.
             </p>
           </div>
 
           {/* Card 3: Base Ativa vs Total */}
-          <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/60">
-            <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="bg-zry-surface/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center justify-between text-xs text-zry-creme/60">
               <span>Parceiros Ativos</span>
-              <span className="text-purple-400 font-medium">Cadastrados</span>
+              <span className="text-zry-coral font-medium">Cadastrados</span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-white tracking-tight">
+              <span className="text-3xl font-extrabold text-zry-creme tracking-tight">
                 {kpis.activePartnersCount}
               </span>
-              <span className="text-sm font-semibold text-slate-300">de {partners.length} parceiros</span>
+              <span className="text-sm font-semibold text-zry-creme/80">de {partners.length} parceiros</span>
             </div>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            <p className="text-xs text-zry-creme/60 mt-2 leading-relaxed">
               Parceiros cadastrados com status ativo e aptos para novas indicações comerciais.
             </p>
           </div>
@@ -842,67 +812,67 @@ export default function Dashboard({
       </div>
 
       {/* Ranking Interativo de Parceiros (Explicit Requirement: ranking por número de indicações e por negócios fechados) */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="bg-zry-surface rounded-zry-lg p-6 border border-zry-border">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zry-border pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-500" />
-              <h3 className="text-base font-bold text-slate-900">Ranking Estratégico de Parceiros</h3>
+              <Award className="w-5 h-5 text-zry-warning" />
+              <h3 className="text-base font-bold text-zry-text">Ranking Estratégico de Parceiros</h3>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-zry-text-2 mt-0.5">
               Classifique parceiros por número de indicações, negócios fechados, volume financeiro ou taxa de conversão.
             </p>
           </div>
 
           {/* Toggle de Classificação (Por Indicações vs Por Fechados vs Outros) */}
-          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium self-start md:self-auto">
-            <span className="text-[11px] text-slate-400 px-2 font-semibold">Ordenar:</span>
+          <div className="flex flex-wrap items-center gap-1 bg-zry-lilas-30 p-1 rounded-full text-xs font-medium self-start md:self-auto">
+            <span className="text-[11px] text-zry-text-2 px-2 font-semibold">Ordenar:</span>
             <button
               onClick={() => setRankingSort('wonDeals')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-3 py-1.5 rounded-full transition ${
                 rankingSort === 'wonDeals'
-                  ? 'bg-white text-emerald-700 font-bold shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme font-bold'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Negócios Fechados
             </button>
             <button
               onClick={() => setRankingSort('referrals')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-3 py-1.5 rounded-full transition ${
                 rankingSort === 'referrals'
-                  ? 'bg-white text-blue-700 font-bold shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme font-bold'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Nº de Indicações
             </button>
             <button
               onClick={() => setRankingSort('volume')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-3 py-1.5 rounded-full transition ${
                 rankingSort === 'volume'
-                  ? 'bg-white text-slate-900 font-bold shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme font-bold'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Volume (R$)
             </button>
             <button
               onClick={() => setRankingSort('conversion')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-3 py-1.5 rounded-full transition ${
                 rankingSort === 'conversion'
-                  ? 'bg-white text-purple-700 font-bold shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme font-bold'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Conversão (%)
             </button>
             <button
               onClick={() => setRankingSort('speed')}
-              className={`px-2.5 py-1 rounded-lg transition ${
+              className={`px-3 py-1.5 rounded-full transition ${
                 rankingSort === 'speed'
-                  ? 'bg-white text-indigo-700 font-bold shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-zry-roxo text-zry-creme font-bold'
+                  : 'text-zry-text-2 hover:text-zry-text'
               }`}
             >
               Mais Rápidos
@@ -912,35 +882,35 @@ export default function Dashboard({
 
         {/* Ranking Table */}
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+          <table className="w-full text-left text-[13px] text-zry-text-2">
+            <thead className="text-[11px] text-zry-text-2 uppercase tracking-wider font-semibold border-b border-zry-border">
               <tr>
                 <th className="py-3 px-4 w-12 text-center">Posição</th>
                 <th className="py-3 px-4">Parceiro</th>
                 <th className="py-3 px-4">Data Entrada</th>
-                <th className={`py-3 px-4 text-center ${rankingSort === 'referrals' ? 'text-blue-700 bg-blue-50/50' : ''}`}>
+                <th className={`py-3 px-4 text-center ${rankingSort === 'referrals' ? 'text-zry-roxo bg-zry-lilas-30' : ''}`}>
                   Indicações
                 </th>
-                <th className={`py-3 px-4 text-center ${rankingSort === 'wonDeals' ? 'text-emerald-700 bg-emerald-50/50' : ''}`}>
+                <th className={`py-3 px-4 text-center ${rankingSort === 'wonDeals' ? 'text-zry-roxo bg-zry-lilas-30' : ''}`}>
                   Negócios Fechados
                 </th>
-                <th className={`py-3 px-4 text-right ${rankingSort === 'volume' ? 'text-slate-900 bg-slate-100/50' : ''}`}>
+                <th className={`py-3 px-4 text-right ${rankingSort === 'volume' ? 'text-zry-roxo bg-zry-lilas-30' : ''}`}>
                   Volume Ganho
                 </th>
                 <th className="py-3 px-4 text-right">Comissões</th>
-                <th className={`py-3 px-4 text-center ${rankingSort === 'conversion' ? 'text-purple-700 bg-purple-50/50' : ''}`}>
+                <th className={`py-3 px-4 text-center ${rankingSort === 'conversion' ? 'text-zry-roxo bg-zry-lilas-30' : ''}`}>
                   Conversão
                 </th>
-                <th className={`py-3 px-4 text-center ${rankingSort === 'speed' ? 'text-indigo-700 bg-indigo-50/50' : ''}`}>
+                <th className={`py-3 px-4 text-center ${rankingSort === 'speed' ? 'text-zry-roxo bg-zry-lilas-30' : ''}`}>
                   Ciclo 1ª Indicação
                 </th>
                 <th className="py-3 px-4 text-center">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {rankings.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-zry-text-2">
                     Nenhum parceiro cadastrado para o ranking.
                   </td>
                 </tr>
@@ -948,41 +918,41 @@ export default function Dashboard({
                 rankings.map((item, index) => {
                   const isTop3 = index < 3;
                   return (
-                    <tr key={item.partnerId} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={item.partnerId} className="border-t border-zry-border hover:bg-zry-lilas-30/60 transition-colors">
                       <td className="py-3 px-4 text-center font-bold">
                         {index === 0 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 font-extrabold text-xs">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-zry-coral text-zry-roxo font-extrabold text-xs">
                             1º
                           </span>
                         ) : index === 1 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-zry-lilas text-zry-text-2 font-extrabold text-xs">
                             2º
                           </span>
                         ) : index === 2 ? (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-600/10 text-amber-800 font-extrabold text-xs">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-zry-warning/10 text-zry-warning font-extrabold text-xs">
                             3º
                           </span>
                         ) : (
-                          <span className="text-slate-400 font-semibold">{index + 1}º</span>
+                          <span className="text-zry-text-2 font-semibold">{index + 1}º</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 font-semibold text-slate-900">
+                      <td className="py-3 px-4 font-semibold text-zry-text">
                         <div className="flex items-center gap-2">
                           <span>{item.partnerName}</span>
                           {isTop3 && (
-                            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.2 rounded font-medium">
+                            <span className="text-[10px] bg-zry-warning-bg text-zry-warning border border-zry-warning/30 px-1.5 py-0.2 rounded font-medium">
                               Top {index + 1}
                             </span>
                           )}
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-slate-500">
+                      <td className="py-3 px-4 text-zry-text-2">
                         {item.joinedDate ? (
                           formatDateBR(item.joinedDate)
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-zry-warning bg-zry-warning-bg px-1.5 py-0.5 rounded border border-zry-warning/30">
                             <AlertTriangle className="w-3 h-3" />
                             Data pendente
                           </span>
@@ -990,55 +960,55 @@ export default function Dashboard({
                       </td>
 
                       <td className={`py-3 px-4 text-center font-semibold ${
-                        rankingSort === 'referrals' ? 'text-blue-700 font-bold bg-blue-50/30' : 'text-slate-700'
+                        rankingSort === 'referrals' ? 'text-zry-info font-bold bg-zry-info-bg/30' : 'text-zry-text-2'
                       }`}>
                         {item.totalReferrals}
                       </td>
 
                       <td className={`py-3 px-4 text-center font-bold ${
-                        rankingSort === 'wonDeals' ? 'text-emerald-700 bg-emerald-50/30' : 'text-emerald-600'
+                        rankingSort === 'wonDeals' ? 'text-zry-positive bg-zry-positive-bg/30' : 'text-zry-positive'
                       }`}>
                         {item.wonReferrals}
                       </td>
 
                       <td className={`py-3 px-4 text-right font-bold ${
-                        rankingSort === 'volume' ? 'text-slate-900 bg-slate-50' : 'text-slate-800'
+                        rankingSort === 'volume' ? 'text-zry-text bg-zry-lilas-30' : 'text-zry-text'
                       }`}>
                         {formatCurrency(item.wonVolume)}
                       </td>
 
-                      <td className="py-3 px-4 text-right font-semibold text-purple-700">
+                      <td className="py-3 px-4 text-right font-semibold text-zry-info">
                         {formatCurrency(item.totalCommissions)}
                       </td>
 
-                      <td className={`py-3 px-4 text-center ${rankingSort === 'conversion' ? 'bg-purple-50/30' : ''}`}>
+                      <td className={`py-3 px-4 text-center ${rankingSort === 'conversion' ? 'bg-zry-info-bg/30' : ''}`}>
                         <span className={`inline-block px-2 py-0.5 rounded font-semibold text-[11px] ${
                           item.conversionRate >= 50
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-zry-positive-bg text-zry-positive border border-zry-positive/30'
                             : item.conversionRate > 0
-                            ? 'bg-slate-100 text-slate-700'
-                            : 'text-slate-400'
+                            ? 'bg-zry-lilas-30 text-zry-text-2'
+                            : 'text-zry-text-2'
                         }`}>
                           {item.conversionRate.toFixed(0)}%
                         </span>
                       </td>
 
-                      <td className={`py-3 px-4 text-center text-slate-600 ${rankingSort === 'speed' ? 'bg-indigo-50/30' : ''}`}>
+                      <td className={`py-3 px-4 text-center text-zry-text-2 ${rankingSort === 'speed' ? 'bg-zry-info-bg/30' : ''}`}>
                         {item.daysToFirstReferral !== null ? (
-                          <span className="font-medium text-slate-800">
+                          <span className="font-medium text-zry-text">
                             {item.daysToFirstReferral} {item.daysToFirstReferral === 1 ? 'dia' : 'dias'}
                           </span>
                         ) : item.totalReferrals > 0 ? (
-                          <span className="text-amber-600 text-[11px]">Sem data entrada</span>
+                          <span className="text-zry-warning text-[11px]">Sem data entrada</span>
                         ) : (
-                          <span className="text-slate-400">Sem indicação</span>
+                          <span className="text-zry-text-2">Sem indicação</span>
                         )}
                       </td>
 
                       <td className="py-3 px-4 text-center">
                         <button
                           onClick={() => onSelectPartner(item.partnerId)}
-                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1"
+                          className="text-xs font-semibold text-zry-info hover:text-zry-info hover:underline inline-flex items-center gap-1"
                         >
                           Filtrar <ChevronRight className="w-3 h-3" />
                         </button>

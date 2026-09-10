@@ -42,6 +42,7 @@ import { formatCurrency, normalizeDocument } from './utils/analytics';
 import { calculateReferralVintages, checkAndTriggerVintageCutoffNotifications } from './utils/vintageAnalytics';
 import { updateReferralCommissionStatusFromInstallments, backfillAllCommissions } from './utils/commissionLogic';
 import Navbar, { type AppTab } from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import UsersView from './components/UsersView';
 import Dashboard from './components/Dashboard';
@@ -599,41 +600,53 @@ export default function App() {
 
   // Gate: exige login real quando o Supabase está configurado.
   if (isSupabaseConfigured && !authChecked) {
-    return <div className="min-h-screen bg-slate-950" />;
+    return <div className="min-h-screen bg-zry-roxo" />;
   }
   if (isSupabaseConfigured && !session) {
     return <Login deniedMessage={accessDeniedMsg} />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      
-      {/* Navigation Topbar */}
-      <Navbar
+    <div className="min-h-screen bg-zry-creme text-zry-text flex selection:bg-zry-coral selection:text-zry-roxo">
+
+      {/* Rail de navegação */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenNewReferral={() => {
-          setEditingReferral(null);
-          setIsReferralModalOpen(true);
-        }}
-        onOpenNewPartner={() => {
-          setEditingPartner(null);
-          setIsPartnerModalOpen(true);
-        }}
         incompleteCount={incompleteCount}
-        unreadNotificationsCount={unreadNotificationsCount}
-        onOpenNotifications={() => setIsNotificationCenterOpen(true)}
-        access={access}
-        executives={executives}
-        onChangeAccess={handleChangeAccess}
         authProfile={authProfile}
-        onLogout={isSupabaseConfigured ? handleLogout : undefined}
-        onOpenSetPassword={isSupabaseConfigured ? () => setIsSetPasswordOpen(true) : undefined}
+        isMaster={isMaster}
       />
 
+      <div className="flex-1 min-w-0 flex flex-col sm:ml-16 pb-16 sm:pb-0">
+
+        {/* Barra superior */}
+        <Navbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenNewReferral={() => {
+            setEditingReferral(null);
+            setIsReferralModalOpen(true);
+          }}
+          onOpenNewPartner={() => {
+            setEditingPartner(null);
+            setIsPartnerModalOpen(true);
+          }}
+          incompleteCount={incompleteCount}
+          unreadNotificationsCount={unreadNotificationsCount}
+          onOpenNotifications={() => setIsNotificationCenterOpen(true)}
+          access={access}
+          executives={executives}
+          onChangeAccess={handleChangeAccess}
+          authProfile={authProfile}
+          onLogout={isSupabaseConfigured ? handleLogout : undefined}
+          onOpenSetPassword={isSupabaseConfigured ? () => setIsSetPasswordOpen(true) : undefined}
+          onSearch={(query) => setFilter(prev => ({ ...prev, searchQuery: query }))}
+        />
+
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
+      <main className="flex-1 w-full max-w-[1480px] mx-auto px-5 sm:px-8 lg:px-10 py-8">
+
         {activeTab === 'dashboard' && (
           <Dashboard
             referrals={visibleReferrals}
@@ -766,42 +779,40 @@ export default function App() {
       </main>
 
       {/* Footer Info & System Management */}
-      <footer className="bg-white border-t border-slate-200 py-4 mt-12 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-zry-border py-5 mt-10 text-[11px] text-zry-text-2">
+        <div className="max-w-[1480px] mx-auto px-5 sm:px-8 lg:px-10 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-            <span>Sistema de Gestão de Indicações &amp; Fechamentos</span>
-            <span className="text-slate-300">•</span>
-            <span>Intervenção e Conferência Manual Humana (Sem Dados Fictícios)</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-zry-positive inline-block"></span>
+            <span>Gestão de indicações &amp; fechamentos</span>
+            <span className="text-zry-border-strong">•</span>
+            <span>Conferência manual, sem dados fictícios</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <button
               onClick={() => setIsNotificationSettingsOpen(true)}
-              className="text-slate-500 hover:text-slate-800 flex items-center gap-1 transition font-medium"
+              className="hover:text-zry-roxo flex items-center gap-1.5 transition font-semibold"
             >
-              <Mail className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Configurar Alertas &amp; E-mail</span>
+              <Mail className="w-3.5 h-3.5" />
+              <span>Alertas &amp; e-mail</span>
             </button>
-
-            <span className="text-slate-200">|</span>
 
             <button
               onClick={handleExportBackup}
-              className="text-slate-500 hover:text-slate-800 flex items-center gap-1 transition font-medium"
+              className="hover:text-zry-roxo flex items-center gap-1.5 transition font-semibold"
               title="Exportar backup completo (parceiros + indicações) em JSON"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Exportar Backup</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Exportar backup</span>
             </button>
 
             <button
               onClick={() => importInputRef.current?.click()}
-              className="text-slate-500 hover:text-slate-800 flex items-center gap-1 transition font-medium"
+              className="hover:text-zry-roxo flex items-center gap-1.5 transition font-semibold"
               title="Restaurar backup a partir de um arquivo JSON"
             >
-              <Upload className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Restaurar Backup</span>
+              <Upload className="w-3.5 h-3.5" />
+              <span>Restaurar backup</span>
             </button>
             <input
               ref={importInputRef}
@@ -815,19 +826,19 @@ export default function App() {
               }}
             />
 
-            <span className="text-slate-200">|</span>
-
             <button
               onClick={handleClearAllData}
-              className="text-slate-400 hover:text-rose-600 flex items-center gap-1 transition"
+              className="hover:text-zry-danger flex items-center gap-1.5 transition"
               title="Limpar todos os registros e começar do zero"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Limpar Dados / Começar do Zero</span>
+              <span>Limpar dados</span>
             </button>
           </div>
         </div>
       </footer>
+
+      </div>
 
       {/* Referral Modal */}
       <ReferralModal
@@ -904,8 +915,8 @@ export default function App() {
 
       {/* Toast Feedback */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-20 md:bottom-6 right-5 z-50 bg-zry-roxo text-zry-creme text-xs px-4 py-3 rounded-2xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <Check className="w-4 h-4 text-zry-coral" />
           <span>{toastMessage}</span>
         </div>
       )}
