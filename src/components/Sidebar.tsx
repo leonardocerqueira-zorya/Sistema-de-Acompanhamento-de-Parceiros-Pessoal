@@ -8,6 +8,7 @@ import {
   Briefcase,
   FileSpreadsheet,
   ShieldAlert,
+  Wallet,
   Sliders,
   UserPlus
 } from 'lucide-react';
@@ -54,6 +55,11 @@ export default function Sidebar({
     { id: 'audit', label: 'Auditoria', Icon: ShieldAlert, badge: incompleteCount },
     { id: 'settings', label: 'Configurações', Icon: Sliders }
   ];
+
+  // Dado financeiro sensível (custo do canal informado pelo financeiro) — só o master vê.
+  if (isMaster) {
+    items.push({ id: 'channel-metrics', label: 'Custos & MRR', Icon: Wallet });
+  }
 
   if (isMaster && authProfile) {
     items.push({ id: 'users', label: 'Usuários', Icon: UserPlus });

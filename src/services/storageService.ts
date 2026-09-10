@@ -1,6 +1,7 @@
-import type { Partner, Referral } from '../types';
+import type { Partner, Referral, ChannelCostEntry, NewMrrEntry } from '../types';
 import { evaluateMissingFields } from './sheetsService';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { loadChannelCosts, saveChannelCosts, loadNewMrrEntries, saveNewMrrEntries } from './channelMetricsService';
 
 const PARTNERS_STORAGE_KEY = 'parceiros_data_v2';
 const REFERRALS_STORAGE_KEY = 'indicacoes_data_v2';
@@ -152,6 +153,8 @@ export interface SystemBackup {
   partners: Partner[];
   referrals: Referral[];
   notifications: unknown[];
+  channelCosts?: ChannelCostEntry[]; // custos do canal por mês (v3+)
+  newMrrEntries?: NewMrrEntry[]; // novo MRR total + canais de origem por mês (v3+)
 }
 
 export function exportAllData(): string {
@@ -165,11 +168,13 @@ export function exportAllData(): string {
 
   const backup: SystemBackup = {
     schema: 'canal-parcerias-backup',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     partners: loadStoredPartners(),
     referrals: loadStoredReferrals(),
-    notifications
+    notifications,
+    channelCosts: loadChannelCosts(),
+    newMrrEntries: loadNewMrrEntries()
   };
   return JSON.stringify(backup, null, 2);
 }
@@ -214,6 +219,14 @@ export function importAllData(json: string): ImportResult {
     } catch {
       /* ignore notification restore errors */
     }
+  }
+
+  // Campos v3+: ausentes num backup antigo (v2) não apagam o que já existe localmente.
+  if (Array.isArray(parsed.channelCosts)) {
+    saveChannelCosts(parsed.channelCosts as ChannelCostEntry[]);
+  }
+  if (Array.isArray(parsed.newMrrEntries)) {
+    saveNewMrrEntries(parsed.newMrrEntries as NewMrrEntry[]);
   }
 
   return {

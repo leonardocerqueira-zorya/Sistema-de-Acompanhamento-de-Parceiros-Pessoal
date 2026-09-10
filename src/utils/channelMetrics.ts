@@ -1,0 +1,118 @@
+import type { ChannelCostEntry, NewMrrEntry, Referral } from '../types';
+
+// Tolerância para considerar o MRR do canal "batendo" com as indicações
+// fechadas — acima disso soma arredondamento de centavos, é divergência real.
+const DISCREPANCY_TOLERANCE_REAIS = 1;
+
+// Novo MRR de um negócio fechado: usa o MRR líquido negociado quando existe;
+// para plano mensal, dealValue já É o MRR, então serve de fallback direto.
+function referralMrr(r: Referral): number {
+  if (r.mrrNet !== undefined && r.mrrNet !== null && !isNaN(r.mrrNet)) return r.mrrNet;
+  if (r.planRecurrence === 'mensal' && r.dealValue) return r.dealValue;
+  return 0;
+}
+
+// Indicações "ganho" cujo fechamento (closeDate) caiu no mês informado (YYYY-MM).
+export function referralsClosedInPeriod(referrals: Referral[], period: string): Referral[] {
+  return referrals.filter(r => r.dealStatus === 'ganho' && (r.closeDate || '').slice(0, 7) === period);
+}
+
+// Soma do novo MRR gerado pelo canal de parceiros no mês, a partir das
+// indicações realmente fechadas no sistema (não do valor informado à mão).
+export function partnersChannelMrrFromReferrals(referrals: Referral[], period: string): number {
+  return referralsClosedInPeriod(referrals, period).reduce((sum, r) => sum + referralMrr(r), 0);
+}
+
+// MRR do Canal de Parceiros IMPLÍCITO no que foi informado: total da empresa
+// menos a soma dos outros canais. Nunca é digitado diretamente.
+export function partnersChannelMrrDeclared(entry: NewMrrEntry | undefined): number | null {
+  if (!entry) return null;
+  const others = entry.otherChannels.reduce((sum, c) => sum + (c.value || 0), 0);
+  return entry.totalNewMrr - others;
+}
+
+export interface MrrDiscrepancyCheck {
+  hasEntry: boolean;
+  declared: number | null; // MRR do canal implícito no total informado
+  fromReferrals: number; // MRR do canal calculado pelas indicações fechadas
+  diff: number | null; // declared - fromReferrals
+  diffPercent: number | null; // diff em % de fromReferrals (null se fromReferrals=0 e diff=0)
+  hasDiscrepancy: boolean;
+}
+
+// Confronta o MRR do canal "informado" (total - outros canais) com o MRR
+// calculado a partir das indicações realmente fechadas no período.
+export function checkMrrDiscrepancy(entry: NewMrrEntry | undefined, referrals: Referral[], period: string): MrrDiscrepancyCheck {
+  const fromReferrals = partnersChannelMrrFromReferrals(referrals, period);
+  const declared = partnersChannelMrrDeclared(entry);
+
+  if (declared === null) {
+    return { hasEntry: false, declared: null, fromReferrals, diff: null, diffPercent: null, hasDiscrepancy: false };
+  }
+
+  const diff = declared - fromReferrals;
+  const diffPercent = fromReferrals !== 0 ? (diff / fromReferrals) * 100 : (diff !== 0 ? 100 : 0);
+  const hasDiscrepancy = Math.abs(diff) > DISCREPANCY_TOLERANCE_REAIS;
+
+  return { hasEntry: true, declared, fromReferrals, diff, diffPercent, hasDiscrepancy };
+}
+
+export interface ChannelPeriodMetrics {
+  period: string;
+  cost: number | null; // custo do canal informado pelo financeiro nesse mês
+  closedDealsCount: number; // negócios "ganho" fechados no canal nesse mês
+  activePartnersCount: number; // parceiros distintos com >=1 fechamento nesse mês
+  channelMrrFromReferrals: number; // novo MRR do canal, calculado pelas indicações
+  // CAC — duas leituras, lado a lado (pedido explícito: mostrar as duas com explicação).
+  cacPorCliente: number | null; // custo do canal ÷ negócios fechados
+  cacPorMrr: number | null; // custo do canal ÷ novo MRR do canal (R$ de custo por R$1 de MRR novo)
+  // CAP — Custo de Aquisição por Parceiro.
+  cap: number | null; // custo do canal ÷ parceiros ativos (com fechamento) no mês
+  // Relevância do canal no novo MRR da empresa (quando há entrada de MRR nesse mês).
+  companyTotalNewMrr: number | null;
+  channelRelevancePercent: number | null; // channelMrrFromReferrals ÷ companyTotalNewMrr * 100
+  discrepancy: MrrDiscrepancyCheck;
+}
+
+// Ponto único de cálculo: junta custo do canal, indicações fechadas e novo MRR
+// informado num único conjunto de métricas para um mês (YYYY-MM).
+export function calculateChannelPeriodMetrics(
+  period: string,
+  referrals: Referral[],
+  costEntries: ChannelCostEntry[],
+  mrrEntries: NewMrrEntry[]
+): ChannelPeriodMetrics {
+  const costEntry = costEntries.find(e => e.period === period);
+  const mrrEntry = mrrEntries.find(e => e.period === period);
+
+  const closedRefs = referralsClosedInPeriod(referrals, period);
+  const closedDealsCount = closedRefs.length;
+  const activePartnersCount = new Set(closedRefs.map(r => r.partnerId)).size;
+  const channelMrrFromReferrals = partnersChannelMrrFromReferrals(referrals, period);
+
+  const cost = costEntry ? costEntry.totalCost : null;
+
+  const cacPorCliente = cost !== null && closedDealsCount > 0 ? cost / closedDealsCount : null;
+  const cacPorMrr = cost !== null && channelMrrFromReferrals > 0 ? cost / channelMrrFromReferrals : null;
+  const cap = cost !== null && activePartnersCount > 0 ? cost / activePartnersCount : null;
+
+  const companyTotalNewMrr = mrrEntry ? mrrEntry.totalNewMrr : null;
+  const channelRelevancePercent =
+    companyTotalNewMrr !== null && companyTotalNewMrr > 0 ? (channelMrrFromReferrals / companyTotalNewMrr) * 100 : null;
+
+  const discrepancy = checkMrrDiscrepancy(mrrEntry, referrals, period);
+
+  return {
+    period,
+    cost,
+    closedDealsCount,
+    activePartnersCount,
+    channelMrrFromReferrals,
+    cacPorCliente,
+    cacPorMrr,
+    cap,
+    companyTotalNewMrr,
+    channelRelevancePercent,
+    discrepancy
+  };
+}

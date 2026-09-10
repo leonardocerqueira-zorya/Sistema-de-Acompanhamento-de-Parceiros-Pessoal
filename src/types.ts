@@ -349,7 +349,43 @@ export interface ReferralVintage {
   
   // Fechamentos mês a mês ao longo dos meses subsequentes (M0, M1, M2...)
   monthlyBreakdown: MonthlyClosedBreakdown[];
-  
+
   // Lista de referências desta safra
   referrals: Referral[];
+}
+
+// ---------------------------------------------------------------------------
+// Custos do Canal & Novo MRR (preenchimento manual, mês a mês, pelo financeiro).
+// Alimenta CAC/CAP e a checagem de relevância do canal de parceiros no MRR novo
+// da empresa — ver utils/channelMetrics.ts.
+// ---------------------------------------------------------------------------
+
+// Custo total do canal de parceiros num mês, informado pelo financeiro.
+// NÃO é só comissão: inclui time interno, ferramentas etc. — é o número
+// definitivo que o financeiro fecha para aquele mês.
+export interface ChannelCostEntry {
+  id: string;
+  period: string; // YYYY-MM
+  totalCost: number; // R$ custo total do canal no mês, segundo o financeiro
+  notes?: string;
+  updatedAt: string; // ISO
+}
+
+// Um canal de aquisição de MRR que não é o Canal de Parceiros (ex: Outbound,
+// Inbound, Ads...), com o valor de novo MRR trazido por ele no mês.
+export interface MrrChannelBreakdownItem {
+  channel: string;
+  value: number; // R$
+}
+
+// Novo MRR total da empresa num mês + de quais canais (exceto Parceiros) veio.
+// O MRR do Canal de Parceiros é sempre a DIFERENÇA (totalNewMrr - soma dos
+// outros canais) — nunca digitado diretamente, para forçar a conta a fechar.
+export interface NewMrrEntry {
+  id: string;
+  period: string; // YYYY-MM
+  totalNewMrr: number; // R$ novo MRR total da empresa no mês (todos os canais)
+  otherChannels: MrrChannelBreakdownItem[]; // outros canais e seus valores
+  notes?: string;
+  updatedAt: string; // ISO
 }

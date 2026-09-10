@@ -12,6 +12,7 @@ export type AppTab =
   | 'carteiras'
   | 'sheets'
   | 'audit'
+  | 'channel-metrics'
   | 'settings'
   | 'users';
 

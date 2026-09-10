@@ -45,6 +45,7 @@ import Navbar, { type AppTab } from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import UsersView from './components/UsersView';
+import ChannelMetricsView from './components/ChannelMetricsView';
 import Dashboard from './components/Dashboard';
 import ReferralsTable from './components/ReferralsTable';
 import CommissionsView from './components/CommissionsView';
@@ -759,6 +760,10 @@ export default function App() {
             }}
             onOpenSpreadsheetImport={() => setActiveTab('sheets')}
           />
+        )}
+
+        {activeTab === 'channel-metrics' && isMaster && (
+          <ChannelMetricsView referrals={referrals} />
         )}
 
         {activeTab === 'settings' && (
