@@ -26,6 +26,7 @@ import {
 
 interface ChannelMetricsViewProps {
   referrals: Referral[];
+  isMaster: boolean;
 }
 
 function currentPeriod(): string {
@@ -45,7 +46,7 @@ interface ChannelRowDraft {
   value: string;
 }
 
-export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProps) {
+export default function ChannelMetricsView({ referrals, isMaster }: ChannelMetricsViewProps) {
   const [costs, setCosts] = useState<ChannelCostEntry[]>(() => loadChannelCosts());
   const [mrrEntries, setMrrEntries] = useState<NewMrrEntry[]>(() => loadNewMrrEntries());
 
@@ -204,57 +205,71 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
             </div>
           </div>
 
-          <div className="p-[22px] space-y-3.5">
-            <div className="bg-zry-lilas-30 rounded-xl p-3 text-[11.5px] text-zry-text-2 flex items-start gap-2">
-              <Info className="w-3.5 h-3.5 text-zry-roxo shrink-0 mt-0.5" />
-              <span>
-                Inclua aqui o custo TOTAL do canal no mês: comissões pagas/a pagar, time interno, ferramentas e qualquer outro custo que o financeiro já consolidou. É esse número que entra no cálculo de CAC e CAP.
-              </span>
-            </div>
+          {isMaster ? (
+            <div className="p-[22px] space-y-3.5">
+              <div className="bg-zry-lilas-30 rounded-xl p-3 text-[11.5px] text-zry-text-2 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-zry-roxo shrink-0 mt-0.5" />
+                <span>
+                  Inclua aqui o custo TOTAL do canal no mês: comissões pagas/a pagar, time interno, ferramentas e qualquer outro custo que o financeiro já consolidou. É esse número que entra no cálculo de CAC e CAP.
+                </span>
+              </div>
 
-            <div>
-              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Custo Total do Canal (R$) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ex: 18500.00"
-                value={costInput}
-                onChange={(e) => setCostInput(e.target.value)}
-                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-              />
-            </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Custo Total do Canal (R$) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ex: 18500.00"
+                  value={costInput}
+                  onChange={(e) => setCostInput(e.target.value)}
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                />
+              </div>
 
-            <div>
-              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Observações (opcional)</label>
-              <input
-                type="text"
-                placeholder="Ex: inclui 1 headcount full-time + ferramentas"
-                value={costNotes}
-                onChange={(e) => setCostNotes(e.target.value)}
-                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-              />
-            </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Observações (opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: inclui 1 headcount full-time + ferramentas"
+                  value={costNotes}
+                  onChange={(e) => setCostNotes(e.target.value)}
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                />
+              </div>
 
-            <div className="flex items-center justify-between gap-2 pt-1">
-              {existingCost ? (
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {existingCost ? (
+                  <button
+                    onClick={handleDeleteCost}
+                    className="text-[12px] font-semibold text-zry-danger hover:opacity-80 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remover
+                  </button>
+                ) : <span />}
                 <button
-                  onClick={handleDeleteCost}
-                  className="text-[12px] font-semibold text-zry-danger hover:opacity-80 flex items-center gap-1"
+                  onClick={handleSaveCost}
+                  className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-5 py-2.5 rounded-full text-[12.5px] transition"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Remover
+                  {costSaved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{costSaved ? 'Salvo!' : 'Salvar Custo do Mês'}</span>
                 </button>
-              ) : <span />}
-              <button
-                onClick={handleSaveCost}
-                className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-5 py-2.5 rounded-full text-[12.5px] transition"
-              >
-                {costSaved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                <span>{costSaved ? 'Salvo!' : 'Salvar Custo do Mês'}</span>
-              </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-[22px]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Valor informado</span>
+              <div className="text-[22px] font-bold text-zry-roxo tracking-tight mt-1.5">
+                {existingCost ? formatCurrency(existingCost.totalCost) : 'Não informado ainda'}
+              </div>
+              {existingCost?.notes && <p className="text-[12px] text-zry-text-2 mt-2">{existingCost.notes}</p>}
+              <p className="text-[11px] text-zry-text-2 mt-3 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 shrink-0" />
+                Só o Master pode preencher ou alterar este valor.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Novo MRR & Canais de Origem */}
@@ -269,6 +284,7 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
             </div>
           </div>
 
+          {isMaster ? (
           <div className="p-[22px] space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -402,6 +418,45 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
               </button>
             </div>
           </div>
+          ) : (
+            <div className="p-[22px] space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Novo MRR Total</span>
+                  <div className="text-[20px] font-bold text-zry-roxo tracking-tight mt-1">
+                    {existingMrr ? formatCurrency(existingMrr.totalNewMrr) : 'Não informado ainda'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Total de Vendas</span>
+                  <div className="text-[20px] font-bold text-zry-roxo tracking-tight mt-1">
+                    {existingMrr?.totalNewDealsCount !== undefined ? existingMrr.totalNewDealsCount : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {existingMrr && existingMrr.otherChannels.length > 0 && (
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block mb-1.5">Outros Canais</span>
+                  <div className="space-y-1.5">
+                    {existingMrr.otherChannels.map((c, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-zry-lilas-30 rounded-lg px-3 py-1.5 text-[12.5px]">
+                        <span className="text-zry-text">{c.channel}</span>
+                        <span className="font-semibold text-zry-roxo">{formatCurrency(c.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {existingMrr?.notes && <p className="text-[12px] text-zry-text-2">{existingMrr.notes}</p>}
+
+              <p className="text-[11px] text-zry-text-2 flex items-center gap-1.5 pt-1">
+                <Info className="w-3.5 h-3.5 shrink-0" />
+                Só o Master pode preencher ou alterar estes valores.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -469,7 +524,10 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
         {!existingCost && (
           <div className="mx-[22px] mb-[22px] bg-zry-warning-bg border border-zry-warning/30 rounded-xl p-3 text-[12px] text-zry-warning flex items-center gap-2">
             <HelpCircle className="w-4 h-4 shrink-0" />
-            <span>Sem custo do canal informado para {formatPeriodLabel(selectedPeriod)} — CAC e CAP ficam em branco até você preencher.</span>
+            <span>
+              Sem custo do canal informado para {formatPeriodLabel(selectedPeriod)} — CAC e CAP ficam em branco até{' '}
+              {isMaster ? 'você preencher' : 'o Master preencher'}.
+            </span>
           </div>
         )}
       </div>
@@ -538,8 +596,8 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
             <HelpCircle className="w-4 h-4 shrink-0" />
             <span>
               {metrics.companyTotalNewMrr === null
-                ? 'Sem Novo MRR Total informado para este mês — preencha no formulário acima.'
-                : 'Sem Total de Vendas informado para este mês — o Ticket Médio Total e a comparação ficam em branco até você preencher.'}
+                ? `Sem Novo MRR Total informado para este mês — ${isMaster ? 'preencha no formulário acima' : 'aguardando o Master preencher'}.`
+                : `Sem Total de Vendas informado para este mês — o Ticket Médio Total e a comparação ficam em branco até ${isMaster ? 'você preencher' : 'o Master preencher'}.`}
             </span>
           </div>
         )}
@@ -603,7 +661,7 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
                           onClick={() => handlePeriodChange(period)}
                           className="text-[12px] font-semibold text-zry-roxo hover:opacity-80"
                         >
-                          Ver / editar
+                          {isMaster ? 'Ver / editar' : 'Ver'}
                         </button>
                       </td>
                     </tr>

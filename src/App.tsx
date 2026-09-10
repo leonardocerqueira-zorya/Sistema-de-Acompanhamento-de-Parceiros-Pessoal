@@ -674,6 +674,8 @@ export default function App() {
               setEditingReferral(ref);
               setIsReferralModalOpen(true);
             }}
+            isMaster={isMaster}
+            onNavigateToChannelMetrics={() => setActiveTab('channel-metrics')}
           />
         )}
 
@@ -762,8 +764,8 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'channel-metrics' && isMaster && (
-          <ChannelMetricsView referrals={referrals} />
+        {activeTab === 'channel-metrics' && (
+          <ChannelMetricsView referrals={referrals} isMaster={isMaster} />
         )}
 
         {activeTab === 'settings' && (

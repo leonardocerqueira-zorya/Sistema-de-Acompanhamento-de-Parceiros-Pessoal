@@ -9,6 +9,8 @@ import {
 } from '../utils/analytics';
 import { exportConsolidatedKPIsAndRankingsCSV } from '../utils/csvExportTemplates';
 import { calculateDataAuditMetrics } from '../services/sheetsService';
+import { loadChannelCosts, loadNewMrrEntries } from '../services/channelMetricsService';
+import { calculateChannelPeriodMetrics } from '../utils/channelMetrics';
 import DataAuditView from './DataAuditView';
 import PartnerCohortChart from './PartnerCohortChart';
 import VintageCohortReport from './VintageCohortReport';
@@ -39,7 +41,9 @@ import {
   Scale,
   Coins,
   Receipt,
-  PiggyBank
+  PiggyBank,
+  Wallet,
+  HelpCircle
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -55,6 +59,8 @@ interface DashboardProps {
   onNavigateToSheets?: () => void;
   onEditPartner?: (partner: Partner) => void;
   onEditReferral?: (referral: Referral) => void;
+  isMaster?: boolean;
+  onNavigateToChannelMetrics?: () => void;
 }
 
 export default function Dashboard({
@@ -69,7 +75,9 @@ export default function Dashboard({
   onOpenNewReferral,
   onNavigateToSheets,
   onEditPartner,
-  onEditReferral
+  onEditReferral,
+  isMaster = false,
+  onNavigateToChannelMetrics
 }: DashboardProps) {
   // Tab inside dashboard: Visão Geral de KPIs vs. Auditoria de Dados Faltantes
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'audit'>('overview');
@@ -91,6 +99,12 @@ export default function Dashboard({
 
   const currentYear = new Date().getFullYear();
   const currentMonth = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+  // Custos & MRR do canal (mês corrente): indicadores visíveis pra todos, só o
+  // PREENCHIMENTO do custo/MRR é master-only (gate fica na própria tela).
+  // Usa a base inteira de indicações (não periodReferrals): o mês já delimita o
+  // período aqui, igual à tela "Custos & MRR".
+  const channelMetrics = calculateChannelPeriodMetrics(currentMonth, referrals, loadChannelCosts(), loadNewMrrEntries());
 
   // Period Preset Handlers
   const handlePeriodPreset = (preset: PeriodFilter['preset']) => {
@@ -504,6 +518,100 @@ export default function Dashboard({
         </div>
 
       </div>
+
+      {/* Custos & MRR do Canal (mês corrente) — indicadores visíveis pra todos;
+          só o preenchimento do custo/MRR (dado do financeiro) é master-only. */}
+      {channelMetrics && (
+        <div className="bg-zry-surface rounded-zry-lg p-6 border border-zry-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zry-border pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-zry-lilas-30 text-zry-roxo flex items-center justify-center shrink-0">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-bold text-zry-text">Custos & MRR do Canal</h3>
+                <p className="text-[11.5px] text-zry-text-2 mt-0.5">
+                  Mês corrente — dados informados pelo financeiro
+                </p>
+              </div>
+            </div>
+            {onNavigateToChannelMetrics && (
+              <button
+                onClick={onNavigateToChannelMetrics}
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-zry-roxo hover:opacity-80 shrink-0"
+              >
+                <span>{isMaster ? 'Ver detalhes & preencher' : 'Ver detalhes'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {channelMetrics.cost === null && channelMetrics.companyTotalNewMrr === null ? (
+            <div className="mt-4 bg-zry-lilas-30 rounded-xl p-4 text-[12.5px] text-zry-text-2 flex items-start gap-2.5">
+              <HelpCircle className="w-4 h-4 text-zry-roxo shrink-0 mt-0.5" />
+              <span>
+                Nenhum custo do canal ou novo MRR informado para este mês ainda.{' '}
+                {isMaster
+                  ? 'Preencha em "Custos & MRR" para ver CAC, CAP e comparação com a empresa aqui.'
+                  : 'Aguardando o Master preencher em "Custos & MRR" para ver CAC, CAP e comparação com a empresa aqui.'}
+              </span>
+            </div>
+          ) : (
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Custo do Canal</span>
+                <div className="text-[18px] font-bold text-zry-roxo tracking-tight mt-1">
+                  {channelMetrics.cost !== null ? formatCurrency(channelMetrics.cost) : '—'}
+                </div>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">CAC / Cliente</span>
+                <div className="text-[18px] font-bold text-zry-roxo tracking-tight mt-1">
+                  {channelMetrics.cacPorCliente !== null ? formatCurrency(channelMetrics.cacPorCliente) : '—'}
+                </div>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">CAP</span>
+                <div className="text-[18px] font-bold text-zry-roxo tracking-tight mt-1">
+                  {channelMetrics.cap !== null ? formatCurrency(channelMetrics.cap) : '—'}
+                </div>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Relevância no MRR</span>
+                <div className="text-[18px] font-bold text-zry-roxo tracking-tight mt-1">
+                  {channelMetrics.channelRelevancePercent !== null ? `${channelMetrics.channelRelevancePercent.toFixed(1)}%` : '—'}
+                </div>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Ticket Canal vs Total</span>
+                <div
+                  className={`text-[18px] font-bold tracking-tight mt-1 ${
+                    channelMetrics.ticketMedioComparisonPercent === null
+                      ? 'text-zry-roxo'
+                      : channelMetrics.ticketMedioComparisonPercent >= 0
+                      ? 'text-zry-positive'
+                      : 'text-zry-danger'
+                  }`}
+                >
+                  {channelMetrics.ticketMedioComparisonPercent !== null
+                    ? `${channelMetrics.ticketMedioComparisonPercent >= 0 ? '+' : ''}${channelMetrics.ticketMedioComparisonPercent.toFixed(1)}%`
+                    : '—'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {channelMetrics.discrepancy.hasEntry && channelMetrics.discrepancy.hasDiscrepancy && (
+            <div className="mt-3.5 bg-zry-warning-bg border border-zry-warning/30 rounded-xl p-3 text-[12px] text-zry-warning flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                O MRR do canal informado não bate com as indicações fechadas no sistema — diferença de{' '}
+                {formatCurrency(Math.abs(channelMetrics.discrepancy.diff || 0))}.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Safras de Indicação: Corte D+15, Conversão e Fechamentos por Safra (Últimos 12 Meses) */}
       <VintageCohortReport

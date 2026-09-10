@@ -53,13 +53,12 @@ export default function Sidebar({
     { id: 'carteiras', label: 'Carteiras', Icon: Briefcase },
     { id: 'sheets', label: 'Planilhas', Icon: FileSpreadsheet },
     { id: 'audit', label: 'Auditoria', Icon: ShieldAlert, badge: incompleteCount },
+    // Indicadores (CAC/CAP/Ticket Médio) visíveis pra todos; só o preenchimento
+    // do custo do canal e do novo MRR (dado do financeiro) é master-only —
+    // gate fica dentro da própria tela, não na navegação.
+    { id: 'channel-metrics', label: 'Custos & MRR', Icon: Wallet },
     { id: 'settings', label: 'Configurações', Icon: Sliders }
   ];
-
-  // Dado financeiro sensível (custo do canal informado pelo financeiro) — só o master vê.
-  if (isMaster) {
-    items.push({ id: 'channel-metrics', label: 'Custos & MRR', Icon: Wallet });
-  }
 
   if (isMaster && authProfile) {
     items.push({ id: 'users', label: 'Usuários', Icon: UserPlus });
