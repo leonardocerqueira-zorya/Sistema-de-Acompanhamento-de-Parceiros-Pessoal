@@ -15,6 +15,7 @@ import {
   exportAllData,
   importAllData
 } from './services/storageService';
+import { syncWithCloud, flushToCloud } from './services/syncService';
 import {
   loadAccess,
   saveAccess,
@@ -70,6 +71,13 @@ export default function App() {
   const [access, setAccess] = useState<AccessState>({ role: 'master', executive: null });
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Sincronização com a cópia compartilhada na nuvem (ver syncService).
+  const [syncStatus, setSyncStatus] = useState<'off' | 'syncing' | 'ok' | 'error'>(
+    isSupabaseConfigured ? 'syncing' : 'off'
+  );
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const lastSyncMsRef = useRef(0);
 
   // Login real (Supabase Auth, magic link). Sem Supabase configurado, o app roda
   // no modo antigo (dropdown livre de acesso, sem login) — ver Navbar.tsx.
@@ -187,6 +195,69 @@ export default function App() {
     } catch (err) {
       console.error('Erro ao verificar cortes de safra na inicialização', err);
     }
+  }, []);
+
+  // Sincroniza com a cópia compartilhada na nuvem: baixa o que as outras
+  // máquinas salvaram, mescla por id com o que existe aqui (união — nada é
+  // descartado) e devolve o resultado reconciliado. Roda ao abrir o app e
+  // quando a aba volta ao foco, para o time ver o trabalho um do outro.
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let active = true;
+
+    const runSync = async (isInitial: boolean) => {
+      if (!active) return;
+      lastSyncMsRef.current = Date.now();
+      setSyncStatus('syncing');
+
+      const outcome = await syncWithCloud();
+      if (!active) return;
+
+      if (outcome.status === 'failed') {
+        setSyncStatus('error');
+        if (isInitial) showToast(outcome.message);
+        return;
+      }
+
+      setSyncStatus('ok');
+      setLastSyncAt(new Date().toISOString());
+
+      // Realinha o estado do React com o que está gravado, sempre. O merge pode
+      // ter escrito no armazenamento depois da carga inicial (ou numa execução
+      // concorrente), e aí a tela mostraria menos dados do que já existem.
+      // Nada em edição é perdido: todo save grava no armazenamento na hora.
+      setPartners(loadStoredPartners());
+      setReferrals(loadStoredReferrals());
+      setNotifications(loadNotifications());
+
+      if (outcome.status === 'adopted' || outcome.status === 'merged') {
+        showToast(outcome.message);
+      }
+    };
+
+    runSync(true);
+
+    // Traz o que o time salvou enquanto esta aba estava em segundo plano.
+    const onFocus = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (Date.now() - lastSyncMsRef.current < 30000) return;
+      void runSync(false);
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+
+    // Garante que a última alteração sobe mesmo se a aba fechar dentro do debounce.
+    const onHide = () => {
+      void flushToCloud();
+    };
+    window.addEventListener('pagehide', onHide);
+
+    return () => {
+      active = false;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('pagehide', onHide);
+    };
   }, []);
 
   // Save referral with automatic notifications for creation, status changes, and commission transitions
@@ -643,6 +714,8 @@ export default function App() {
           onLogout={isSupabaseConfigured ? handleLogout : undefined}
           onOpenSetPassword={isSupabaseConfigured ? () => setIsSetPasswordOpen(true) : undefined}
           onSearch={(query) => setFilter(prev => ({ ...prev, searchQuery: query }))}
+          syncStatus={syncStatus}
+          lastSyncAt={lastSyncAt}
         />
 
       {/* Main Container */}

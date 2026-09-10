@@ -2,7 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import type { User } from 'firebase/auth';
 import { initAuth, googleSignIn, logout } from '../services/firebaseAuth';
 import type { AccessState, UserRole, UserProfile } from '../types';
-import { Plus, Bell, LogOut, KeyRound, Search, ShieldCheck, Briefcase, CheckCircle } from 'lucide-react';
+import { Plus, Bell, LogOut, KeyRound, Search, ShieldCheck, Briefcase, CheckCircle, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 
 export type AppTab =
   | 'dashboard'
@@ -31,6 +31,8 @@ interface NavbarProps {
   onLogout?: () => void;
   onOpenSetPassword?: () => void;
   onSearch?: (query: string) => void;
+  syncStatus?: 'off' | 'syncing' | 'ok' | 'error';
+  lastSyncAt?: string | null;
 }
 
 export default function Navbar({
@@ -44,7 +46,9 @@ export default function Navbar({
   authProfile = null,
   onLogout,
   onOpenSetPassword,
-  onSearch
+  onSearch,
+  syncStatus = 'off',
+  lastSyncAt = null
 }: NavbarProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
@@ -221,6 +225,43 @@ export default function Navbar({
             </svg>
             <span className="hidden xl:inline">{isLoggingIn ? 'Conectando...' : 'Conectar Sheets'}</span>
           </button>
+        )}
+
+        {/* Estado da sincronização com a cópia compartilhada do time */}
+        {syncStatus !== 'off' && (
+          <div
+            title={
+              syncStatus === 'syncing'
+                ? 'Sincronizando com a nuvem...'
+                : syncStatus === 'error'
+                  ? 'Falha ao sincronizar. Seus dados seguem salvos neste navegador e sobem na próxima tentativa.'
+                  : lastSyncAt
+                    ? `Sincronizado com a nuvem às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                    : 'Sincronizado com a nuvem'
+            }
+            className={`hidden sm:flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-3 py-2 shrink-0 border ${
+              syncStatus === 'error'
+                ? 'text-red-700 bg-red-50 border-red-200'
+                : 'text-zry-text-2 bg-zry-surface border-zry-border'
+            }`}
+          >
+            {syncStatus === 'syncing' ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : syncStatus === 'error' ? (
+              <CloudOff className="w-3.5 h-3.5" />
+            ) : (
+              <Cloud className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden xl:inline">
+              {syncStatus === 'syncing'
+                ? 'Sincronizando'
+                : syncStatus === 'error'
+                  ? 'Sem sincronizar'
+                  : lastSyncAt
+                    ? new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    : 'Sincronizado'}
+            </span>
+          </div>
         )}
 
         {/* Notificações */}

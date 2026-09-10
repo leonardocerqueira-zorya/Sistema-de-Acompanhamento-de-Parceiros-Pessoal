@@ -1,7 +1,8 @@
 import type { Partner, Referral, ChannelCostEntry, NewMrrEntry } from '../types';
 import { evaluateMissingFields } from './sheetsService';
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { supabase } from './supabaseClient';
 import { loadChannelCosts, saveChannelCosts, loadNewMrrEntries, saveNewMrrEntries } from './channelMetricsService';
+import { markLocalChange, registerCloudPush, runWithoutTracking } from './syncState';
 
 const PARTNERS_STORAGE_KEY = 'parceiros_data_v2';
 const REFERRALS_STORAGE_KEY = 'indicacoes_data_v2';
@@ -75,7 +76,10 @@ export function loadStoredPartners(): Partner[] {
   } catch (e) {
     console.error('Erro ao ler parceiros do localStorage', e);
   }
-  saveStoredPartners(INITIAL_PARTNERS);
+  // Gravar o padrao vazio nao e alteracao do usuario: se marcasse alteracao,
+  // um navegador novo poderia empurrar uma copia vazia pra nuvem antes de o
+  // merge baixar os dados do time.
+  runWithoutTracking(() => saveStoredPartners(INITIAL_PARTNERS));
   return INITIAL_PARTNERS;
 }
 
@@ -85,7 +89,7 @@ export function saveStoredPartners(partners: Partner[]): void {
   } catch (e) {
     console.error('Erro ao salvar parceiros no localStorage', e);
   }
-  scheduleCloudBackupSync();
+  markLocalChange();
 }
 
 export function loadStoredReferrals(): Referral[] {
@@ -117,7 +121,7 @@ export function loadStoredReferrals(): Referral[] {
     console.error('Erro ao ler indicações do localStorage', e);
   }
   const initial = getInitialReferrals();
-  saveStoredReferrals(initial);
+  runWithoutTracking(() => saveStoredReferrals(initial));
   return initial;
 }
 
@@ -127,7 +131,7 @@ export function saveStoredReferrals(referrals: Referral[]): void {
   } catch (e) {
     console.error('Erro ao salvar indicações no localStorage', e);
   }
-  scheduleCloudBackupSync();
+  markLocalChange();
 }
 
 // Clear all data to completely start clean
@@ -238,27 +242,15 @@ export function importAllData(json: string): ImportResult {
 }
 
 // ---------------------------------------------------------------------------
-// Espelho na nuvem (Supabase) -- opcional e best-effort.
-// localStorage continua sendo a fonte da verdade e o app funciona 100% offline;
-// se o Supabase estiver configurado (ver supabaseClient.ts), cada save local
-// também empurra o mesmo formato do backup (SystemBackup) pra nuvem, em segundo
-// plano, sem bloquear a UI e sem quebrar nada se a rede/Supabase falhar.
+// Espelho na nuvem (Supabase).
+// localStorage segue sendo lido primeiro (o app funciona offline), mas a nuvem
+// é a cópia compartilhada do time: cada save local sobe o mesmo formato do
+// backup (SystemBackup) em segundo plano, e o syncService baixa e mescla essa
+// cópia ao abrir o app. Falha de rede nunca quebra o uso local.
 // ---------------------------------------------------------------------------
 
 const CLOUD_BACKUP_TABLE = 'system_backups';
 const CLOUD_BACKUP_ROW_ID = 'main';
-const CLOUD_SYNC_DEBOUNCE_MS = 1500;
-
-let cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
-
-function scheduleCloudBackupSync(): void {
-  if (!isSupabaseConfigured) return;
-  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
-  cloudSyncTimer = setTimeout(() => {
-    cloudSyncTimer = null;
-    pushBackupToSupabase().catch(e => console.warn('Sync com Supabase falhou (dados seguem salvos localmente):', e));
-  }, CLOUD_SYNC_DEBOUNCE_MS);
-}
 
 export async function pushBackupToSupabase(): Promise<void> {
   if (!supabase) return;
@@ -269,13 +261,28 @@ export async function pushBackupToSupabase(): Promise<void> {
   if (error) throw error;
 }
 
-export async function pullBackupFromSupabase(): Promise<SystemBackup | null> {
+export interface CloudBackupRow {
+  backup: SystemBackup;
+  updatedAt: string; // quando a nuvem foi atualizada pela última vez (por qualquer máquina)
+}
+
+// Baixa a cópia compartilhada junto do seu timestamp — é o timestamp que diz
+// ao merge se a nuvem tem alterações mais novas que as deste navegador.
+export async function fetchCloudBackup(): Promise<CloudBackupRow | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from(CLOUD_BACKUP_TABLE)
-    .select('data')
+    .select('data, updated_at')
     .eq('id', CLOUD_BACKUP_ROW_ID)
     .maybeSingle();
   if (error) throw error;
-  return (data?.data as SystemBackup) ?? null;
+  if (!data?.data) return null;
+  return {
+    backup: data.data as SystemBackup,
+    updatedAt: (data.updated_at as string) ?? new Date(0).toISOString()
+  };
 }
+
+// O rastreador de alterações locais (módulo folha) não conhece o Supabase:
+// é aqui que o push real é ligado ao debounce dele.
+registerCloudPush(pushBackupToSupabase);

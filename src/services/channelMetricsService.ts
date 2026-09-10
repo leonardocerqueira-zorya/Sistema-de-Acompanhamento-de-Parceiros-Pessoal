@@ -1,4 +1,5 @@
 import type { ChannelCostEntry, MrrChannelBreakdownItem, NewMrrEntry } from '../types';
+import { markLocalChange } from './syncState';
 
 const COSTS_STORAGE_KEY = 'canal_custos_v1';
 const MRR_STORAGE_KEY = 'canal_novo_mrr_v1';
@@ -23,6 +24,7 @@ export function saveChannelCosts(entries: ChannelCostEntry[]): void {
   } catch (e) {
     console.error('Erro ao salvar custos do canal no localStorage', e);
   }
+  markLocalChange();
 }
 
 // Cria ou atualiza (por período) o custo do canal informado pelo financeiro.
@@ -74,6 +76,7 @@ export function saveNewMrrEntries(entries: NewMrrEntry[]): void {
   } catch (e) {
     console.error('Erro ao salvar novo MRR no localStorage', e);
   }
+  markLocalChange();
 }
 
 export function upsertNewMrrEntry(
