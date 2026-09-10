@@ -385,6 +385,7 @@ export interface NewMrrEntry {
   id: string;
   period: string; // YYYY-MM
   totalNewMrr: number; // R$ novo MRR total da empresa no mês (todos os canais)
+  totalNewDealsCount?: number; // nº total de negócios fechados na empresa no mês (todos os canais) — para o Ticket Médio Total
   otherChannels: MrrChannelBreakdownItem[]; // outros canais e seus valores
   notes?: string;
   updatedAt: string; // ISO

@@ -71,6 +71,13 @@ export interface ChannelPeriodMetrics {
   // Relevância do canal no novo MRR da empresa (quando há entrada de MRR nesse mês).
   companyTotalNewMrr: number | null;
   channelRelevancePercent: number | null; // channelMrrFromReferrals ÷ companyTotalNewMrr * 100
+  // Ticket Médio — canal vs empresa toda. totalNewDealsCount é preenchido à mão
+  // (nº de vendas fechadas na empresa, todos os canais) porque o sistema só
+  // enxerga as indicações do canal de parceiros.
+  totalNewDealsCount: number | null;
+  ticketMedioCanal: number | null; // MRR do canal ÷ negócios fechados no canal
+  ticketMedioTotal: number | null; // Novo MRR total da empresa ÷ total de vendas informado
+  ticketMedioComparisonPercent: number | null; // quanto o ticket do canal está acima/abaixo do da empresa
   discrepancy: MrrDiscrepancyCheck;
 }
 
@@ -100,6 +107,17 @@ export function calculateChannelPeriodMetrics(
   const channelRelevancePercent =
     companyTotalNewMrr !== null && companyTotalNewMrr > 0 ? (channelMrrFromReferrals / companyTotalNewMrr) * 100 : null;
 
+  const totalNewDealsCount = mrrEntry?.totalNewDealsCount ?? null;
+  const ticketMedioCanal = closedDealsCount > 0 ? channelMrrFromReferrals / closedDealsCount : null;
+  const ticketMedioTotal =
+    companyTotalNewMrr !== null && totalNewDealsCount !== null && totalNewDealsCount > 0
+      ? companyTotalNewMrr / totalNewDealsCount
+      : null;
+  const ticketMedioComparisonPercent =
+    ticketMedioCanal !== null && ticketMedioTotal !== null && ticketMedioTotal > 0
+      ? ((ticketMedioCanal - ticketMedioTotal) / ticketMedioTotal) * 100
+      : null;
+
   const discrepancy = checkMrrDiscrepancy(mrrEntry, referrals, period);
 
   return {
@@ -112,6 +130,10 @@ export function calculateChannelPeriodMetrics(
     cacPorMrr,
     cap,
     companyTotalNewMrr,
+    totalNewDealsCount,
+    ticketMedioCanal,
+    ticketMedioTotal,
+    ticketMedioComparisonPercent,
     channelRelevancePercent,
     discrepancy
   };

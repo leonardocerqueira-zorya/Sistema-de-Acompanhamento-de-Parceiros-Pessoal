@@ -79,6 +79,7 @@ export function saveNewMrrEntries(entries: NewMrrEntry[]): void {
 export function upsertNewMrrEntry(
   period: string,
   totalNewMrr: number,
+  totalNewDealsCount: number | undefined,
   otherChannels: MrrChannelBreakdownItem[],
   notes?: string
 ): NewMrrEntry[] {
@@ -93,7 +94,7 @@ export function upsertNewMrrEntry(
   if (existing) {
     updated = current.map(e =>
       e.period === period
-        ? { ...e, totalNewMrr, otherChannels: cleanChannels, notes: notes?.trim() || undefined, updatedAt: now }
+        ? { ...e, totalNewMrr, totalNewDealsCount, otherChannels: cleanChannels, notes: notes?.trim() || undefined, updatedAt: now }
         : e
     );
   } else {
@@ -103,6 +104,7 @@ export function upsertNewMrrEntry(
         id: 'mrr-' + Math.random().toString(36).substring(2, 9),
         period,
         totalNewMrr,
+        totalNewDealsCount,
         otherChannels: cleanChannels,
         notes: notes?.trim() || undefined,
         updatedAt: now

@@ -59,6 +59,9 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
   const [costSaved, setCostSaved] = useState(false);
 
   const [totalMrrInput, setTotalMrrInput] = useState<string>(existingMrr ? String(existingMrr.totalNewMrr) : '');
+  const [totalDealsInput, setTotalDealsInput] = useState<string>(
+    existingMrr?.totalNewDealsCount !== undefined ? String(existingMrr.totalNewDealsCount) : ''
+  );
   const [otherChannelsDraft, setOtherChannelsDraft] = useState<ChannelRowDraft[]>(
     existingMrr && existingMrr.otherChannels.length > 0
       ? existingMrr.otherChannels.map(c => ({ channel: c.channel, value: String(c.value) }))
@@ -75,6 +78,7 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
     setCostInput(c ? String(c.totalCost) : '');
     setCostNotes(c?.notes || '');
     setTotalMrrInput(m ? String(m.totalNewMrr) : '');
+    setTotalDealsInput(m?.totalNewDealsCount !== undefined ? String(m.totalNewDealsCount) : '');
     setOtherChannelsDraft(
       m && m.otherChannels.length > 0 ? m.otherChannels.map(x => ({ channel: x.channel, value: String(x.value) })) : [{ channel: '', value: '' }]
     );
@@ -109,10 +113,15 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
       alert('Informe um valor válido para o novo MRR total.');
       return;
     }
+    const dealsCount = totalDealsInput.trim() ? parseInt(totalDealsInput, 10) : undefined;
+    if (dealsCount !== undefined && (isNaN(dealsCount) || dealsCount < 0)) {
+      alert('Informe um número válido para o total de vendas (ou deixe em branco).');
+      return;
+    }
     const channels: MrrChannelBreakdownItem[] = otherChannelsDraft
       .filter(c => c.channel.trim())
       .map(c => ({ channel: c.channel.trim(), value: parseFloat(c.value) || 0 }));
-    const updated = upsertNewMrrEntry(selectedPeriod, total, channels, mrrNotes);
+    const updated = upsertNewMrrEntry(selectedPeriod, total, dealsCount, channels, mrrNotes);
     setMrrEntries(updated);
     setMrrSaved(true);
     setTimeout(() => setMrrSaved(false), 2500);
@@ -123,6 +132,7 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
     if (!window.confirm(`Remover o novo MRR informado para ${formatPeriodLabel(selectedPeriod)}?`)) return;
     setMrrEntries(deleteNewMrrEntry(existingMrr.id));
     setTotalMrrInput('');
+    setTotalDealsInput('');
     setOtherChannelsDraft([{ channel: '', value: '' }]);
   };
 
@@ -260,17 +270,32 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
           </div>
 
           <div className="p-[22px] space-y-3.5">
-            <div>
-              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Novo MRR Total da Empresa (R$) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ex: 42000.00"
-                value={totalMrrInput}
-                onChange={(e) => setTotalMrrInput(e.target.value)}
-                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Novo MRR Total da Empresa (R$) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ex: 42000.00"
+                  value={totalMrrInput}
+                  onChange={(e) => setTotalMrrInput(e.target.value)}
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Total de Vendas (nº, todos os canais)</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="Ex: 34"
+                  value={totalDealsInput}
+                  onChange={(e) => setTotalDealsInput(e.target.value)}
+                  className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                />
+                <span className="text-[10px] text-zry-text-2 mt-1 block">Opcional — habilita o Ticket Médio Total da empresa</span>
+              </div>
             </div>
 
             <div>
@@ -380,14 +405,19 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
         </div>
       </div>
 
-      {/* Resumo do mês selecionado: CAC (x2), CAP, Relevância */}
+      {/* Análise do Canal (sozinho) */}
       <div className="bg-zry-surface border border-zry-border rounded-zry-lg overflow-hidden">
-        <div className="px-[22px] py-[18px] border-b border-zry-border">
-          <h3 className="text-[14px] font-bold text-zry-text">Indicadores de {formatPeriodLabel(selectedPeriod)}</h3>
-          <p className="text-[11px] text-zry-text-2 mt-0.5">
-            {metrics.closedDealsCount} negócio(s) fechado(s) por {metrics.activePartnersCount} parceiro(s) neste mês, somando{' '}
-            {formatCurrency(metrics.channelMrrFromReferrals)} de novo MRR (calculado a partir das indicações).
-          </p>
+        <div className="px-[22px] py-[18px] border-b border-zry-border flex items-center gap-2.5">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-zry-roxo bg-zry-lilas-30 px-2.5 py-1 rounded-full">
+            Análise do Canal
+          </span>
+          <div>
+            <h3 className="text-[14px] font-bold text-zry-text">Canal de Parceiros — {formatPeriodLabel(selectedPeriod)}</h3>
+            <p className="text-[11px] text-zry-text-2 mt-0.5">
+              {metrics.closedDealsCount} negócio(s) fechado(s) por {metrics.activePartnersCount} parceiro(s) neste mês, somando{' '}
+              {formatCurrency(metrics.channelMrrFromReferrals)} de novo MRR (calculado a partir das indicações).
+            </p>
+          </div>
         </div>
 
         <div className="p-[22px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -424,6 +454,41 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
             </p>
           </div>
 
+          {/* Ticket Médio do Canal */}
+          <div className="bg-zry-lilas-30 rounded-zry-lg p-4">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Ticket Médio do Canal</span>
+            <div className="text-[22px] font-bold text-zry-roxo tracking-tight mt-1.5">
+              {metrics.ticketMedioCanal !== null ? formatCurrency(metrics.ticketMedioCanal) : '—'}
+            </div>
+            <p className="text-[11px] text-zry-text-2 mt-2 leading-relaxed">
+              Novo MRR do canal ÷ nº de negócios fechados no canal. Valor médio de cada venda trazida por parceiros.
+            </p>
+          </div>
+        </div>
+
+        {!existingCost && (
+          <div className="mx-[22px] mb-[22px] bg-zry-warning-bg border border-zry-warning/30 rounded-xl p-3 text-[12px] text-zry-warning flex items-center gap-2">
+            <HelpCircle className="w-4 h-4 shrink-0" />
+            <span>Sem custo do canal informado para {formatPeriodLabel(selectedPeriod)} — CAC e CAP ficam em branco até você preencher.</span>
+          </div>
+        )}
+      </div>
+
+      {/* Canal vs Total da Empresa (comparação) */}
+      <div className="bg-zry-surface border border-zry-border rounded-zry-lg overflow-hidden">
+        <div className="px-[22px] py-[18px] border-b border-zry-border flex items-center gap-2.5">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-zry-roxo bg-zry-coral/20 px-2.5 py-1 rounded-full">
+            Canal vs Total
+          </span>
+          <div>
+            <h3 className="text-[14px] font-bold text-zry-text">Canal de Parceiros comparado com a Empresa Toda</h3>
+            <p className="text-[11px] text-zry-text-2 mt-0.5">
+              Precisa do Novo MRR Total e do Total de Vendas preenchidos acima para todos os números aparecerem.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-[22px] grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Relevância no MRR */}
           <div className="bg-zry-lilas-30 rounded-zry-lg p-4">
             <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Relevância no MRR Novo</span>
@@ -434,12 +499,48 @@ export default function ChannelMetricsView({ referrals }: ChannelMetricsViewProp
               % do novo MRR total da empresa no mês que veio do canal de parceiros (calculado pelas indicações fechadas).
             </p>
           </div>
+
+          {/* Ticket Médio Total da Empresa */}
+          <div className="bg-zry-lilas-30 rounded-zry-lg p-4">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Ticket Médio Total (Empresa)</span>
+            <div className="text-[22px] font-bold text-zry-roxo tracking-tight mt-1.5">
+              {metrics.ticketMedioTotal !== null ? formatCurrency(metrics.ticketMedioTotal) : '—'}
+            </div>
+            <p className="text-[11px] text-zry-text-2 mt-2 leading-relaxed">
+              Novo MRR total da empresa ÷ total de vendas informado (todos os canais).
+            </p>
+          </div>
+
+          {/* Comparação de Ticket Médio */}
+          <div className="bg-zry-lilas-30 rounded-zry-lg p-4">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zry-text-2 block">Ticket do Canal vs Total</span>
+            <div
+              className={`text-[22px] font-bold tracking-tight mt-1.5 ${
+                metrics.ticketMedioComparisonPercent === null
+                  ? 'text-zry-roxo'
+                  : metrics.ticketMedioComparisonPercent >= 0
+                  ? 'text-zry-positive'
+                  : 'text-zry-danger'
+              }`}
+            >
+              {metrics.ticketMedioComparisonPercent !== null
+                ? `${metrics.ticketMedioComparisonPercent >= 0 ? '+' : ''}${metrics.ticketMedioComparisonPercent.toFixed(1)}%`
+                : '—'}
+            </div>
+            <p className="text-[11px] text-zry-text-2 mt-2 leading-relaxed">
+              Quanto o ticket médio do canal está acima (+) ou abaixo (−) do ticket médio da empresa toda.
+            </p>
+          </div>
         </div>
 
-        {!existingCost && (
+        {(metrics.companyTotalNewMrr === null || metrics.totalNewDealsCount === null) && (
           <div className="mx-[22px] mb-[22px] bg-zry-warning-bg border border-zry-warning/30 rounded-xl p-3 text-[12px] text-zry-warning flex items-center gap-2">
             <HelpCircle className="w-4 h-4 shrink-0" />
-            <span>Sem custo do canal informado para {formatPeriodLabel(selectedPeriod)} — CAC e CAP ficam em branco até você preencher.</span>
+            <span>
+              {metrics.companyTotalNewMrr === null
+                ? 'Sem Novo MRR Total informado para este mês — preencha no formulário acima.'
+                : 'Sem Total de Vendas informado para este mês — o Ticket Médio Total e a comparação ficam em branco até você preencher.'}
+            </span>
           </div>
         )}
       </div>
