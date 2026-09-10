@@ -225,6 +225,20 @@ export default function ReferralsTable({
               </select>
             </div>
 
+            {/* Churn Filter (só filtra dentro dos 'ganho') */}
+            <div className="flex items-center gap-2">
+              <span className="text-[12.5px] text-zry-text-2 font-semibold">Ganhos:</span>
+              <select
+                value={filter.churnFilter || 'all'}
+                onChange={(e) => onFilterChange({ ...filter, churnFilter: e.target.value as FilterState['churnFilter'] })}
+                className="bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
+              >
+                <option value="all">Todos</option>
+                <option value="active">Só ativos</option>
+                <option value="churned">Só cancelados</option>
+              </select>
+            </div>
+
             {/* Commission Status Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[12.5px] text-zry-text-2 font-semibold">Comissão:</span>
@@ -348,7 +362,14 @@ export default function ReferralsTable({
 
                         {/* Status Negócio */}
                         <td className="py-3.5 px-3 text-[13px]">
-                          {statusBadge(ref.dealStatus)}
+                          <div className="flex flex-col items-start gap-1">
+                            {statusBadge(ref.dealStatus)}
+                            {ref.dealStatus === 'ganho' && ref.churnedAt && (
+                              <span className={`${badgeBase} bg-zry-danger-bg text-zry-danger`} title={ref.churnReason || undefined}>
+                                <XCircle className="w-3 h-3" /> Cancelado em {formatDateBR(ref.churnedAt)}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Valor Negócio */}

@@ -1,16 +1,7 @@
 import type { Referral, ReferralVintage, MonthlyClosedBreakdown } from '../types';
 import { dispatchNotification } from '../services/notificationService';
 import { formatCurrency } from './analytics';
-
-const MONTH_NAMES_PT = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
-
-const MONTH_SHORT_PT = [
-  'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-];
+import { MONTH_NAMES_PT, MONTH_SHORT_PT } from './dateLabels';
 
 /**
  * Calculates referral vintages (safras) for the past N months.

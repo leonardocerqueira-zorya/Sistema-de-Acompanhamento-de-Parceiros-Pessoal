@@ -113,6 +113,11 @@ export interface Referral {
   closeDate?: string; // YYYY-MM-DD (data de fechamento)
   invoiceDueDay?: number; // Dia de vencimento da fatura do cliente (1 a 31)
   firstInvoiceDueDate?: string; // YYYY-MM-DD da 1ª fatura
+
+  // Churn: cliente fechou (dealStatus continua 'ganho', não reescrevemos o
+  // histórico) e depois cancelou. Preenchido = parou de contar como MRR ativo.
+  churnedAt?: string; // YYYY-MM-DD
+  churnReason?: string;
   
   commissionPercent?: number; // % referencial se aplicável
   commissionValue?: number; // R$ comissão total fixa por plano
@@ -200,6 +205,7 @@ export interface FilterState {
   commissionStatus: CommissionStatus | 'all';
   onlyMissingData: boolean;
   searchQuery: string;
+  churnFilter?: 'all' | 'active' | 'churned'; // Só se aplica a indicações 'ganho'
 }
 
 export type RankingSortKey = 'wonDeals' | 'referrals' | 'volume' | 'conversion' | 'speed';
@@ -265,6 +271,13 @@ export interface ChannelKPIs {
   activePartnersCount: number;
   partnerActivationRate: number; // % partners that referred at least once
   incompleteDataCount: number;
+
+  // Churn: totalWonVolume/totalWonDeals acima continuam históricos (nunca
+  // encolhem retroativamente); estes refletem o estado atual.
+  churnedCount: number; // Quantidade de 'ganho' com churnedAt preenchido
+  churnedVolume: number; // R$ dealValue somado dos cancelados
+  activeWonVolume: number; // totalWonVolume - churnedVolume ("MRR ativo" hoje)
+  churnRate: number; // % churnedCount / totalWonDeals
 }
 
 export interface PartnerRankingItem {

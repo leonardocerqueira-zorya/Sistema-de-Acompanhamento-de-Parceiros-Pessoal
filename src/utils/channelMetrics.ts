@@ -13,8 +13,23 @@ function referralMrr(r: Referral): number {
 }
 
 // Indicações "ganho" cujo fechamento (closeDate) caiu no mês informado (YYYY-MM).
+// Fechar num mês é um fato histórico: não muda se o cliente cancelar depois.
 export function referralsClosedInPeriod(referrals: Referral[], period: string): Referral[] {
   return referrals.filter(r => r.dealStatus === 'ganho' && (r.closeDate || '').slice(0, 7) === period);
+}
+
+// Indicação "ganho" que ainda gera MRR na data de referência (hoje, por
+// padrão) — ou seja, ainda não foi marcada como cancelada até essa data.
+export function isActiveWon(r: Referral, asOfDate: string = new Date().toISOString().slice(0, 10)): boolean {
+  if (r.dealStatus !== 'ganho') return false;
+  if (!r.churnedAt) return true;
+  return r.churnedAt > asOfDate;
+}
+
+// MRR "ativo hoje": soma o MRR de todo "ganho" que ainda não cancelou até a
+// data de referência. Diferente de referralsClosedInPeriod, que é histórico.
+export function currentActiveMrr(referrals: Referral[], asOfDate: string = new Date().toISOString().slice(0, 10)): number {
+  return referrals.filter(r => isActiveWon(r, asOfDate)).reduce((sum, r) => sum + referralMrr(r), 0);
 }
 
 // Soma do novo MRR gerado pelo canal de parceiros no mês, a partir das

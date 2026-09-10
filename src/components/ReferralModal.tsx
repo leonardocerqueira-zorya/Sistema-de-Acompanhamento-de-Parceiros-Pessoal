@@ -14,7 +14,8 @@ import {
   Sparkles,
   Layers,
   Clock,
-  ChevronDown
+  ChevronDown,
+  XCircle
 } from 'lucide-react';
 
 interface ReferralModalProps {
@@ -72,6 +73,10 @@ export default function ReferralModal({
   const [paymentMethod, setPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Churn: cliente fechou ('ganho') e depois cancelou
+  const [churnedAt, setChurnedAt] = useState('');
+  const [churnReason, setChurnReason] = useState('');
+
   // Existing installments if editing
   const [existingInstallments, setExistingInstallments] = useState<CommissionInstallment[]>([]);
 
@@ -109,6 +114,8 @@ export default function ReferralModal({
       setCommissionPaidDate(initialData.commissionPaidDate || '');
       setPaymentMethod(initialData.paymentMethod || '');
       setNotes(initialData.notes || '');
+      setChurnedAt(initialData.churnedAt || '');
+      setChurnReason(initialData.churnReason || '');
       setExistingInstallments(initialData.commissionInstallments || []);
     } else {
       const today = new Date().toISOString().slice(0, 10);
@@ -147,6 +154,8 @@ export default function ReferralModal({
       setCommissionPaidDate('');
       setPaymentMethod('');
       setNotes('');
+      setChurnedAt('');
+      setChurnReason('');
       setExistingInstallments([]);
     }
   }, [initialData, partners, isOpen]);
@@ -316,6 +325,24 @@ export default function ReferralModal({
       }
     }
 
+    // Churn: cliente cancelou — toda parcela ainda não paga vira 'cancelada'
+    // automaticamente (não faz sentido cobrar/pagar comissão de cliente que já saiu).
+    const trimmedChurnedAt = churnedAt.trim();
+    if (trimmedChurnedAt && finalInstallments) {
+      finalInstallments = finalInstallments.map(inst =>
+        ['a_liberar', 'solicitada', 'agendada'].includes(inst.status)
+          ? { ...inst, status: 'cancelada' as const, notes: `Cancelada automaticamente — cliente cancelou em ${formatDateBR(trimmedChurnedAt)}` }
+          : inst
+      );
+    }
+    // Se nenhuma parcela chegou a ser paga antes do cancelamento, o status geral
+    // da comissão também reflete isso; se já houve pagamento parcial, mantém o
+    // status escolhido manualmente (não existe um "parcialmente cancelada").
+    const finalCommissionStatus: CommissionStatus =
+      trimmedChurnedAt && finalInstallments && finalInstallments.every(i => i.status === 'cancelada')
+        ? 'cancelada'
+        : commissionStatus;
+
     const baseReferral: Partial<Referral> = {
       id: refId,
       idConexa: idConexa.trim() || undefined,
@@ -347,11 +374,14 @@ export default function ReferralModal({
 
       commissionPercent: numCommPercent,
       commissionValue: numCommValue,
-      commissionStatus,
+      commissionStatus: finalCommissionStatus,
       commissionPaidDate: commissionPaidDate || undefined,
       paymentMethod: paymentMethod || undefined,
       notes: notes.trim() || undefined,
-      
+
+      churnedAt: dealStatus === 'ganho' ? (trimmedChurnedAt || undefined) : undefined,
+      churnReason: dealStatus === 'ganho' && trimmedChurnedAt ? (churnReason.trim() || undefined) : undefined,
+
       commissionInstallments: finalInstallments,
 
       // Ao salvar pelo formulário sempre há empresa/cliente (campo obrigatório):
@@ -800,6 +830,51 @@ export default function ReferralModal({
                     ? '💡 No plano mensal, a comissão é liberada em 3 partes (1/3 cada) nas 1ª, 3ª e 5ª mensalidades do cliente.'
                     : `💡 No plano anual ${planInstallments}, o pagamento acompanha as parcelas do cliente conforme quitação.`}
                 </p>
+              </div>
+            )}
+
+            {/* Churn: cliente fechou e depois cancelou (só faz sentido pra negócio já ganho) */}
+            {dealStatus === 'ganho' && (
+              <div className="border-t border-zry-border pt-3.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!churnedAt}
+                    onChange={(e) => setChurnedAt(e.target.checked ? new Date().toISOString().slice(0, 10) : '')}
+                    className="w-4 h-4 rounded accent-zry-danger"
+                  />
+                  <span className="text-[12px] font-semibold text-zry-danger flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" /> Cliente cancelou (churn)
+                  </span>
+                </label>
+
+                {churnedAt && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2.5 bg-zry-danger-bg/40 border border-zry-danger/30 p-3 rounded-xl">
+                    <div>
+                      <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Data do Cancelamento *</label>
+                      <input
+                        type="date"
+                        value={churnedAt}
+                        onChange={(e) => setChurnedAt(e.target.value)}
+                        required
+                        className="w-full bg-zry-surface border border-zry-danger/40 rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-danger transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Motivo (opcional)</label>
+                      <input
+                        type="text"
+                        value={churnReason}
+                        onChange={(e) => setChurnReason(e.target.value)}
+                        placeholder="Ex: encerrou operação, trocou de fornecedor..."
+                        className="w-full bg-zry-surface border border-zry-danger/40 rounded-xl px-3 py-2 text-[13px] text-zry-text focus:outline-none focus:border-zry-danger transition"
+                      />
+                    </div>
+                    <p className="sm:col-span-2 text-[10.5px] text-zry-danger leading-relaxed">
+                      Parcelas de comissão ainda não pagas serão canceladas automaticamente ao salvar. O status "Ganho / Fechado" é mantido — só deixa de contar como MRR ativo.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

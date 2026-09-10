@@ -16,6 +16,7 @@ import EngagementBar from './EngagementBar';
 import DataAuditView from './DataAuditView';
 import PartnerCohortChart from './PartnerCohortChart';
 import VintageCohortReport from './VintageCohortReport';
+import ChurnReport from './ChurnReport';
 import PartnerLocationMap from './PartnerLocationMap';
 import { 
   TrendingUp, 
@@ -46,7 +47,8 @@ import {
   PiggyBank,
   Wallet,
   HelpCircle,
-  HeartPulse
+  HeartPulse,
+  TrendingDown
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -495,6 +497,37 @@ export default function Dashboard({
           </div>
         </div>
 
+        {/* KPI 3b: MRR Ativo (exclui cancelados) */}
+        <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
+            <DollarSign className="w-[18px] h-[18px] text-zry-creme" />
+          </div>
+          <div className="text-[22px] font-bold tracking-tight text-zry-text leading-none">
+            {formatCurrency(kpis.activeWonVolume)}
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">MRR ativo hoje</div>
+          <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
+            Cancelado: <span className="font-semibold text-zry-danger">{formatCurrency(kpis.churnedVolume)}</span>
+          </div>
+        </div>
+
+        {/* KPI 3c: Taxa de Churn */}
+        <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
+          <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
+            <TrendingDown className="w-[18px] h-[18px] text-zry-creme" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[26px] font-bold tracking-tight text-zry-text leading-none">
+              {kpis.churnRate.toFixed(1)}
+            </span>
+            <span className="text-[12px] font-semibold text-zry-text-2">%</span>
+          </div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Taxa de churn</div>
+          <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
+            {kpis.churnedCount} de {kpis.totalWonDeals} fechados
+          </div>
+        </div>
+
         {/* KPI 4: Descontos Aplicados (R$ e %) */}
         <div className="bg-zry-surface rounded-zry-lg p-5 border border-zry-border">
           <div className="w-[38px] h-[38px] rounded-xl bg-zry-roxo flex items-center justify-center mb-3.5">
@@ -803,6 +836,17 @@ export default function Dashboard({
 
       {/* Safras de Indicação: Corte D+15, Conversão e Fechamentos por Safra (Últimos 12 Meses) */}
       <VintageCohortReport
+        referrals={referrals}
+        onSelectReferral={(referralId) => {
+          if (onEditReferral) {
+            const found = referrals.find(r => r.id === referralId);
+            if (found) onEditReferral(found);
+          }
+        }}
+      />
+
+      {/* Cancelamentos por Mês (churn) */}
+      <ChurnReport
         referrals={referrals}
         onSelectReferral={(referralId) => {
           if (onEditReferral) {

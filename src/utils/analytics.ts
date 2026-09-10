@@ -157,6 +157,13 @@ export function filterReferrals(
       if (ref.commissionStatus !== filter.commissionStatus) return false;
     }
 
+    // 4b. Churn filter — só se aplica a indicações 'ganho' (não filtra as demais)
+    if (filter.churnFilter && filter.churnFilter !== 'all' && ref.dealStatus === 'ganho') {
+      const isChurned = !!ref.churnedAt;
+      if (filter.churnFilter === 'active' && isChurned) return false;
+      if (filter.churnFilter === 'churned' && !isChurned) return false;
+    }
+
     // 5. Only missing data audit filter
     if (filter.onlyMissingData) {
       if (!ref.hasMissingData) return false;
@@ -190,6 +197,8 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
   let totalCommissionsWon = 0;
   let pendingCommissionCount = 0;
   let incompleteDataCount = 0;
+  let churnedCount = 0;
+  let churnedVolume = 0;
 
   // Lead to close cycle day calculations
   const leadToCloseDaysList: number[] = [];
@@ -220,6 +229,13 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
         wonCommission = ref.commissionInstallments.reduce((acc, curr) => acc + (curr.value || 0), 0);
       }
       totalCommissionsWon += wonCommission;
+
+      if (ref.churnedAt) {
+        churnedCount++;
+        if (ref.dealValue && !isNaN(ref.dealValue)) {
+          churnedVolume += ref.dealValue;
+        }
+      }
 
       // Calculate days between referral and close
       const days = calculateDaysBetween(ref.referralDate, ref.closeDate);
@@ -316,6 +332,11 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     ? (partnersWithReferrals.size / partners.length) * 100
     : 0;
 
+  // Churn: totalWonVolume/totalWonDeals continuam históricos; activeWonVolume
+  // é o que efetivamente ainda gera MRR hoje.
+  const activeWonVolume = totalWonVolume - churnedVolume;
+  const churnRate = totalWonDeals > 0 ? (churnedCount / totalWonDeals) * 100 : 0;
+
   return {
     totalReferrals,
     totalWonDeals,
@@ -338,7 +359,11 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     avgDaysReferralToClose,
     activePartnersCount,
     partnerActivationRate,
-    incompleteDataCount
+    incompleteDataCount,
+    churnedCount,
+    churnedVolume,
+    activeWonVolume,
+    churnRate
   };
 }
 
