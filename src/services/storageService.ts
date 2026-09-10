@@ -2,7 +2,14 @@ import type { Partner, Referral, ChannelCostEntry, NewMrrEntry } from '../types'
 import { evaluateMissingFields } from './sheetsService';
 import { supabase } from './supabaseClient';
 import { loadChannelCosts, saveChannelCosts, loadNewMrrEntries, saveNewMrrEntries } from './channelMetricsService';
-import { markLocalChange, registerCloudPush, runWithoutTracking } from './syncState';
+import { markLocalChange, registerCloudPush, runWithoutTracking, isTracking } from './syncState';
+import {
+  type TableName,
+  queueWrite,
+  registerRowResolver,
+  partnerToRow,
+  referralToRow
+} from './repository';
 
 const PARTNERS_STORAGE_KEY = 'parceiros_data_v2';
 const REFERRALS_STORAGE_KEY = 'indicacoes_data_v2';
@@ -56,6 +63,54 @@ export function getInitialReferrals(): Referral[] {
   });
 }
 
+function readRawList<T>(key: string): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as T[];
+    }
+  } catch {
+    /* ilegível: trata como vazio; o sync completo reconcilia depois */
+  }
+  return [];
+}
+
+// Compara o que estava gravado com o que está sendo gravado e enfileira só os
+// registros que mudaram de fato. É o que faz duas pessoas editando registros
+// diferentes ao mesmo tempo não se sobrescreverem — cada save toca só as
+// próprias linhas, em vez de reescrever a base inteira.
+//
+// A comparação é feita na forma de LINHA (o que vai pro banco), não no objeto
+// de domínio: campos derivados como `missingFields` mudam a cada carga e
+// gerariam envio desnecessário.
+function queueRowDelta<T extends { id: string }>(
+  table: TableName,
+  previous: T[],
+  next: T[],
+  toRow: (item: T) => Record<string, unknown>
+): void {
+  if (!isTracking()) return; // gravação que é eco do servidor não volta pra ele
+
+  const previousRows = new Map<string, string>();
+  for (const item of previous) {
+    if (item?.id) previousRows.set(item.id, JSON.stringify(toRow(item)));
+  }
+
+  const nextIds = new Set<string>();
+  for (const item of next) {
+    if (!item?.id) continue;
+    nextIds.add(item.id);
+    if (previousRows.get(item.id) !== JSON.stringify(toRow(item))) {
+      queueWrite(table, item.id, 'upsert');
+    }
+  }
+
+  for (const id of previousRows.keys()) {
+    if (!nextIds.has(id)) queueWrite(table, id, 'delete');
+  }
+}
+
 // Local Storage Handlers
 export function loadStoredPartners(): Partner[] {
   try {
@@ -84,11 +139,13 @@ export function loadStoredPartners(): Partner[] {
 }
 
 export function saveStoredPartners(partners: Partner[]): void {
+  const previous = readRawList<Partner>(PARTNERS_STORAGE_KEY);
   try {
     localStorage.setItem(PARTNERS_STORAGE_KEY, JSON.stringify(partners));
   } catch (e) {
     console.error('Erro ao salvar parceiros no localStorage', e);
   }
+  queueRowDelta('partners', previous, partners, partnerToRow);
   markLocalChange();
 }
 
@@ -126,11 +183,13 @@ export function loadStoredReferrals(): Referral[] {
 }
 
 export function saveStoredReferrals(referrals: Referral[]): void {
+  const previous = readRawList<Referral>(REFERRALS_STORAGE_KEY);
   try {
     localStorage.setItem(REFERRALS_STORAGE_KEY, JSON.stringify(referrals));
   } catch (e) {
     console.error('Erro ao salvar indicações no localStorage', e);
   }
+  queueRowDelta('referrals', previous, referrals, referralToRow);
   markLocalChange();
 }
 
@@ -282,6 +341,18 @@ export async function fetchCloudBackup(): Promise<CloudBackupRow | null> {
     updatedAt: (data.updated_at as string) ?? new Date(0).toISOString()
   };
 }
+
+// O repositório envia por linha e precisa reler o registro atual na hora do
+// envio (a fila guarda só o id, então uma edição posterior sobe a versão final).
+registerRowResolver('partners', id => {
+  const found = readRawList<Partner>(PARTNERS_STORAGE_KEY).find(p => p.id === id);
+  return found ? partnerToRow(found) : null;
+});
+
+registerRowResolver('referrals', id => {
+  const found = readRawList<Referral>(REFERRALS_STORAGE_KEY).find(r => r.id === id);
+  return found ? referralToRow(found) : null;
+});
 
 // O rastreador de alterações locais (módulo folha) não conhece o Supabase:
 // é aqui que o push real é ligado ao debounce dele.

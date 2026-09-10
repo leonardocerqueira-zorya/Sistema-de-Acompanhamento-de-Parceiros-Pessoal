@@ -1,155 +1,159 @@
-import type { AppNotification, ChannelCostEntry, NewMrrEntry, Partner, Referral } from '../types';
+import type { ChannelCostEntry, NewMrrEntry, Partner, Referral } from '../types';
 import { supabase } from './supabaseClient';
 import {
-  type SystemBackup,
-  importAllData,
+  fetchCloudBackup,
   loadStoredPartners,
   loadStoredReferrals,
-  fetchCloudBackup,
+  saveStoredPartners,
+  saveStoredReferrals,
   pushBackupToSupabase
 } from './storageService';
-import { loadChannelCosts, loadNewMrrEntries } from './channelMetricsService';
-import { getLocalChangeAt, setLocalChangeAt, runWithoutTracking } from './syncState';
+import {
+  loadChannelCosts,
+  saveChannelCosts,
+  loadNewMrrEntries,
+  saveNewMrrEntries
+} from './channelMetricsService';
+import {
+  type TableName,
+  fetchSnapshot,
+  flushPendingWrites,
+  pendingIdsFor,
+  queueWrite,
+  seedTables,
+  SETTING_PARTNER_TIERS,
+  SETTING_PRICING_PLANS
+} from './repository';
+import { runWithoutTracking, setLocalChangeAt } from './syncState';
 
-const NOTIFICATIONS_STORAGE_KEY = 'canal_notificacoes_v1';
+const FULL_SYNC_KEY = 'canal_ultimo_sync_completo';
+const PLANS_STORAGE_KEY = 'zorya_custom_pricing_plans_v1';
+const TIERS_STORAGE_KEY = 'zorya_partner_tiers_v1';
 
 // ---------------------------------------------------------------------------
-// Sincronização entre máquinas.
+// Sincronização sobre tabelas relacionais.
 //
-// O app continua offline-first (localStorage é lido primeiro e sempre funciona),
-// mas agora a nuvem é reconciliada de verdade: ao abrir o sistema (e ao voltar
-// o foco pra aba), o backup da nuvem é baixado e MESCLADO com o local por id.
+// O banco é a fonte da verdade; o localStorage é cache, para a tela pintar na
+// hora e o app aguentar oscilação de rede. Cada alteração sobe como upsert/
+// delete da própria LINHA (ver repository.ts), então duas pessoas mexendo em
+// registros diferentes nunca se sobrescrevem e apagar apaga de verdade.
 //
-// Regra central, pensada pra não perder dados: a mesclagem é uma UNIÃO. Todo
-// registro que existe em qualquer um dos lados sobrevive. Só quando o MESMO id
-// existe nos dois lados com conteúdo diferente é que há decisão a tomar — e aí
-// vale o mais recente (por updatedAt do próprio registro quando existe, senão
-// pelo lado que foi alterado por último).
-//
-// Limitação conhecida: sem "tombstones" (marca de exclusão), um registro
-// apagado numa máquina pode voltar se outra máquina ainda o tiver. No domínio
-// deste app isso é raro — parceiro vira `inativo` e indicação vira `perdido`,
-// em vez de serem removidos da lista.
+// Regra de merge: o servidor manda, com duas exceções deliberadas —
+//   1. id com escrita pendente (ainda não confirmada pelo servidor): a versão
+//      local vence, senão uma edição feita offline seria apagada pela cópia
+//      antiga que está no banco;
+//   2. antes do primeiro sync completo deste navegador, registro que existe só
+//      aqui é dado legado (de antes da migração) e sobe — depois do primeiro
+//      sync completo, ausente no servidor significa apagado por alguém, e
+//      some daqui também.
 // ---------------------------------------------------------------------------
 
 export type SyncStatus =
-  | 'disabled' // Supabase não configurado
-  | 'empty' // nada local, nada na nuvem
-  | 'bootstrapped' // nuvem estava vazia: subiu o local como primeira cópia
-  | 'adopted' // navegador novo/zerado: adotou a nuvem inteira
-  | 'merged' // os dois lados tinham dados: mesclou e reconciliou
-  | 'up-to-date' // já estavam idênticos
+  | 'disabled'
+  | 'empty'
+  | 'migrated' // carga inicial: levou os dados existentes para as tabelas
+  | 'merged'
+  | 'up-to-date'
   | 'failed';
 
 export interface SyncOutcome {
   status: SyncStatus;
-  partnersFromCloud: number; // registros que só existiam na nuvem
+  partnersFromCloud: number;
   referralsFromCloud: number;
-  partnersOnlyLocal: number; // registros que só existiam aqui (foram preservados e subiram)
-  referralsOnlyLocal: number;
-  conflicts: number; // mesmo id divergente nos dois lados
+  uploadedFromLocal: number;
+  removedLocally: number;
+  pendingFailures: number;
   message: string;
   error?: string;
 }
 
-interface MergeStats {
-  fromCloudOnly: number;
-  fromLocalOnly: number;
-  conflicts: number;
-}
-
-function sameContent(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-// Mescla duas listas de registros com `id`, em união.
-// `preferCloud` só decide empates em que não há timestamp por registro.
-export function mergeRecords<T extends { id: string }>(
-  local: T[],
-  cloud: T[],
-  preferCloud: boolean,
-  recencyOf?: (item: T) => string | undefined
-): { merged: T[]; stats: MergeStats } {
-  const localById = new Map<string, T>();
-  for (const item of local) if (item && item.id) localById.set(item.id, item);
-  const cloudById = new Map<string, T>();
-  for (const item of cloud) if (item && item.id) cloudById.set(item.id, item);
-
-  const merged = new Map<string, T>();
-  const stats: MergeStats = { fromCloudOnly: 0, fromLocalOnly: 0, conflicts: 0 };
-
-  for (const [id, localItem] of localById) {
-    const cloudItem = cloudById.get(id);
-
-    if (!cloudItem) {
-      stats.fromLocalOnly++;
-      merged.set(id, localItem);
-      continue;
-    }
-
-    if (sameContent(localItem, cloudItem)) {
-      merged.set(id, localItem);
-      continue;
-    }
-
-    stats.conflicts++;
-    const localAt = recencyOf?.(localItem);
-    const cloudAt = recencyOf?.(cloudItem);
-    if (localAt && cloudAt) {
-      merged.set(id, cloudAt > localAt ? cloudItem : localItem);
-    } else if (cloudAt && !localAt) {
-      merged.set(id, cloudItem);
-    } else if (localAt && !cloudAt) {
-      merged.set(id, localItem);
-    } else {
-      merged.set(id, preferCloud ? cloudItem : localItem);
-    }
-  }
-
-  for (const [id, cloudItem] of cloudById) {
-    if (merged.has(id)) continue;
-    stats.fromCloudOnly++;
-    merged.set(id, cloudItem);
-  }
-
-  return { merged: Array.from(merged.values()), stats };
-}
-
-function loadLocalNotifications(): AppNotification[] {
+function getLastFullSync(): string | null {
   try {
-    const raw = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AppNotification[];
+    return localStorage.getItem(FULL_SYNC_KEY);
   } catch {
-    /* notificações são acessórias: se ilegíveis, segue com lista vazia */
+    return null;
   }
-  return [];
 }
 
-// Escreve um backup no armazenamento local sem contar como alteração do
-// usuário (senão o merge acharia que este navegador é o lado mais fresco).
-function applyBackupLocally(backup: SystemBackup): void {
-  runWithoutTracking(() => {
-    importAllData(JSON.stringify(backup));
-  });
+function markFullSyncDone(): void {
+  try {
+    localStorage.setItem(FULL_SYNC_KEY, new Date().toISOString());
+  } catch {
+    /* sem armazenamento: o merge só fica mais conservador na próxima vez */
+  }
 }
 
-function describeMerge(o: Omit<SyncOutcome, 'message'>): string {
-  const parts: string[] = [];
-  const baixados = o.partnersFromCloud + o.referralsFromCloud;
-  const enviados = o.partnersOnlyLocal + o.referralsOnlyLocal;
-  if (baixados > 0) parts.push(`${baixados} registro(s) baixado(s) da nuvem`);
-  if (enviados > 0) parts.push(`${enviados} registro(s) deste navegador enviado(s)`);
-  if (o.conflicts > 0) parts.push(`${o.conflicts} atualizado(s) para a versão mais recente`);
-  return parts.length > 0 ? `Dados sincronizados: ${parts.join(', ')}.` : 'Dados já estavam sincronizados.';
+interface MergeResult<T> {
+  merged: T[];
+  fromServer: number;
+  uploaded: number;
+  removed: number;
+}
+
+function mergeWithServer<T extends { id: string }>(
+  table: TableName,
+  local: T[],
+  server: T[],
+  hadFullSync: boolean
+): MergeResult<T> {
+  const pending = pendingIdsFor(table);
+  const byId = new Map<string, T>();
+  for (const item of server) if (item?.id) byId.set(item.id, item);
+
+  const serverIds = new Set(byId.keys());
+  const localIds = new Set<string>();
+  let uploaded = 0;
+  let removed = 0;
+
+  for (const item of local) {
+    if (!item?.id) continue;
+    localIds.add(item.id);
+
+    if (pending.has(item.id)) {
+      // Alteração local ainda não confirmada: ela vence e já está na fila.
+      byId.set(item.id, item);
+      continue;
+    }
+
+    if (!serverIds.has(item.id)) {
+      if (!hadFullSync) {
+        // Dado anterior à migração: preserva e envia.
+        byId.set(item.id, item);
+        queueWrite(table, item.id, 'upsert');
+        uploaded++;
+      } else {
+        // Já sincronizamos antes e o servidor não tem mais: foi apagado.
+        removed++;
+      }
+    }
+  }
+
+  let fromServer = 0;
+  for (const id of serverIds) if (!localIds.has(id)) fromServer++;
+
+  return { merged: Array.from(byId.values()), fromServer, uploaded, removed };
+}
+
+function applySettings(settings: Record<string, unknown>): void {
+  const write = (key: string, value: unknown) => {
+    if (value === undefined || value === null) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      /* configuração é acessória: sem espaço, segue com o padrão local */
+    }
+  };
+  write(PLANS_STORAGE_KEY, settings[SETTING_PRICING_PLANS]);
+  write(TIERS_STORAGE_KEY, settings[SETTING_PARTNER_TIERS]);
 }
 
 export async function syncWithCloud(): Promise<SyncOutcome> {
-  const base: Omit<SyncOutcome, 'status' | 'message'> = {
+  const base = {
     partnersFromCloud: 0,
     referralsFromCloud: 0,
-    partnersOnlyLocal: 0,
-    referralsOnlyLocal: 0,
-    conflicts: 0
+    uploadedFromLocal: 0,
+    removedLocally: 0,
+    pendingFailures: 0
   };
 
   if (!supabase) {
@@ -157,143 +161,156 @@ export async function syncWithCloud(): Promise<SyncOutcome> {
   }
 
   try {
-    const cloudRow = await fetchCloudBackup();
+    // 1. Sobe o que ficou pendente antes de ler, para não baixar uma versão
+    //    antiga por cima de uma edição que ainda não tinha saído daqui.
+    const flushed = await flushPendingWrites();
+
+    // 2. Lê as tabelas.
+    const snapshot = await fetchSnapshot();
+    if (!snapshot) {
+      return { ...base, status: 'failed', message: 'Não foi possível ler os dados na nuvem.' };
+    }
+
     const localPartners = loadStoredPartners();
     const localReferrals = loadStoredReferrals();
-    const localIsEmpty = localPartners.length === 0 && localReferrals.length === 0;
-    const localChangeAt = getLocalChangeAt();
+    const localCosts = loadChannelCosts();
+    const localMrr = loadNewMrrEntries();
 
-    // Nuvem ainda vazia: este navegador vira a primeira cópia compartilhada.
-    if (!cloudRow) {
-      if (localIsEmpty) {
-        return { ...base, status: 'empty', message: 'Nenhum dado local nem na nuvem.' };
+    const tablesEmpty =
+      snapshot.partners.length === 0 &&
+      snapshot.referrals.length === 0 &&
+      snapshot.channelCosts.length === 0 &&
+      snapshot.newMrrEntries.length === 0;
+
+    // 3. Carga inicial: as tabelas ainda não têm nada. Junta o que existe neste
+    //    navegador com o backup antigo (blob) e leva tudo para o banco.
+    if (tablesEmpty) {
+      let seed = {
+        partners: localPartners,
+        referrals: localReferrals,
+        channelCosts: localCosts,
+        newMrrEntries: localMrr
+      };
+
+      try {
+        const legacy = await fetchCloudBackup();
+        if (legacy) {
+          seed = {
+            partners: unionById(localPartners, legacy.backup.partners || []),
+            referrals: unionById(localReferrals, legacy.backup.referrals || []),
+            channelCosts: unionById(localCosts, legacy.backup.channelCosts || []),
+            newMrrEntries: unionById(localMrr, legacy.backup.newMrrEntries || [])
+          };
+        }
+      } catch (e) {
+        console.warn('Backup antigo não pôde ser lido na carga inicial (segue com os dados locais):', e);
       }
-      await pushBackupToSupabase();
+
+      const total = seed.partners.length + seed.referrals.length;
+      if (total === 0) {
+        return { ...base, status: 'empty', message: 'Nenhum dado para sincronizar ainda.' };
+      }
+
+      await seedTables(seed);
+      applyLocally(seed);
+      markFullSyncDone();
       setLocalChangeAt(new Date().toISOString());
+
       return {
         ...base,
-        status: 'bootstrapped',
-        partnersOnlyLocal: localPartners.length,
-        referralsOnlyLocal: localReferrals.length,
-        message: 'Primeira cópia enviada para a nuvem — o time já pode acessar destes dados.'
+        status: 'migrated',
+        uploadedFromLocal: total,
+        message: `Dados migrados para o banco: ${seed.partners.length} parceiros e ${seed.referrals.length} indicações agora ficam em registros individuais.`
       };
     }
 
-    const cloud = cloudRow.backup;
+    // 4. Merge normal.
+    const hadFullSync = getLastFullSync() !== null;
 
-    // Navegador/máquina nova (nunca teve dado nem alteração local): adota a
-    // nuvem inteira. É o caso mais comum ao liberar o sistema para o time.
-    if (localIsEmpty && !localChangeAt) {
-      applyBackupLocally(cloud);
-      setLocalChangeAt(cloudRow.updatedAt);
-      return {
-        ...base,
-        status: 'adopted',
-        partnersFromCloud: (cloud.partners || []).length,
-        referralsFromCloud: (cloud.referrals || []).length,
-        message: `Dados carregados da nuvem: ${(cloud.partners || []).length} parceiros e ${(cloud.referrals || []).length} indicações.`
-      };
-    }
+    const partners = mergeWithServer<Partner>('partners', localPartners, snapshot.partners, hadFullSync);
+    const referrals = mergeWithServer<Referral>('referrals', localReferrals, snapshot.referrals, hadFullSync);
+    const costs = mergeWithServer<ChannelCostEntry>('channel_costs', localCosts, snapshot.channelCosts, hadFullSync);
+    const mrr = mergeWithServer<NewMrrEntry>('new_mrr_entries', localMrr, snapshot.newMrrEntries, hadFullSync);
 
-    // Os dois lados têm conteúdo: mescla. `preferCloud` só desempata registros
-    // sem timestamp próprio — a união preserva tudo o mais.
-    //
-    // Sem timestamp local (primeira abertura depois desta atualização) não há
-    // como saber qual lado é mais fresco. Nesse caso mantém-se o que a pessoa
-    // já vê na tela, em vez de reverter silenciosamente o trabalho dela para
-    // uma versão da nuvem de origem desconhecida.
-    const preferCloud = localChangeAt ? cloudRow.updatedAt > localChangeAt : false;
-
-    const partners = mergeRecords<Partner>(localPartners, cloud.partners || [], preferCloud);
-    const referrals = mergeRecords<Referral>(localReferrals, cloud.referrals || [], preferCloud);
-    const costs = mergeRecords<ChannelCostEntry>(
-      loadChannelCosts(),
-      cloud.channelCosts || [],
-      preferCloud,
-      e => e.updatedAt
-    );
-    const mrr = mergeRecords<NewMrrEntry>(
-      loadNewMrrEntries(),
-      cloud.newMrrEntries || [],
-      preferCloud,
-      e => e.updatedAt
-    );
-    const notifications = mergeRecords<AppNotification>(
-      loadLocalNotifications(),
-      (cloud.notifications || []) as AppNotification[],
-      preferCloud,
-      n => n.timestamp
-    );
-
-    const changed =
-      partners.stats.fromCloudOnly > 0 ||
-      partners.stats.conflicts > 0 ||
-      referrals.stats.fromCloudOnly > 0 ||
-      referrals.stats.conflicts > 0 ||
-      costs.stats.fromCloudOnly > 0 ||
-      costs.stats.conflicts > 0 ||
-      mrr.stats.fromCloudOnly > 0 ||
-      mrr.stats.conflicts > 0 ||
-      notifications.stats.fromCloudOnly > 0;
-
-    const localHasExtras =
-      partners.stats.fromLocalOnly > 0 ||
-      referrals.stats.fromLocalOnly > 0 ||
-      costs.stats.fromLocalOnly > 0 ||
-      mrr.stats.fromLocalOnly > 0;
-
-    if (!changed && !localHasExtras) {
-      return { ...base, status: 'up-to-date', message: 'Dados já estavam sincronizados.' };
-    }
-
-    const mergedBackup: SystemBackup = {
-      schema: 'canal-parcerias-backup',
-      version: 3,
-      exportedAt: new Date().toISOString(),
+    applyLocally({
       partners: partners.merged,
       referrals: referrals.merged,
-      notifications: notifications.merged,
       channelCosts: costs.merged,
       newMrrEntries: mrr.merged
+    });
+    applySettings(snapshot.settings);
+    markFullSyncDone();
+
+    const uploaded = partners.uploaded + referrals.uploaded + costs.uploaded + mrr.uploaded;
+    const removed = partners.removed + referrals.removed + costs.removed + mrr.removed;
+    const fromServer = partners.fromServer + referrals.fromServer;
+
+    // Registros legados enfileirados agora: sobe já, sem esperar o debounce.
+    if (uploaded > 0) await flushPendingWrites();
+
+    const changed = fromServer > 0 || uploaded > 0 || removed > 0;
+
+    return {
+      ...base,
+      status: changed ? 'merged' : 'up-to-date',
+      partnersFromCloud: partners.fromServer,
+      referralsFromCloud: referrals.fromServer,
+      uploadedFromLocal: uploaded,
+      removedLocally: removed,
+      pendingFailures: flushed.failed,
+      message: changed ? describeChanges(fromServer, uploaded, removed) : 'Dados já estavam sincronizados.'
     };
-
-    if (changed) {
-      applyBackupLocally(mergedBackup);
-    }
-
-    // Reconcilia a nuvem com a união (inclusive o que só existia aqui).
-    await pushBackupToSupabase();
-    setLocalChangeAt(new Date().toISOString());
-
-    const outcome: Omit<SyncOutcome, 'message'> = {
-      status: 'merged',
-      partnersFromCloud: partners.stats.fromCloudOnly,
-      referralsFromCloud: referrals.stats.fromCloudOnly,
-      partnersOnlyLocal: partners.stats.fromLocalOnly,
-      referralsOnlyLocal: referrals.stats.fromLocalOnly,
-      conflicts: partners.stats.conflicts + referrals.stats.conflicts + costs.stats.conflicts + mrr.stats.conflicts
-    };
-
-    return { ...outcome, message: describeMerge(outcome) };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
-    console.warn('Sincronização com a nuvem falhou (dados seguem salvos localmente):', e);
+    console.warn('Sincronização falhou (dados seguem salvos neste navegador):', e);
     return {
       ...base,
       status: 'failed',
-      message: 'Não foi possível sincronizar com a nuvem agora. Seus dados seguem salvos neste navegador.',
+      message: 'Não foi possível sincronizar agora. Seus dados seguem salvos neste navegador e sobem sozinhos na próxima tentativa.',
       error
     };
   }
 }
 
-// Envia o estado local pra nuvem imediatamente (sem esperar o debounce).
-// Usado ao sair do app/fechar a aba para não perder a última alteração.
+function describeChanges(fromServer: number, uploaded: number, removed: number): string {
+  const parts: string[] = [];
+  if (fromServer > 0) parts.push(`${fromServer} registro(s) recebido(s) do time`);
+  if (uploaded > 0) parts.push(`${uploaded} enviado(s) deste navegador`);
+  if (removed > 0) parts.push(`${removed} removido(s) por outra pessoa`);
+  return `Dados sincronizados: ${parts.join(', ')}.`;
+}
+
+function unionById<T extends { id: string }>(a: T[], b: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const item of b) if (item?.id) byId.set(item.id, item);
+  for (const item of a) if (item?.id) byId.set(item.id, item); // local vence
+  return Array.from(byId.values());
+}
+
+// Grava o resultado do merge sem que isso conte como alteração do usuário —
+// senão o que acabou de ser baixado voltaria pro servidor.
+function applyLocally(data: {
+  partners: Partner[];
+  referrals: Referral[];
+  channelCosts: ChannelCostEntry[];
+  newMrrEntries: NewMrrEntry[];
+}): void {
+  runWithoutTracking(() => {
+    saveStoredPartners(data.partners);
+    saveStoredReferrals(data.referrals);
+    saveChannelCosts(data.channelCosts);
+    saveNewMrrEntries(data.newMrrEntries);
+  });
+}
+
+// Sobe o que estiver pendente imediatamente (ex.: aba sendo fechada).
+// O blob em system_backups segue sendo atualizado como backup de segurança.
 export async function flushToCloud(): Promise<void> {
   if (!supabase) return;
   try {
+    await flushPendingWrites();
     await pushBackupToSupabase();
   } catch (e) {
-    console.warn('Envio final para a nuvem falhou:', e);
+    console.warn('Envio final falhou:', e);
   }
 }

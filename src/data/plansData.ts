@@ -1,3 +1,5 @@
+import { queueWrite, registerRowResolver, SETTING_PRICING_PLANS } from '../services/repository';
+import { isTracking } from '../services/syncState';
 export interface PricingPlan {
   id: string;
   commercialName: string;
@@ -454,6 +456,9 @@ export function saveStoredPricingPlans(plans: PricingPlan[]): void {
   } catch (e) {
     console.error('Erro ao salvar tabela de planos no localStorage', e);
   }
+  // A tabela de planos vale para o time todo: antes ficava só no navegador de
+  // quem editou.
+  if (isTracking()) queueWrite('app_settings', SETTING_PRICING_PLANS, 'upsert');
 }
 
 // Reset plans to default official table
@@ -463,5 +468,11 @@ export function resetStoredPricingPlans(): PricingPlan[] {
   } catch (e) {
     console.error('Erro ao restaurar planos padrão', e);
   }
+  // Volta ao padrão para todo mundo, não só neste navegador.
+  if (isTracking()) queueWrite('app_settings', SETTING_PRICING_PLANS, 'upsert');
   return ZORYA_PLANS;
 }
+
+registerRowResolver('app_settings', id =>
+  id === SETTING_PRICING_PLANS ? { key: id, value: loadStoredPricingPlans() } : null
+);

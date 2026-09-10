@@ -53,6 +53,12 @@ export function markLocalChange(): void {
 // Gravações feitas pelo próprio merge são eco da nuvem, não alteração do
 // usuário: marcar timestamp aqui falsearia a recência e dispararia push
 // redundante, então o rastreio é suspenso durante a aplicação do merge.
+// Falso enquanto uma gravação é eco do servidor: quem escreve consulta isso
+// para não reenviar de volta o que acabou de baixar.
+export function isTracking(): boolean {
+  return tracking;
+}
+
 export function runWithoutTracking<T>(fn: () => T): T {
   const previous = tracking;
   tracking = false;

@@ -230,7 +230,7 @@ export default function App() {
       setReferrals(loadStoredReferrals());
       setNotifications(loadNotifications());
 
-      if (outcome.status === 'adopted' || outcome.status === 'merged') {
+      if (outcome.status === 'migrated' || outcome.status === 'merged') {
         showToast(outcome.message);
       }
     };
