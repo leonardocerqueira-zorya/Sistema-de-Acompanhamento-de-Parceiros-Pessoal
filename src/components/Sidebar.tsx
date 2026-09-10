@@ -79,10 +79,9 @@ export default function Sidebar({
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                title={label}
                 aria-label={label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`relative w-[42px] h-[42px] rounded-2xl flex items-center justify-center transition-colors ${
+                className={`group relative w-[42px] h-[42px] rounded-2xl flex items-center justify-center transition-colors ${
                   isActive
                     ? 'bg-white/12 text-zry-coral'
                     : 'text-white/55 hover:text-white hover:bg-white/8'
@@ -94,6 +93,16 @@ export default function Sidebar({
                     {badge > 99 ? '99' : badge}
                   </span>
                 )}
+
+                {/* Nome da aba ao passar o mouse. Substitui o tooltip nativo do
+                    navegador (title), que só aparece depois de ~1s. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-xl bg-zry-roxo border border-white/15 px-2.5 py-1.5 text-[11.5px] font-semibold text-white shadow-lg opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0"
+                >
+                  {label}
+                  <span className="absolute right-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-r-[5px] border-r-zry-roxo" />
+                </span>
               </button>
             );
           })}
