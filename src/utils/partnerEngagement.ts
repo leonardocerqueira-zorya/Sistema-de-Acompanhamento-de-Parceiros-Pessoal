@@ -11,7 +11,11 @@ import type { Partner, PartnerStatus, Referral } from '../types';
 
 export const ENGAGEMENT_ZERO_DAYS = 90; // dias sem indicação até zerar
 export const ENGAGEMENT_DECAY_PER_DAY = 100 / ENGAGEMENT_ZERO_DAYS; // ~1,111 pp/dia
-export const ENGAGEMENT_REFERRAL_BOOST = 30; // pp por indicação registrada
+// 35pp, e não 30, de propósito: 30 dias de decaimento custam 33,3pp, então um
+// bônus de 30 deixaria saldo negativo (-3,3pp/mês) e o parceiro que cumpre a
+// meta de 1 indicação por mês acabaria inativado. Com 35 o ritmo mensal fica
+// levemente positivo (+1,7pp/mês).
+export const ENGAGEMENT_REFERRAL_BOOST = 35; // pp por indicação registrada
 export const ENGAGEMENT_RISK_THRESHOLD = 20; // <= 20% conta como "em risco"
 export const ENGAGEMENT_MAX = 100;
 
