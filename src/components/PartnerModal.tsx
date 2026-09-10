@@ -1,10 +1,21 @@
-import { useState, useEffect, type FormEvent } from 'react';
-import type { Partner, PartnerStatus, PartnerProfile } from '../types';
-import { Users, Calendar, AlertTriangle, ShieldCheck, Tag, Award } from 'lucide-react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import type { Partner, PartnerStatus, PartnerProfile, Referral } from '../types';
+import { Users, Calendar, AlertTriangle, ShieldCheck, Tag, Award, Activity } from 'lucide-react';
 import { evaluatePartnerMissingFields } from '../services/sheetsService';
 import { normalizeDocument, formatDocument } from '../utils/analytics';
 import { loadStoredPartnerTiers } from '../data/tiersData';
 import { listProfiles, listPendingInvites } from '../services/authService';
+import {
+  calculatePartnerEngagement,
+  statusFromEngagement,
+  ENGAGEMENT_ZERO_DAYS,
+  ENGAGEMENT_DECAY_PER_DAY,
+  ENGAGEMENT_ONBOARDING_MAX_DAYS,
+  ENGAGEMENT_RISK_THRESHOLD,
+  PARTNER_STATUS_LABEL,
+  PARTNER_STATUS_BADGE
+} from '../utils/partnerEngagement';
+import EngagementBar from './EngagementBar';
 
 interface PartnerModalProps {
   isOpen: boolean;
@@ -12,6 +23,8 @@ interface PartnerModalProps {
   onSave: (partner: Partner) => void;
   initialData?: Partner | null;
   partners?: Partner[];
+  /** Indicações do canal — entram no cálculo do status automático. */
+  referrals?: Referral[];
 }
 
 const PARTNER_PROFILES: PartnerProfile[] = [
@@ -26,7 +39,8 @@ export default function PartnerModal({
   onClose,
   onSave,
   initialData,
-  partners = []
+  partners = [],
+  referrals = []
 }: PartnerModalProps) {
   const partnerTiers = loadStoredPartnerTiers();
   const [name, setName] = useState('');
@@ -43,10 +57,56 @@ export default function PartnerModal({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [joinedDate, setJoinedDate] = useState('');
-  const [status, setStatus] = useState<PartnerStatus>('ativo');
   const [notes, setNotes] = useState('');
 
   const missingFieldsList = initialData ? evaluatePartnerMissingFields(initialData) : [];
+
+  // Status não é escolhido, é consequência: a régua de saúde (decaimento por
+  // dias sem indicar + indicações registradas) diz ativo / onboarding /
+  // inativo. Recalcula junto com a Data de Entrada digitada aqui, porque é
+  // dela que o decaimento parte — a pessoa vê o efeito antes de salvar.
+  const engagement = useMemo(() => {
+    const candidate: Partner = {
+      ...(initialData ?? ({ id: '__novo__', name: '', status: 'ativo' } as Partner)),
+      joinedDate: joinedDate || undefined
+    };
+    return calculatePartnerEngagement(candidate, referrals);
+  }, [initialData, joinedDate, referrals]);
+
+  // null = sem Data de Entrada, a régua não tem de quando decair. Aí o status
+  // gravado fica como está (e o cadastro novo entra como ativo).
+  const derivedStatus = statusFromEngagement(engagement);
+  const status: PartnerStatus = derivedStatus ?? initialData?.status ?? 'ativo';
+
+  const daysToZero =
+    engagement.score !== null && engagement.score > 0
+      ? Math.ceil(engagement.score / ENGAGEMENT_DECAY_PER_DAY)
+      : 0;
+
+  // Dias que ainda restam da janela de onboarding (só faz sentido sem indicação).
+  const onboardingDaysLeft = Math.max(
+    0,
+    ENGAGEMENT_ONBOARDING_MAX_DAYS - (engagement.daysSinceJoined ?? 0)
+  );
+
+  // Risco tem duas causas e elas pedem ações diferentes: quem estourou o
+  // onboarding nunca engatou a primeira indicação, quem decaiu já indicou e
+  // parou. Dizer qual é evita procurar a explicação no lugar errado.
+  const riskReason =
+    engagement.referralCount === 0
+      ? `Passaram ${engagement.daysSinceJoined} dias da entrada e nenhuma indicação foi registrada — o onboarding vale ${ENGAGEMENT_ONBOARDING_MAX_DAYS} dias. Inativa em ${daysToZero} dia(s); a primeira indicação ativa na hora.`
+      : `Engajamento em ${Math.round(engagement.score ?? 0)}%, abaixo do limiar de ${ENGAGEMENT_RISK_THRESHOLD}%. Inativa em ${daysToZero} dia(s) sem indicar.`;
+
+  const statusExplanation =
+    derivedStatus === null
+      ? `Preencha a Data de Entrada para o status ser calculado. Até lá vale o atual: ${PARTNER_STATUS_LABEL[status]}.`
+      : status === 'inativo'
+        ? `${ENGAGEMENT_ZERO_DAYS} dias sem indicar zeraram o engajamento. Uma indicação nova reativa na hora.`
+        : status === 'onboarding'
+          ? `Parceiro novo, ainda sem indicar: restam ${onboardingDaysLeft} de ${ENGAGEMENT_ONBOARDING_MAX_DAYS} dia(s) de onboarding. A primeira indicação passa para Ativo.`
+          : status === 'risco'
+            ? riskReason
+            : `${engagement.referralCount} indicação(ões) registrada(s). Zera em ${daysToZero} dia(s) sem indicar de novo.`;
 
   // Executivos conhecidos pelo Usuários — perfil já criado (fez login) OU convite
   // enviado e ainda não aceito. Contam como executivo dos dois jeitos: o Master
@@ -101,7 +161,6 @@ export default function PartnerModal({
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
       setJoinedDate(initialData.joinedDate || '');
-      setStatus(initialData.status || 'ativo');
       setNotes(initialData.notes || '');
     } else {
       setName('');
@@ -118,7 +177,6 @@ export default function PartnerModal({
       setEmail('');
       setPhone('');
       setJoinedDate(new Date().toISOString().slice(0, 10));
-      setStatus('ativo');
       setNotes('');
     }
   }, [initialData, isOpen]);
@@ -161,8 +219,8 @@ export default function PartnerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-zry-roxo/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-zry-surface rounded-zry-xl max-w-xl w-full p-6 shadow-lg border border-zry-border my-8">
+    <div className="fixed inset-0 z-50 bg-zry-roxo/40 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-zry-surface rounded-zry-xl max-w-3xl w-full p-6 shadow-lg border border-zry-border my-8">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zry-border pb-4">
@@ -235,7 +293,7 @@ export default function PartnerModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.2fr_1.2fr_1fr_auto] gap-3">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>CNPJ / CPF do Parceiro *</span>
@@ -262,9 +320,7 @@ export default function PartnerModal({
                 className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Cidade</label>
               <input
@@ -283,12 +339,12 @@ export default function PartnerModal({
                 placeholder="SP"
                 value={state}
                 onChange={(e) => setState(e.target.value.toUpperCase())}
-                className="w-20 bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2.5 text-[13px] text-zry-text font-bold text-center uppercase focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+                className="w-full md:w-16 bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2.5 text-[13px] text-zry-text font-bold text-center uppercase focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>Perfil do Parceiro *</span>
@@ -399,18 +455,34 @@ export default function PartnerModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Status do Parceiro</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as PartnerStatus)}
-                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-              >
-                <option value="ativo">Ativo</option>
-                <option value="onboarding">Em Onboarding</option>
-                <option value="inativo">Inativo</option>
-              </select>
+              <label className="text-[12px] font-semibold text-zry-text mb-1.5 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-zry-text-2" />
+                <span>Status do Parceiro</span>
+                <span className="text-[9.5px] font-bold text-zry-text-2 uppercase tracking-wide bg-zry-lilas-30 rounded-full px-1.5 py-0.5">
+                  automático
+                </span>
+              </label>
+              <div className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${PARTNER_STATUS_BADGE[status]}`}>
+                    {PARTNER_STATUS_LABEL[status]}
+                  </span>
+                  <span className="text-[10.5px] font-semibold text-zry-text-2">
+                    {engagement.score === null ? 'sem engajamento' : `${Math.round(engagement.score)}% de engajamento`}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <EngagementBar
+                    score={engagement.score}
+                    level={engagement.level}
+                    showLabel={false}
+                    size="sm"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-zry-text-2 mt-1">{statusExplanation}</p>
             </div>
 
             <div>
@@ -436,17 +508,17 @@ export default function PartnerModal({
                 className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-[12px] font-semibold text-zry-text mb-1.5">E-mail de Contato</label>
-            <input
-              type="email"
-              placeholder="parceiro@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-            />
+            <div>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">E-mail de Contato</label>
+              <input
+                type="email"
+                placeholder="parceiro@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+              />
+            </div>
           </div>
 
           <div>

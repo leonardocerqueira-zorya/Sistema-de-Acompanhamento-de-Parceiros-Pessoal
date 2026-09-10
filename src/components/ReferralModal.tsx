@@ -373,8 +373,8 @@ export default function ReferralModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-zry-roxo/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-zry-surface rounded-zry-xl max-w-3xl w-full p-6 shadow-lg border border-zry-border my-8">
+    <div className="fixed inset-0 z-50 bg-zry-roxo/40 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-zry-surface rounded-zry-xl max-w-5xl w-full p-6 shadow-lg border border-zry-border my-8">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zry-border pb-4">
@@ -473,8 +473,8 @@ export default function ReferralModal({
           </div>
 
           {/* Section 2: Client Info & Responsible Person */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="md:col-span-2">
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>Razão Social / Nome do Cliente Indicado *</span>
                 {!clientName && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
@@ -502,9 +502,7 @@ export default function ReferralModal({
                 className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!responsiblePerson ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>CNPJ / CPF do Cliente Indicado *</span>
@@ -531,9 +529,7 @@ export default function ReferralModal({
                 className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5">E-mail do Cliente</label>
               <input
@@ -637,7 +633,7 @@ export default function ReferralModal({
             )}
 
             {/* Financial auto-filled editable inputs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-zry-border">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-zry-border">
               <div>
                 <label className="block text-[12px] font-semibold text-zry-text mb-1.5">MRR Bruto Tabela</label>
                 <input
@@ -683,10 +679,7 @@ export default function ReferralModal({
                   className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-roxo font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
               </div>
-            </div>
 
-            {/* Commission fixed value from table */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-zry-border">
               <div>
                 <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Valor Contratado Total (R$)</label>
                 <input
@@ -697,7 +690,7 @@ export default function ReferralModal({
                   className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[13px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
                 />
                 <span className="text-[10px] text-zry-text-2">
-                  {planRecurrence === 'anual' ? 'Total anual líquido com desconto' : 'Assinatura mensal líquida'}
+                  {planRecurrence === 'anual' ? 'Total anual c/ desconto' : 'Assinatura mensal líquida'}
                 </span>
               </div>
 
@@ -713,7 +706,7 @@ export default function ReferralModal({
                   className="w-full bg-zry-coral/15 border border-zry-coral/50 rounded-xl px-3 py-2 text-[13px] font-extrabold text-zry-roxo focus:outline-none focus:border-zry-coral transition"
                 />
                 <span className="text-[10px] text-zry-roxo">
-                  Preenchido de acordo com o plano. Editável pelo executivo.
+                  Editável pelo executivo.
                 </span>
               </div>
             </div>
