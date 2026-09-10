@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { Referral, Partner, FilterState, PeriodFilter, RankingSortKey } from '../types';
-import { 
-  calculateKPIs, 
-  calculatePartnerRankings, 
-  formatCurrency, 
-  formatDateBR 
+import {
+  calculateKPIs,
+  calculatePartnerRankings,
+  formatCurrency,
+  formatDateBR,
+  filterReferrals
 } from '../utils/analytics';
 import { exportConsolidatedKPIsAndRankingsCSV } from '../utils/csvExportTemplates';
 import { calculateDataAuditMetrics } from '../services/sheetsService';
@@ -76,9 +77,17 @@ export default function Dashboard({
   // Sorting state for the Partner Ranking (Explicit requirement: by referrals AND by closed deals)
   const [rankingSort, setRankingSort] = useState<RankingSortKey>('wonDeals');
 
-  const kpis = calculateKPIs(referrals, partners);
+  // "Visão Geral" (KPIs + Ranking) respeita o filtro de Período de Análise
+  // exibido logo acima. Auditoria e os gráficos de safra/maturação abaixo
+  // têm janela temporal própria e continuam vendo a base inteira de propósito.
+  const periodReferrals =
+    filter.period.preset === 'all'
+      ? referrals
+      : filterReferrals(referrals, { ...filter, partnerId: 'all', dealStatus: 'all', commissionStatus: 'all', onlyMissingData: false, searchQuery: '' });
+
+  const kpis = calculateKPIs(periodReferrals, partners);
   const auditMetrics = calculateDataAuditMetrics(partners, referrals);
-  const rankings = calculatePartnerRankings(referrals, partners, rankingSort);
+  const rankings = calculatePartnerRankings(periodReferrals, partners, rankingSort);
 
   const currentYear = new Date().getFullYear();
   const currentMonth = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
