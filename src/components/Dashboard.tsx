@@ -1109,7 +1109,7 @@ export default function Dashboard({
               <span className="text-sm font-semibold text-zry-creme/80">de {partners.length} parceiros</span>
             </div>
             <p className="text-xs text-zry-creme/60 mt-2 leading-relaxed">
-              Parceiros cadastrados com status ativo e aptos para novas indicações comerciais.
+              Parceiros aptos para novas indicações comerciais — inclui os em risco, exclui onboarding e inativos.
             </p>
           </div>
 

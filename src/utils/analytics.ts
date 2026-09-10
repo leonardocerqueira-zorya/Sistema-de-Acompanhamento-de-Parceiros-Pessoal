@@ -306,7 +306,12 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     ? Math.round(partnerFirstReferralDaysList.reduce((acc, curr) => acc + curr, 0) / partnerFirstReferralDaysList.length)
     : null;
 
-  const activePartnersCount = partners.filter(p => p.status === 'ativo').length;
+  // Em risco continua sendo base ativa: o parceiro segue apto a indicar — é
+  // justamente por isso que o status é "risco" e não "inativo". Só onboarding
+  // (ainda não engatou) e inativo ficam fora da conta.
+  const activePartnersCount = partners.filter(
+    p => p.status === 'ativo' || p.status === 'risco'
+  ).length;
   const partnerActivationRate = partners.length > 0
     ? (partnersWithReferrals.size / partners.length) * 100
     : 0;

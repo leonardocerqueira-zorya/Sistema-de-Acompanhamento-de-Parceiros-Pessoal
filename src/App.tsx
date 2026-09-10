@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import type { Referral, Partner, FilterState, AppNotification, CommissionInstallment, AccessState, UserProfile } from './types';
+import type { Referral, Partner, PartnerStatus, FilterState, AppNotification, CommissionInstallment, AccessState, UserProfile } from './types';
 import {
   loadStoredPartners,
   saveStoredPartners,
@@ -43,7 +43,12 @@ import type { SheetImportResult } from './services/sheetsService';
 import { formatCurrency, normalizeDocument } from './utils/analytics';
 import { calculateReferralVintages, checkAndTriggerVintageCutoffNotifications } from './utils/vintageAnalytics';
 import { updateReferralCommissionStatusFromInstallments, backfillAllCommissions } from './utils/commissionLogic';
-import { applyEngagementStatus } from './utils/partnerEngagement';
+import {
+  applyEngagementStatus,
+  ENGAGEMENT_ZERO_DAYS,
+  ENGAGEMENT_ONBOARDING_MAX_DAYS,
+  ENGAGEMENT_RISK_THRESHOLD
+} from './utils/partnerEngagement';
 import Navbar, { type AppTab } from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
@@ -184,26 +189,7 @@ export default function App() {
       saveStoredReferrals(initializedReferrals);
     }
 
-    // Status automático por engajamento: 0% vira inativo, e volta a ativo
-    // quando uma indicação nova tira o score do zero. Parceiro sem Data de
-    // Entrada nunca é tocado — sem ela não há de quando contar o decaimento,
-    // e assumir um padrão inativaria a base inteira de uma vez.
-    const { partners: engagementPartners, changed: statusChanges } = applyEngagementStatus(
-      loadedPartners,
-      initializedReferrals
-    );
-    if (statusChanges.length > 0) {
-      saveStoredPartners(engagementPartners);
-      const inativados = statusChanges.filter(c => c.to === 'inativo').length;
-      const reativados = statusChanges.filter(c => c.to === 'ativo').length;
-      const partes = [
-        inativados > 0 ? `${inativados} parceiro(s) inativado(s) por 90 dias sem indicar` : null,
-        reativados > 0 ? `${reativados} reativado(s) por indicação nova` : null
-      ].filter(Boolean);
-      showToast(`Engajamento atualizado: ${partes.join(' e ')}.`);
-    }
-
-    setPartners(engagementPartners);
+    setPartners(loadedPartners);
     setReferrals(initializedReferrals);
     setNotifications(loadedNotifications);
     setAccess(loadAccess());
@@ -217,6 +203,40 @@ export default function App() {
       console.error('Erro ao verificar cortes de safra na inicialização', err);
     }
   }, []);
+
+  // O Status do parceiro não é digitado: ele é consequência da régua de saúde.
+  // Este efeito é o único lugar que grava status, e cobre todo caminho de
+  // entrada de dados — carga inicial, sync da nuvem, importação de planilha,
+  // indicação nova, exclusão de indicação e edição de cadastro.
+  //
+  // applyEngagementStatus devolve a MESMA referência da lista quando nada
+  // muda, então isso converge numa passada e não vira laço de re-render.
+  // Parceiro sem Data de Entrada não é tocado: sem ela não há de quando contar
+  // o decaimento, e assumir um padrão inativaria a base inteira de uma vez.
+  useEffect(() => {
+    if (partners.length === 0) return;
+
+    const { partners: next, changed } = applyEngagementStatus(partners, referrals);
+    if (changed.length === 0) return;
+
+    setPartners(next);
+    saveStoredPartners(next);
+
+    const conta = (to: PartnerStatus) => changed.filter(c => c.to === to).length;
+    const partes = [
+      conta('inativo') > 0
+        ? `${conta('inativo')} inativado(s) por ${ENGAGEMENT_ZERO_DAYS} dias sem indicar`
+        : null,
+      conta('risco') > 0
+        ? `${conta('risco')} em risco (onboarding vencido ou engajamento abaixo de ${ENGAGEMENT_RISK_THRESHOLD}%)`
+        : null,
+      conta('ativo') > 0 ? `${conta('ativo')} ativado(s) por indicação registrada` : null,
+      conta('onboarding') > 0
+        ? `${conta('onboarding')} em onboarding (nos primeiros ${ENGAGEMENT_ONBOARDING_MAX_DAYS} dias, sem indicar)`
+        : null
+    ].filter(Boolean);
+    showToast(`Status atualizado pela régua de saúde: ${partes.join(', ')}.`);
+  }, [partners, referrals]);
 
   // Sincroniza com a cópia compartilhada na nuvem: baixa o que as outras
   // máquinas salvaram, mescla por id com o que existe aqui (união — nada é
@@ -972,6 +992,7 @@ export default function App() {
         onSave={handleSavePartner}
         initialData={editingPartner}
         partners={partners}
+        referrals={referrals}
       />
 
       {/* Bulk (number-only) Referral Modal — master only */}

@@ -4,7 +4,10 @@ import type { Partner, PartnerStatus, Referral } from '../types';
 // Engajamento do parceiro.
 //
 // O parceiro entra com 100% e decai todo dia. Sem nenhuma indicação, chega a
-// 0% em 90 dias e é considerado inativo. Cada indicação recupera 30pp.
+// 0% em 90 dias e é considerado inativo. Cada indicação recupera 35pp.
+//
+// O campo Status do parceiro sai daqui — ver statusFromEngagement no fim do
+// arquivo. A tela não escolhe status à mão.
 //
 // Constantes num só lugar: a régua é uma decisão de negócio e vai ser ajustada.
 // ---------------------------------------------------------------------------
@@ -17,6 +20,10 @@ export const ENGAGEMENT_DECAY_PER_DAY = 100 / ENGAGEMENT_ZERO_DAYS; // ~1,111 pp
 // levemente positivo (+1,7pp/mês).
 export const ENGAGEMENT_REFERRAL_BOOST = 35; // pp por indicação registrada
 export const ENGAGEMENT_RISK_THRESHOLD = 20; // <= 20% conta como "em risco"
+// Prazo do onboarding: o parceiro tem 45 dias desde a entrada para registrar a
+// primeira indicação. Passou disso sem indicar, deixa de ser parceiro novo e
+// cai em inativo — mesmo com engajamento sobrando (45 dias custam 50pp).
+export const ENGAGEMENT_ONBOARDING_MAX_DAYS = 45;
 export const ENGAGEMENT_MAX = 100;
 
 export type EngagementLevel =
@@ -38,6 +45,8 @@ export interface PartnerEngagement {
   anchorDate: string | null;
   /** Dias desde a última atividade (indicação, ou a entrada se nunca indicou). */
   daysSinceActivity: number | null;
+  /** Dias corridos desde a entrada no programa — prazo do onboarding sai daqui. */
+  daysSinceJoined: number | null;
 }
 
 function toUtcDays(iso: string): number | null {
@@ -108,7 +117,8 @@ export function calculatePartnerEngagement(
       lastReferralDate,
       daysSinceLastReferral,
       anchorDate: null,
-      daysSinceActivity: null
+      daysSinceActivity: null,
+      daysSinceJoined: null
     };
   }
 
@@ -142,7 +152,8 @@ export function calculatePartnerEngagement(
     lastReferralDate,
     daysSinceLastReferral,
     anchorDate: partner.joinedDate ?? null,
-    daysSinceActivity: Math.max(0, now - cursor)
+    daysSinceActivity: Math.max(0, now - cursor),
+    daysSinceJoined: Math.max(0, now - anchorDay)
   };
 }
 
@@ -183,24 +194,68 @@ export function calculateChannelHealth(
 // ---------------------------------------------------------------------------
 
 /**
- * Status que o engajamento impõe, ou null para "não mexer".
+ * Status que a régua de saúde impõe, ou null quando ela não tem o que dizer.
  *
- * Só desce para inativo em 0% e só volta para ativo quando o score saiu do
- * zero — o que, na prática, só acontece por uma indicação nova. Parceiro
- * inativado à mão e sem indicação recente tem score 0 e continua inativo.
- * Parceiro sem data de entrada nunca é tocado.
+ * A régua cobre os quatro status, então o campo não precisa de escolha manual:
+ *
+ *   score = 0                                  -> inativo
+ *   nenhuma indicação, até 45 dias de entrada  -> onboarding
+ *   nenhuma indicação, passados os 45 dias     -> risco
+ *   indicou, mas score <= 20%                  -> risco
+ *   indicou e score > 20%                      -> ativo
+ *
+ * Onboarding é uma janela, não um estado permanente: tem prazo de
+ * ENGAGEMENT_ONBOARDING_MAX_DAYS dias e não volta depois da primeira
+ * indicação. Vencido o prazo sem indicar, o parceiro entra em risco — e NÃO em
+ * inativo: o prazo de inativação continua sendo os ENGAGEMENT_ZERO_DAYS dias
+ * de decaimento, igual para todo mundo. Aos 45 dias o score está em ~50%, e
+ * "risco" é o aviso de que a janela fechou sem a primeira indicação.
+ *
+ * Para quem já indicou, o risco é o mesmo limiar que a barra de engajamento
+ * mostra (ENGAGEMENT_RISK_THRESHOLD): o status não pode dizer "Ativo" enquanto
+ * a barra ao lado diz "Em risco".
+ *
+ * Sem data de entrada não existe ponto de partida para o decaimento nem para o
+ * prazo — o score é indefinido, esta função devolve null e o status gravado
+ * fica como está. Assumir um padrão aqui inativaria a base inteira de uma vez.
  */
-export function statusFromEngagement(
-  partner: Partner,
-  engagement: PartnerEngagement
-): PartnerStatus | null {
+export function statusFromEngagement(engagement: PartnerEngagement): PartnerStatus | null {
   if (engagement.score === null) return null;
+  if (engagement.score <= 0) return 'inativo';
 
-  if (engagement.score <= 0) {
-    return partner.status === 'inativo' ? null : 'inativo';
+  if (engagement.referralCount === 0) {
+    return (engagement.daysSinceJoined ?? 0) <= ENGAGEMENT_ONBOARDING_MAX_DAYS
+      ? 'onboarding'
+      : 'risco';
   }
 
-  return partner.status === 'inativo' ? 'ativo' : null;
+  return engagement.score <= ENGAGEMENT_RISK_THRESHOLD ? 'risco' : 'ativo';
+}
+
+// Rótulo e cor do status ficam junto da régua que os produz: são três telas
+// pintando o mesmo badge (Parceiros, Carteiras e o cadastro), e status novo
+// esquecido em uma delas aparecia como texto cru sem cor.
+export const PARTNER_STATUS_LABEL: Record<PartnerStatus, string> = {
+  ativo: 'Ativo',
+  onboarding: 'Em Onboarding',
+  risco: 'Em Risco',
+  inativo: 'Inativo'
+};
+
+export const PARTNER_STATUS_BADGE: Record<PartnerStatus, string> = {
+  ativo: 'bg-zry-positive-bg text-zry-positive',
+  onboarding: 'bg-zry-info-bg text-zry-info',
+  risco: 'bg-zry-warning-bg text-zry-warning',
+  inativo: 'bg-zry-lilas text-zry-text-2'
+};
+
+/** Atalho para a tela: engajamento + régua num passo. null = régua sem dados. */
+export function derivePartnerStatus(
+  partner: Partner,
+  referrals: Referral[],
+  today?: Date
+): PartnerStatus | null {
+  return statusFromEngagement(calculatePartnerEngagement(partner, referrals, today));
 }
 
 /** Aplica o status automático na lista. Devolve o que mudou, para avisar. */
@@ -213,11 +268,12 @@ export function applyEngagementStatus(
 
   const updated = partners.map(p => {
     const engagement = calculatePartnerEngagement(p, referrals, today);
-    const next = statusFromEngagement(p, engagement);
+    const next = statusFromEngagement(engagement);
     if (!next || next === p.status) return p;
     changed.push({ partner: p, from: p.status, to: next });
     return { ...p, status: next };
   });
 
+  // Mesma referência quando nada mudou: quem observa a lista não re-renderiza.
   return { partners: changed.length > 0 ? updated : partners, changed };
 }

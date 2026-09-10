@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import type { Partner, Referral } from '../types';
 import { calculatePartnerRankings, formatCurrency, formatDateBR } from '../utils/analytics';
-import { calculatePartnerEngagement } from '../utils/partnerEngagement';
+import {
+  calculatePartnerEngagement,
+  PARTNER_STATUS_LABEL,
+  PARTNER_STATUS_BADGE
+} from '../utils/partnerEngagement';
 import EngagementBar from './EngagementBar';
 import {
   Plus,
@@ -117,12 +121,8 @@ export default function PartnersView({
                     </div>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${
-                    partner.status === 'ativo' ? 'bg-zry-positive-bg text-zry-positive' :
-                    partner.status === 'onboarding' ? 'bg-zry-info-bg text-zry-info' :
-                    'bg-zry-lilas text-zry-text-2'
-                  }`}>
-                    {partner.status}
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 ${PARTNER_STATUS_BADGE[partner.status]}`}>
+                    {PARTNER_STATUS_LABEL[partner.status]}
                   </span>
                 </div>
 

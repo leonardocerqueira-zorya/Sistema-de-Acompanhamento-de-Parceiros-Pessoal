@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Partner, Referral } from '../types';
 import { formatCurrency } from '../utils/analytics';
 import { listProfiles, listPendingInvites } from '../services/authService';
+import { PARTNER_STATUS_LABEL, PARTNER_STATUS_BADGE } from '../utils/partnerEngagement';
 import {
   Users,
   ChevronDown,
@@ -253,12 +254,8 @@ export default function CarteirasView({
                               <td className="py-3.5 px-[22px] text-[13px] font-semibold text-zry-text">{p.name}</td>
                               <td className="py-3.5 px-[22px] text-[13px] text-zry-text-2">{p.profile || '—'}</td>
                               <td className="py-3.5 px-[22px] text-[13px]">
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${
-                                  p.status === 'ativo' ? 'bg-zry-positive-bg text-zry-positive' :
-                                  p.status === 'onboarding' ? 'bg-zry-info-bg text-zry-info' :
-                                  'bg-zry-lilas text-zry-text-2'
-                                }`}>
-                                  {p.status}
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${PARTNER_STATUS_BADGE[p.status]}`}>
+                                  {PARTNER_STATUS_LABEL[p.status]}
                                 </span>
                               </td>
                               <td className="py-3.5 px-[22px] text-[13px] text-right">

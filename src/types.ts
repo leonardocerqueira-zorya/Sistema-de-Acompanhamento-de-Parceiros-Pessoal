@@ -1,4 +1,4 @@
-export type PartnerStatus = 'ativo' | 'onboarding' | 'inativo';
+export type PartnerStatus = 'ativo' | 'onboarding' | 'risco' | 'inativo';
 
 export type PartnerProfile = 
   | 'Contabilidade' 
