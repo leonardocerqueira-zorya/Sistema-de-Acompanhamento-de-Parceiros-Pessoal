@@ -43,6 +43,7 @@ import type { SheetImportResult } from './services/sheetsService';
 import { formatCurrency, normalizeDocument } from './utils/analytics';
 import { calculateReferralVintages, checkAndTriggerVintageCutoffNotifications } from './utils/vintageAnalytics';
 import { updateReferralCommissionStatusFromInstallments, backfillAllCommissions } from './utils/commissionLogic';
+import { applyEngagementStatus } from './utils/partnerEngagement';
 import Navbar, { type AppTab } from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
@@ -183,7 +184,26 @@ export default function App() {
       saveStoredReferrals(initializedReferrals);
     }
 
-    setPartners(loadedPartners);
+    // Status automático por engajamento: 0% vira inativo, e volta a ativo
+    // quando uma indicação nova tira o score do zero. Parceiro sem Data de
+    // Entrada nunca é tocado — sem ela não há de quando contar o decaimento,
+    // e assumir um padrão inativaria a base inteira de uma vez.
+    const { partners: engagementPartners, changed: statusChanges } = applyEngagementStatus(
+      loadedPartners,
+      initializedReferrals
+    );
+    if (statusChanges.length > 0) {
+      saveStoredPartners(engagementPartners);
+      const inativados = statusChanges.filter(c => c.to === 'inativo').length;
+      const reativados = statusChanges.filter(c => c.to === 'ativo').length;
+      const partes = [
+        inativados > 0 ? `${inativados} parceiro(s) inativado(s) por 90 dias sem indicar` : null,
+        reativados > 0 ? `${reativados} reativado(s) por indicação nova` : null
+      ].filter(Boolean);
+      showToast(`Engajamento atualizado: ${partes.join(' e ')}.`);
+    }
+
+    setPartners(engagementPartners);
     setReferrals(initializedReferrals);
     setNotifications(loadedNotifications);
     setAccess(loadAccess());

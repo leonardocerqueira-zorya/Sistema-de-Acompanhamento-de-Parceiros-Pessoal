@@ -11,6 +11,8 @@ import { exportConsolidatedKPIsAndRankingsCSV } from '../utils/csvExportTemplate
 import { calculateDataAuditMetrics } from '../services/sheetsService';
 import { loadChannelCosts, loadNewMrrEntries } from '../services/channelMetricsService';
 import { calculateChannelPeriodMetrics } from '../utils/channelMetrics';
+import { calculateChannelHealth, ENGAGEMENT_RISK_THRESHOLD, ENGAGEMENT_ZERO_DAYS, ENGAGEMENT_REFERRAL_BOOST } from '../utils/partnerEngagement';
+import EngagementBar from './EngagementBar';
 import DataAuditView from './DataAuditView';
 import PartnerCohortChart from './PartnerCohortChart';
 import VintageCohortReport from './VintageCohortReport';
@@ -43,7 +45,8 @@ import {
   Receipt,
   PiggyBank,
   Wallet,
-  HelpCircle
+  HelpCircle,
+  HeartPulse
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -85,6 +88,10 @@ export default function Dashboard({
   // Sorting state for the Partner Ranking (Explicit requirement: by referrals AND by closed deals)
   const [rankingSort, setRankingSort] = useState<RankingSortKey>('wonDeals');
 
+  // Filtro do KPI de engajamento: 'all' = média do canal, ou um parceiro.
+  // É independente do filtro de período — engajamento é sempre "hoje".
+  const [engagementPartnerId, setEngagementPartnerId] = useState<string>('all');
+
   // "Visão Geral" (KPIs + Ranking) respeita o filtro de Período de Análise
   // exibido logo acima. Auditoria e os gráficos de safra/maturação abaixo
   // têm janela temporal própria e continuam vendo a base inteira de propósito.
@@ -105,6 +112,14 @@ export default function Dashboard({
   // Usa a base inteira de indicações (não periodReferrals): o mês já delimita o
   // período aqui, igual à tela "Custos & MRR".
   const channelMetrics = calculateChannelPeriodMetrics(currentMonth, referrals, loadChannelCosts(), loadNewMrrEntries());
+
+  // Saúde do canal: engajamento é estado de HOJE, não recorte de período —
+  // usa a base inteira de propósito, igual ao decaimento que roda no relógio.
+  const channelHealth = calculateChannelHealth(partners, referrals);
+  const selectedEngagement =
+    engagementPartnerId === 'all'
+      ? null
+      : channelHealth.byPartner.find(e => e.partnerId === engagementPartnerId) ?? null;
 
   // Period Preset Handlers
   const handlePeriodPreset = (preset: PeriodFilter['preset']) => {
@@ -517,6 +532,179 @@ export default function Dashboard({
           </div>
         </div>
 
+      </div>
+
+      {/* Saúde / Engajamento do Canal. Entra com 100%, decai até zerar em
+          ENGAGEMENT_ZERO_DAYS dias sem indicar, e cada indicação recupera
+          ENGAGEMENT_REFERRAL_BOOST pp. Sempre "hoje": não segue o filtro de período. */}
+      <div className="bg-zry-surface rounded-zry-lg p-6 border border-zry-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zry-border pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-zry-lilas-30 text-zry-roxo flex items-center justify-center shrink-0">
+              <HeartPulse className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-bold text-zry-text">Saúde do Canal</h3>
+              <p className="text-[11.5px] text-zry-text-2 mt-0.5">
+                Engajamento hoje — 100% na entrada, zera em {ENGAGEMENT_ZERO_DAYS} dias sem indicar, +{ENGAGEMENT_REFERRAL_BOOST}pp por indicação
+              </p>
+            </div>
+          </div>
+
+          <select
+            value={engagementPartnerId}
+            onChange={(e) => setEngagementPartnerId(e.target.value)}
+            className="shrink-0 text-[12px] font-semibold text-zry-text bg-zry-lilas-30 border border-zry-border rounded-full px-3.5 py-2 focus:bg-zry-surface focus:border-zry-roxo focus:ring-1 focus:ring-zry-roxo"
+          >
+            <option value="all">Média do canal ({channelHealth.scoredCount} parceiro(s))</option>
+            {channelHealth.byPartner
+              .slice()
+              .sort((a, b) => a.partnerName.localeCompare(b.partnerName))
+              .map(e => (
+                <option key={e.partnerId} value={e.partnerId}>
+                  {e.partnerName}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {selectedEngagement ? (
+          /* Um parceiro específico */
+          <div className="mt-5">
+            <div className="flex items-end justify-between gap-4 mb-2.5">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">
+                  Engajamento de {selectedEngagement.partnerName}
+                </span>
+                <span className="text-[30px] font-bold text-zry-text leading-none">
+                  {selectedEngagement.score === null ? '—' : `${Math.round(selectedEngagement.score)}%`}
+                </span>
+              </div>
+              <button
+                onClick={() => onSelectPartner(selectedEngagement.partnerId)}
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-zry-roxo hover:opacity-80 shrink-0"
+              >
+                <span>Ver indicações</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <EngagementBar score={selectedEngagement.score} level={selectedEngagement.level} showLabel={false} />
+
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Indicações</span>
+                <span className="text-[17px] font-bold text-zry-text">{selectedEngagement.referralCount}</span>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Última indicação</span>
+                <span className="text-[17px] font-bold text-zry-text">
+                  {selectedEngagement.daysSinceLastReferral === null
+                    ? 'Nunca'
+                    : `${selectedEngagement.daysSinceLastReferral}d atrás`}
+                </span>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Entrada</span>
+                <span className="text-[17px] font-bold text-zry-text">
+                  {selectedEngagement.anchorDate ? formatDateBR(selectedEngagement.anchorDate) : '—'}
+                </span>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Situação</span>
+                <span
+                  className={`text-[17px] font-bold ${
+                    selectedEngagement.level === 'saudavel'
+                      ? 'text-zry-positive'
+                      : selectedEngagement.level === 'risco'
+                        ? 'text-zry-warning'
+                        : selectedEngagement.level === 'inativo'
+                          ? 'text-zry-danger'
+                          : 'text-zry-text-2'
+                  }`}
+                >
+                  {selectedEngagement.level === 'saudavel'
+                    ? 'Saudável'
+                    : selectedEngagement.level === 'risco'
+                      ? 'Em risco'
+                      : selectedEngagement.level === 'inativo'
+                        ? 'Inativo'
+                        : 'Sem dados'}
+                </span>
+              </div>
+            </div>
+
+            {selectedEngagement.score === null && (
+              <div className="mt-4 bg-zry-lilas-30 rounded-xl p-4 text-[12.5px] text-zry-text-2 flex items-start gap-2.5">
+                <HelpCircle className="w-4 h-4 text-zry-roxo shrink-0 mt-0.5" />
+                <span>
+                  Sem <strong className="text-zry-text">Data de Entrada</strong> no cadastro deste parceiro não há de quando
+                  contar o decaimento. Preencha para o engajamento passar a ser calculado.
+                </span>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Média do canal */
+          <div className="mt-5">
+            <div className="flex items-end justify-between gap-4 mb-2.5">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">
+                  Engajamento médio do canal
+                </span>
+                <span className="text-[30px] font-bold text-zry-text leading-none">
+                  {channelHealth.average === null ? '—' : `${Math.round(channelHealth.average)}%`}
+                </span>
+              </div>
+              <span className="text-[11.5px] text-zry-text-2 shrink-0 text-right">
+                Risco a partir de {ENGAGEMENT_RISK_THRESHOLD}%
+              </span>
+            </div>
+
+            <EngagementBar
+              score={channelHealth.average}
+              level={
+                channelHealth.average === null
+                  ? 'sem-dados'
+                  : channelHealth.average <= 0
+                    ? 'inativo'
+                    : channelHealth.average <= ENGAGEMENT_RISK_THRESHOLD
+                      ? 'risco'
+                      : 'saudavel'
+              }
+              showLabel={false}
+            />
+
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              <div className="bg-zry-positive-bg rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Saudáveis</span>
+                <span className="text-[17px] font-bold text-zry-positive">{channelHealth.healthyCount}</span>
+              </div>
+              <div className="bg-zry-warning-bg rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Em risco</span>
+                <span className="text-[17px] font-bold text-zry-warning">{channelHealth.riskCount}</span>
+              </div>
+              <div className="bg-zry-danger-bg rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Inativos</span>
+                <span className="text-[17px] font-bold text-zry-danger">{channelHealth.inactiveCount}</span>
+              </div>
+              <div className="bg-zry-lilas-30 rounded-zry-lg p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zry-text-2 block">Sem data</span>
+                <span className="text-[17px] font-bold text-zry-text-2">{channelHealth.missingDataCount}</span>
+              </div>
+            </div>
+
+            {channelHealth.missingDataCount > 0 && (
+              <div className="mt-4 bg-zry-warning-bg/70 border border-zry-warning/30 rounded-xl p-4 text-[12.5px] text-zry-warning flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  <strong>{channelHealth.missingDataCount} parceiro(s) sem Data de Entrada</strong> ficam fora da média e não
+                  são inativados automaticamente — sem essa data não há de quando contar o decaimento.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Custos & MRR do Canal (mês corrente) — indicadores visíveis pra todos;

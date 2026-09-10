@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { Partner, Referral } from '../types';
 import { calculatePartnerRankings, formatCurrency, formatDateBR } from '../utils/analytics';
+import { calculatePartnerEngagement } from '../utils/partnerEngagement';
+import EngagementBar from './EngagementBar';
 import {
   Plus,
   Edit3,
@@ -86,6 +88,7 @@ export default function PartnersView({
         {filteredPartners.map(partner => {
           const stats = rankingMap.get(partner.id);
           const hasMissingJoinDate = !partner.joinedDate;
+          const engagement = calculatePartnerEngagement(partner, referrals);
 
           return (
             <div
@@ -151,6 +154,19 @@ export default function PartnersView({
                       <span>{partner.phone}</span>
                     </div>
                   )}
+                </div>
+
+                {/* Engajamento: decai com o tempo e sobe a cada indicação. */}
+                <div className="mt-4 pt-4 border-t border-zry-border">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[11px] text-zry-text-2 font-medium">Engajamento</span>
+                    <span className="text-[11px] text-zry-text-2">
+                      {engagement.daysSinceLastReferral === null
+                        ? 'Nunca indicou'
+                        : `Última indicação: ${engagement.daysSinceLastReferral}d`}
+                    </span>
+                  </div>
+                  <EngagementBar score={engagement.score} level={engagement.level} />
                 </div>
 
                 {/* Channel Cycle and Performance Stats */}
