@@ -491,6 +491,7 @@ export default function PartnerModal({
                 <option value="">Nenhum</option>
                 {partners
                   .filter(p => p.id !== initialData?.id)
+                  .filter(p => p.tier?.toLowerCase().includes('embaixador') || p.id === ambassadorId)
                   .slice()
                   .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
                   .map(p => (
@@ -500,7 +501,7 @@ export default function PartnerModal({
                   ))}
               </select>
               <p className="text-[10px] text-zry-text-2 mt-1">
-                Quem trouxe este parceiro pro programa — gera comissão pra ele nas indicações fechadas deste parceiro.
+                Quem trouxe este parceiro pro programa — gera comissão pra ele nas indicações fechadas deste parceiro. Só parceiros com tier Embaixador aparecem aqui.
               </p>
             </div>
 

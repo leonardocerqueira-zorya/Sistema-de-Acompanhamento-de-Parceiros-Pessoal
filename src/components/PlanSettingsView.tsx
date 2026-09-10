@@ -303,8 +303,8 @@ export default function PlanSettingsView({ isMaster = false, plans, onPlansUpdat
               <h2 className="text-xl font-bold text-zry-text">Tiers de Parceiros</h2>
             </div>
             <p className="text-sm text-zry-text-2 max-w-2xl">
-              Categorias exibidas no cadastro do parceiro. O tier <strong>Embaixador Zorya</strong> é só uma convenção de nome —
-              o que realmente gera comissão de embaixador é o campo "Embaixador Associado" no cadastro de cada parceiro.
+              Categorias exibidas no cadastro do parceiro. Só parceiros com um tier contendo <strong>"Embaixador"</strong> no nome
+              podem ser selecionados no campo "Embaixador Associado" do cadastro de outro parceiro — é o que gera a comissão de embaixador.
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
