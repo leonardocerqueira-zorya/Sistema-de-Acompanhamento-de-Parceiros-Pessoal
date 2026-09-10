@@ -71,7 +71,7 @@ export default function PlanSettingsView({ isMaster = false, plans, onPlansUpdat
   };
 
   const handleResetTiers = () => {
-    if (confirm('Restaurar os tiers para o padrão (Parceiro Zorya, Growth, Estratégico, Embaixador Zorya)?')) {
+    if (confirm('Restaurar os tiers para o padrão (Parceiro Zorya, Growth, Estratégico, Revendedor, Embaixador Zorya)?')) {
       setEditableTiers(resetStoredPartnerTiers());
       setTiersSaved(false);
     }

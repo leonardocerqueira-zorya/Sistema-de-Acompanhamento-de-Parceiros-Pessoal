@@ -8,6 +8,7 @@ export const DEFAULT_PARTNER_TIERS: string[] = [
   'Parceiro Zorya',
   'Growth',
   'Estratégico',
+  'Revendedor',
   'Embaixador Zorya'
 ];
 
