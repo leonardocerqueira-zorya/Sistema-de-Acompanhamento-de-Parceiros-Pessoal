@@ -13,7 +13,8 @@ import {
   saveStoredReferrals,
   clearAllSystemData,
   exportAllData,
-  importAllData
+  importAllData,
+  setBlobBackupAllowed
 } from './services/storageService';
 import { syncWithCloud, flushToCloud } from './services/syncService';
 import {
@@ -230,7 +231,13 @@ export default function App() {
       setReferrals(loadStoredReferrals());
       setNotifications(loadNotifications());
 
-      if (outcome.status === 'migrated' || outcome.status === 'merged') {
+      // Alteração recusada por permissão não sobe nunca: precisa ser dita, ou
+      // a pessoa segue achando que salvou.
+      if (outcome.deniedWrites > 0) {
+        showToast(
+          `${outcome.deniedWrites} alteração(ões) não foram salvas: fora do seu escopo de acesso. Fale com o Master.`
+        );
+      } else if (outcome.status === 'migrated' || outcome.status === 'merged') {
         showToast(outcome.message);
       }
     };
@@ -661,6 +668,8 @@ export default function App() {
 
   // Derived access scoping: executivo vê apenas sua carteira; master vê tudo.
   const isMaster = checkIsMaster(effectiveAccess);
+  // Só o master grava o backup completo — ver setBlobBackupAllowed.
+  setBlobBackupAllowed(isMaster);
   const executives = listExecutives(partners);
   const visiblePartners = scopePartnersForAccess(partners, effectiveAccess);
   const visibleReferrals = scopeReferralsForAccess(referrals, partners, effectiveAccess);
@@ -843,6 +852,7 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <PlanSettingsView
+            isMaster={isMaster}
             onSavedPlansChange={() => {
               showToast('Configurações de planos e comissões atualizadas com sucesso!');
             }}

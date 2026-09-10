@@ -311,8 +311,19 @@ export function importAllData(json: string): ImportResult {
 const CLOUD_BACKUP_TABLE = 'system_backups';
 const CLOUD_BACKUP_ROW_ID = 'main';
 
+// O blob de system_backups é a cópia INTEIRA do sistema. Com escopo por
+// carteira no banco, um executivo só enxerga parte dos dados — se ele gravasse
+// aqui, salvaria esse pedaço por cima e destruiria o backup do time. Por isso
+// só o master escreve (o banco também recusa, ver schema_rls_scope.sql; este
+// gate evita a tentativa e o erro recorrente no console).
+let blobBackupAllowed = false;
+
+export function setBlobBackupAllowed(allowed: boolean): void {
+  blobBackupAllowed = allowed;
+}
+
 export async function pushBackupToSupabase(): Promise<void> {
-  if (!supabase) return;
+  if (!supabase || !blobBackupAllowed) return;
   const backup = JSON.parse(exportAllData()) as SystemBackup;
   const { error } = await supabase
     .from(CLOUD_BACKUP_TABLE)

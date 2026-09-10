@@ -31,6 +31,8 @@ const FLUSH_DEBOUNCE_MS = 600;
 
 export const SETTING_PRICING_PLANS = 'pricing_plans';
 export const SETTING_PARTNER_TIERS = 'partner_tiers';
+// Marcador de que a carga inicial para as tabelas já aconteceu.
+export const SETTING_MIGRATION_DONE = 'migration_done';
 
 function undef<T>(value: T | null | undefined): T | undefined {
   return value === null || value === undefined ? undefined : value;
@@ -286,17 +288,29 @@ function scheduleFlush(): void {
   }, FLUSH_DEBOUNCE_MS);
 }
 
+// Escrita recusada por permissão (RLS) nunca vai passar por repetição — ao
+// contrário de falha de rede. Precisa sair da fila, senão trava as próximas
+// tentativas para sempre e o indicador de sync fica em erro eterno.
+function isPermissionDenied(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  if (!e) return false;
+  if (e.code === '42501') return true;
+  const msg = (e.message || '').toLowerCase();
+  return msg.includes('row-level security') || msg.includes('violates row-level');
+}
+
 // Envia tudo o que está pendente. Cada entrada só sai da fila quando o
 // servidor confirma — falha de rede mantém a pendência para a próxima vez.
-export async function flushPendingWrites(): Promise<{ sent: number; failed: number }> {
-  if (!supabase) return { sent: 0, failed: 0 };
+export async function flushPendingWrites(): Promise<{ sent: number; failed: number; denied: number }> {
+  if (!supabase) return { sent: 0, failed: 0, denied: 0 };
 
   const outbox = loadOutbox();
   const keys = Object.keys(outbox);
-  if (keys.length === 0) return { sent: 0, failed: 0 };
+  if (keys.length === 0) return { sent: 0, failed: 0, denied: 0 };
 
   let sent = 0;
   let failed = 0;
+  let denied = 0;
 
   for (const key of keys) {
     const sep = key.indexOf(':');
@@ -322,13 +336,19 @@ export async function flushPendingWrites(): Promise<{ sent: number; failed: numb
       delete outbox[key];
       sent++;
     } catch (e) {
-      failed++;
-      console.warn(`Falha ao enviar ${op} em ${table}:${id} (fica pendente para a próxima tentativa)`, e);
+      if (isPermissionDenied(e)) {
+        delete outbox[key];
+        denied++;
+        console.warn(`Sem permissão para ${op} em ${table}:${id} — alteração descartada (fora do seu escopo de acesso).`, e);
+      } else {
+        failed++;
+        console.warn(`Falha ao enviar ${op} em ${table}:${id} (fica pendente para a próxima tentativa)`, e);
+      }
     }
   }
 
   saveOutbox(outbox);
-  return { sent, failed };
+  return { sent, failed, denied };
 }
 
 // ---------------------------------------------------------------------------

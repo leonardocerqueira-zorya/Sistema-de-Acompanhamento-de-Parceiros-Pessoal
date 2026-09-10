@@ -29,12 +29,13 @@ import {
 } from 'lucide-react';
 
 interface PlanSettingsViewProps {
+  isMaster?: boolean;
   plans?: PricingPlan[];
   onPlansUpdated?: (newPlans: PricingPlan[]) => void;
   onSavedPlansChange?: () => void;
 }
 
-export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansChange }: PlanSettingsViewProps) {
+export default function PlanSettingsView({ isMaster = false, plans, onPlansUpdated, onSavedPlansChange }: PlanSettingsViewProps) {
   const [editablePlans, setEditablePlans] = useState<PricingPlan[]>(() => plans || loadStoredPricingPlans());
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [activePlanEdit, setActivePlanEdit] = useState<string | null>(null);
@@ -127,25 +128,35 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
+          {isMaster && <button
             type="button"
             onClick={handleResetDefaults}
             className="flex items-center gap-1.5 border border-zry-border-strong text-zry-roxo font-semibold px-3.5 py-[7px] rounded-full text-[12px] hover:bg-zry-lilas-30 transition"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Restaurar Padrão
-          </button>
+          </button>}
 
-          <button
+          {isMaster && <button
             type="button"
             onClick={handleSave}
             className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-[18px] py-2.5 rounded-full text-[12.5px] transition"
           >
             <Save className="w-4 h-4" />
             Salvar Alterações
-          </button>
+          </button>}
         </div>
       </div>
+
+      {!isMaster && (
+        <div className="bg-zry-lilas-30 border border-zry-border rounded-zry-lg p-4 flex items-start gap-2.5 text-[12.5px] text-zry-text-2">
+          <Info className="w-4 h-4 text-zry-roxo shrink-0 mt-0.5" />
+          <span>
+            Você está vendo a tabela de planos e os tiers em uso pelo time.
+            <strong className="text-zry-text"> Só o Master pode alterar</strong> — essas configurações valem para todo mundo.
+          </span>
+        </div>
+      )}
 
       {savedSuccess && (
         <div className="bg-zry-positive-bg border border-zry-positive/30 text-zry-positive p-4 rounded-zry-lg flex items-center gap-2.5 text-[12.5px] animate-fade-in">
@@ -217,6 +228,7 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
                       <div className="inline-flex items-center gap-1.5">
                         <span className="text-zry-text-2 font-semibold text-[12px]">R$</span>
                         <input
+                        disabled={!isMaster}
                           type="number"
                           step="0.10"
                           value={plan.monthlyPrice}
@@ -237,6 +249,7 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
                       <div className="inline-flex items-center gap-1.5">
                         <span className="text-zry-text-2 font-semibold text-[12px]">R$</span>
                         <input
+                        disabled={!isMaster}
                           type="number"
                           step="10.00"
                           value={plan.commissionAmount}
@@ -295,22 +308,22 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button
+            {isMaster && <button
               type="button"
               onClick={handleResetTiers}
               className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-zry-text-2 hover:text-zry-text bg-zry-lilas-30 hover:bg-zry-lilas rounded-xl transition"
             >
               <RotateCcw className="w-4 h-4" />
               Restaurar Padrão
-            </button>
-            <button
+            </button>}
+            {isMaster && <button
               type="button"
               onClick={handleSaveTiers}
               className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-zry-roxo hover:bg-zry-roxo shadow-sm rounded-xl transition"
             >
               <Save className="w-4 h-4" />
               Salvar Tiers
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -333,25 +346,27 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
           {editableTiers.map((t, idx) => (
             <div key={idx} className="flex items-center gap-2">
               <input
+                disabled={!isMaster}
                 type="text"
                 value={t}
                 onChange={(e) => handleRenameTier(idx, e.target.value)}
                 className="flex-1 px-3 py-2 bg-zry-lilas-30 border border-zry-border rounded-xl text-zry-text font-medium text-sm focus:bg-zry-surface focus:border-zry-roxo focus:ring-1 focus:ring-zry-roxo"
               />
-              <button
+              {isMaster && <button
                 type="button"
                 onClick={() => handleRemoveTier(idx)}
                 className="p-2 text-zry-danger hover:text-zry-danger hover:bg-zry-danger-bg rounded-xl transition"
                 title="Remover tier"
               >
                 <Trash2 className="w-4 h-4" />
-              </button>
+              </button>}
             </div>
           ))}
         </div>
 
         <div className="flex items-center gap-2 pt-2 border-t border-zry-border">
           <input
+            disabled={!isMaster}
             type="text"
             placeholder="Novo tier..."
             value={newTierName}
@@ -359,14 +374,14 @@ export default function PlanSettingsView({ plans, onPlansUpdated, onSavedPlansCh
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTier(); } }}
             className="flex-1 px-3 py-2 bg-zry-lilas-30 border border-zry-border rounded-xl text-zry-text text-sm focus:bg-zry-surface focus:border-zry-roxo focus:ring-1 focus:ring-zry-roxo"
           />
-          <button
+          {isMaster && <button
             type="button"
             onClick={handleAddTier}
             className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-zry-info bg-zry-info-bg hover:bg-zry-info-bg rounded-xl transition"
           >
             <Plus className="w-4 h-4" />
             Adicionar
-          </button>
+          </button>}
         </div>
       </div>
     </div>

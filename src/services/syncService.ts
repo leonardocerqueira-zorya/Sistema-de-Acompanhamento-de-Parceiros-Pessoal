@@ -22,6 +22,7 @@ import {
   queueWrite,
   seedTables,
   upsertSetting,
+  SETTING_MIGRATION_DONE,
   SETTING_PARTNER_TIERS,
   SETTING_PRICING_PLANS
 } from './repository';
@@ -64,6 +65,7 @@ export interface SyncOutcome {
   uploadedFromLocal: number;
   removedLocally: number;
   pendingFailures: number;
+  deniedWrites: number; // alterações recusadas por falta de permissão
   message: string;
   error?: string;
 }
@@ -178,7 +180,8 @@ export async function syncWithCloud(): Promise<SyncOutcome> {
     referralsFromCloud: 0,
     uploadedFromLocal: 0,
     removedLocally: 0,
-    pendingFailures: 0
+    pendingFailures: 0,
+    deniedWrites: 0
   };
 
   if (!supabase) {
@@ -201,15 +204,16 @@ export async function syncWithCloud(): Promise<SyncOutcome> {
     const localCosts = loadChannelCosts();
     const localMrr = loadNewMrrEntries();
 
-    const tablesEmpty =
-      snapshot.partners.length === 0 &&
-      snapshot.referrals.length === 0 &&
-      snapshot.channelCosts.length === 0 &&
-      snapshot.newMrrEntries.length === 0;
+    // A migração é decidida por um marcador explícito, NUNCA por contagem de
+    // linhas: com escopo por carteira no banco, um executivo sem parceiros
+    // atribuídos enxerga zero linhas, e contar linhas concluiria — errado —
+    // que o banco está vazio, disparando uma recarga em cima do que o time já
+    // tem. Ver `migration_done` em supabase/schema_rls_scope.sql.
+    const alreadyMigrated = snapshot.settings[SETTING_MIGRATION_DONE] !== undefined;
 
-    // 3. Carga inicial: as tabelas ainda não têm nada. Junta o que existe neste
-    //    navegador com o backup antigo (blob) e leva tudo para o banco.
-    if (tablesEmpty) {
+    // 3. Carga inicial: junta o que existe neste navegador com o backup antigo
+    //    (blob) e leva tudo para o banco.
+    if (!alreadyMigrated) {
       let seed = {
         partners: localPartners,
         referrals: localReferrals,
@@ -238,6 +242,11 @@ export async function syncWithCloud(): Promise<SyncOutcome> {
 
       await seedTables(seed);
       await seedLocalSettings();
+      try {
+        await upsertSetting(SETTING_MIGRATION_DONE, { at: new Date().toISOString() });
+      } catch (e) {
+        console.warn('Não foi possível marcar a migração como concluída (só o master pode gravar):', e);
+      }
       applyLocally(seed);
       markFullSyncDone();
       setLocalChangeAt(new Date().toISOString());
@@ -284,6 +293,7 @@ export async function syncWithCloud(): Promise<SyncOutcome> {
       uploadedFromLocal: uploaded,
       removedLocally: removed,
       pendingFailures: flushed.failed,
+      deniedWrites: flushed.denied,
       message: changed ? describeChanges(fromServer, uploaded, removed) : 'Dados já estavam sincronizados.'
     };
   } catch (e) {
