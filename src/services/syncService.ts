@@ -21,6 +21,7 @@ import {
   pendingIdsFor,
   queueWrite,
   seedTables,
+  upsertSetting,
   SETTING_PARTNER_TIERS,
   SETTING_PRICING_PLANS
 } from './repository';
@@ -134,6 +135,30 @@ function mergeWithServer<T extends { id: string }>(
   return { merged: Array.from(byId.values()), fromServer, uploaded, removed };
 }
 
+// Na carga inicial, tabela de planos e tiers customizados existem só no
+// navegador de quem editou. Se não subirem aqui, some a customização assim que
+// outra pessoa gravar a dela — então vão junto com a migração.
+async function seedLocalSettings(): Promise<void> {
+  const read = (key: string): unknown => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const plans = read(PLANS_STORAGE_KEY);
+  const tiers = read(TIERS_STORAGE_KEY);
+
+  try {
+    if (Array.isArray(plans) && plans.length > 0) await upsertSetting(SETTING_PRICING_PLANS, plans);
+    if (Array.isArray(tiers) && tiers.length > 0) await upsertSetting(SETTING_PARTNER_TIERS, tiers);
+  } catch (e) {
+    console.warn('Não foi possível enviar planos/tiers na carga inicial:', e);
+  }
+}
+
 function applySettings(settings: Record<string, unknown>): void {
   const write = (key: string, value: unknown) => {
     if (value === undefined || value === null) return;
@@ -212,6 +237,7 @@ export async function syncWithCloud(): Promise<SyncOutcome> {
       }
 
       await seedTables(seed);
+      await seedLocalSettings();
       applyLocally(seed);
       markFullSyncDone();
       setLocalChangeAt(new Date().toISOString());
