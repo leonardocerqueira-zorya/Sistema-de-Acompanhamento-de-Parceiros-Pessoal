@@ -64,7 +64,7 @@ export default function Sidebar({
       {/* Rail vertical (desktop) */}
       <nav className="hidden sm:flex fixed left-0 top-0 bottom-0 w-16 z-30 bg-zry-roxo flex-col items-center py-4 gap-1.5">
         <div className="w-8 h-8 flex items-center justify-center mb-2.5 shrink-0">
-          <span className="text-zry-coral font-black text-lg leading-none tracking-tight">z</span>
+          <img src="/brand/icone-zorya.svg" alt="Zorya" className="w-7 h-7" />
         </div>
 
         <div className="flex-1 flex flex-col items-center gap-1">

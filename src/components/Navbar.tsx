@@ -89,9 +89,7 @@ export default function Navbar({
       <div className="h-16 flex items-center gap-3 sm:gap-5 px-4 sm:px-7">
         {/* Marca */}
         <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-          <span className="text-zry-roxo font-black text-[15px] tracking-tight leading-none">
-            zorya<span className="text-zry-coral">.</span>
-          </span>
+          <img src="/brand/marca-zorya-roxa.svg" alt="Zorya" className="h-[18px] w-auto" />
           <div className="hidden sm:block w-px h-[22px] bg-zry-border" />
           <div className="hidden sm:block">
             <div className="text-[13px] font-bold tracking-tight leading-tight text-zry-text">
