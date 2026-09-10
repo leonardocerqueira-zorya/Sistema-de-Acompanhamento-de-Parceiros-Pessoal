@@ -68,6 +68,7 @@ export function partnerToRow(p: Partner): Row {
     state: p.state ?? null,
     joined_date: p.joinedDate ?? null,
     status: p.status,
+    has_signed_contract: p.hasSignedContract ?? null,
     notes: p.notes ?? null
   };
 }
@@ -90,6 +91,7 @@ export function rowToPartner(r: Row): Partner {
     state: undef(r.state as string),
     joinedDate: undef(r.joined_date as string),
     status: (r.status as Partner['status']) ?? 'ativo',
+    hasSignedContract: undef(r.has_signed_contract as boolean),
     notes: undef(r.notes as string)
   };
 }

@@ -4,6 +4,7 @@ import { Users, Calendar, AlertTriangle, ShieldCheck, Tag, Award, Activity } fro
 import { evaluatePartnerMissingFields } from '../services/sheetsService';
 import { normalizeDocument, formatDocument } from '../utils/analytics';
 import { loadStoredPartnerTiers } from '../data/tiersData';
+import { BRAZIL_STATES, fetchCitiesByState } from '../data/brazilLocations';
 import { listProfiles, listPendingInvites } from '../services/authService';
 import {
   calculatePartnerEngagement,
@@ -54,10 +55,42 @@ export default function PartnerModal({
   const [company, setCompany] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [hasSignedContract, setHasSignedContract] = useState<'' | 'sim' | 'nao'>('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [joinedDate, setJoinedDate] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Município é lista do IBGE filtrada por UF, não texto livre (nome digitado
+  // errado quebrava relatório por cidade). Busca de novo a cada troca de UF;
+  // o valor atual entra na lista mesmo se a busca ainda não voltou, pra não
+  // sumir com o dado já salvo enquanto carrega.
+  useEffect(() => {
+    if (!state) {
+      setCityOptions([]);
+      return;
+    }
+    let cancelled = false;
+    setCitiesLoading(true);
+    fetchCitiesByState(state).then(names => {
+      if (!cancelled) {
+        setCityOptions(names);
+        setCitiesLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [state]);
+
+  const cityOptionsWithCurrent =
+    city && !cityOptions.includes(city) ? [city, ...cityOptions] : cityOptions;
+  const stateOptionsWithCurrent =
+    state && !BRAZIL_STATES.some(s => s.uf === state)
+      ? [{ uf: state, name: state }, ...BRAZIL_STATES]
+      : BRAZIL_STATES;
 
   const missingFieldsList = initialData ? evaluatePartnerMissingFields(initialData) : [];
 
@@ -158,6 +191,9 @@ export default function PartnerModal({
       setCompany(initialData.company || '');
       setCity(initialData.city || '');
       setState(initialData.state || '');
+      setHasSignedContract(
+        initialData.hasSignedContract === true ? 'sim' : initialData.hasSignedContract === false ? 'nao' : ''
+      );
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
       setJoinedDate(initialData.joinedDate || '');
@@ -174,6 +210,7 @@ export default function PartnerModal({
       setCompany('');
       setCity('');
       setState('');
+      setHasSignedContract('');
       setEmail('');
       setPhone('');
       setJoinedDate(new Date().toISOString().slice(0, 10));
@@ -201,6 +238,7 @@ export default function PartnerModal({
       company: company.trim() || undefined,
       city: city.trim() || undefined,
       state: state.trim().toUpperCase() || undefined,
+      hasSignedContract: hasSignedContract === '' ? undefined : hasSignedContract === 'sim',
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
       joinedDate: joinedDate || undefined,
@@ -293,7 +331,7 @@ export default function PartnerModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.2fr_1.2fr_1fr_auto] gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.2fr_1.2fr_auto_1fr] gap-3">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center justify-between">
                 <span>CNPJ / CPF do Parceiro *</span>
@@ -322,25 +360,37 @@ export default function PartnerModal({
             </div>
 
             <div>
-              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Cidade</label>
-              <input
-                type="text"
-                placeholder="Ex: São Paulo"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-              />
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">UF</label>
+              <select
+                value={state}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setState(v);
+                  if (v !== state) setCity('');
+                }}
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2.5 text-[13px] text-zry-text font-bold focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
+              >
+                <option value="">Selecione</option>
+                {stateOptionsWithCurrent.map(s => (
+                  <option key={s.uf} value={s.uf}>{s.uf}</option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">UF</label>
-              <input
-                type="text"
-                maxLength={2}
-                placeholder="SP"
-                value={state}
-                onChange={(e) => setState(e.target.value.toUpperCase())}
-                className="w-full md:w-16 bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2.5 text-[13px] text-zry-text font-bold text-center uppercase focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
-              />
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Cidade</label>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={!state}
+                className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition disabled:opacity-50"
+              >
+                <option value="">
+                  {!state ? 'Selecione o estado primeiro' : citiesLoading ? 'Carregando...' : 'Selecione'}
+                </option>
+                {cityOptionsWithCurrent.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -412,7 +462,7 @@ export default function PartnerModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center gap-1.5">
                 <Award className="w-3.5 h-3.5 text-zry-warning" />
@@ -452,6 +502,29 @@ export default function PartnerModal({
               <p className="text-[10px] text-zry-text-2 mt-1">
                 Quem trouxe este parceiro pro programa — gera comissão pra ele nas indicações fechadas deste parceiro.
               </p>
+            </div>
+
+            <div>
+              <label className="block text-[12px] font-semibold text-zry-text mb-1.5 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-zry-positive" />
+                <span>Possui Contrato Assinado?</span>
+              </label>
+              <div className="grid grid-cols-2 gap-1 bg-zry-lilas p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setHasSignedContract('sim')}
+                  className={`py-2 rounded-full font-bold text-[12px] transition ${hasSignedContract === 'sim' ? 'bg-zry-surface text-zry-text' : 'text-zry-text-2 hover:text-zry-text'}`}
+                >
+                  Sim
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHasSignedContract('nao')}
+                  className={`py-2 rounded-full font-bold text-[12px] transition ${hasSignedContract === 'nao' ? 'bg-zry-surface text-zry-text' : 'text-zry-text-2 hover:text-zry-text'}`}
+                >
+                  Não
+                </button>
+              </div>
             </div>
           </div>
 

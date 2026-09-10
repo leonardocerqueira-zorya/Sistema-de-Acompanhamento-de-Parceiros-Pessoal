@@ -301,6 +301,17 @@ export function parseDateString(val: string | undefined | null): string | undefi
   return undefined;
 }
 
+// "Sim/Não" (ou variações) de uma célula. undefined = célula vazia ou texto não
+// reconhecido — nunca vira "false" por padrão: parceiro ainda não classificado
+// é diferente de parceiro sem contrato.
+export function parseBooleanFlag(val: string | undefined | null): boolean | undefined {
+  if (!val || val.trim() === '') return undefined;
+  const v = val.trim().toLowerCase();
+  if (['sim', 's', 'yes', 'y', 'true', 'verdadeiro', '1'].includes(v)) return true;
+  if (['não', 'nao', 'n', 'no', 'false', 'falso', '0'].includes(v)) return false;
+  return undefined;
+}
+
 // Convert parsed matrix from spreadsheet into structured Partners and Referrals
 export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   if (rows.length < 2) {
@@ -334,6 +345,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   const partnerCompanyIdx = headers.findIndex(h => (h.includes('empresa') || h.includes('razao')) && !h.includes('cliente'));
   const partnerCityIdx = headers.findIndex(h => h.includes('cidade') || h.includes('municipio'));
   const partnerStateIdx = headers.findIndex(h => h === 'uf' || h.includes('estado'));
+  const contractIdx = headers.findIndex(h => h.includes('contrato'));
   const refDateIdx = headers.findIndex(h => h.includes('data') && (h.includes('indica') || h.includes('envio') || h.includes('registro')));
   const statusIdx = headers.findIndex(h => (h.includes('status') || h.includes('estagio') || h.includes('fase')) && !h.includes('comis') && !h.includes('pagamento'));
   const valueIdx = headers.findIndex(h => h.includes('valor') && (h.includes('neg') || h.includes('fech') || h.includes('contrat') || h.includes('venda') || h.includes('liquido') || h.includes('mrr')));
@@ -381,6 +393,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
     const partnerCompany = partnerCompanyIdx >= 0 && row[partnerCompanyIdx]?.trim() ? row[partnerCompanyIdx].trim() : undefined;
     const partnerCity = partnerCityIdx >= 0 && row[partnerCityIdx]?.trim() ? row[partnerCityIdx].trim() : undefined;
     const partnerState = partnerStateIdx >= 0 && row[partnerStateIdx]?.trim() ? row[partnerStateIdx].trim().toUpperCase() : undefined;
+    const hasSignedContract = contractIdx >= 0 ? parseBooleanFlag(row[contractIdx]) : undefined;
 
     // Register partner if not existing
     const partnerKey = (partnerName || 'Parceiro Não Identificado').toLowerCase();
@@ -399,6 +412,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
         company: partnerCompany,
         city: partnerCity,
         state: partnerState,
+        hasSignedContract,
         status: 'ativo'
       };
       const partnerMissing = evaluatePartnerMissingFields(pObj);
@@ -418,6 +432,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
       if (partnerCompany && !p.company) p.company = partnerCompany;
       if (partnerCity && !p.city) p.city = partnerCity;
       if (partnerState && !p.state) p.state = partnerState;
+      if (hasSignedContract !== undefined && p.hasSignedContract === undefined) p.hasSignedContract = hasSignedContract;
       const partnerMissing = evaluatePartnerMissingFields(p);
       p.hasMissingData = partnerMissing.length > 0;
       p.missingFields = partnerMissing;

@@ -128,14 +128,15 @@ export function downloadPartnerTemplateCSV(): void {
   
   // Header line — sem coluna de status: ele é calculado pela régua de saúde
   // (ver statusFromEngagement), então importar um valor à mão não teria efeito.
-  lines.push('id_conexa;nome_parceiro;cnpj_cpf;perfil_parceiro;pessoa_responsavel;data_entrada;empresa_razao_social;email;telefone;observacoes');
+  // contrato_assinado aceita sim/não — em branco fica "não classificado" (nunca vira "não" por padrão).
+  lines.push('id_conexa;nome_parceiro;cnpj_cpf;perfil_parceiro;pessoa_responsavel;data_entrada;empresa_razao_social;email;telefone;cidade;uf;contrato_assinado;observacoes');
 
   // Realistic sample rows
-  lines.push('CX-PAR-001;Nexus Contabilidade;12.345.678/0001-90;Contabilidade;Mariana Ramos;15/01/2026;Nexus Soluções Contábeis LTDA;mariana@nexuscontabil.com.br;(11) 98765-4321;Parceiro estratégico focado em PMEs de SP');
-  lines.push('CX-PAR-002;Prime RH & Benefícios;23.456.789/0001-01;BPO DP/RH;Carlos Eduardo;02/02/2026;Prime Gestão & BPO de Pessoal;carlos@primerh.com.br;(21) 99876-5432;Atua com empresas de 50 a 300 vidas');
-  lines.push('CX-PAR-003;SoftRev Distribuidora;34.567.890/0001-12;Representante de Softwares;Fernanda Lima;10/02/2026;SoftRev Tecnologia e Distribuição;fernanda@softrev.com.br;(31) 97654-3210;Representante comercial em MG');
-  lines.push('CX-PAR-004;João Alves Consultor;123.456.789-00;Consultor de Negócios;Roberto Alves;20/02/2026;João Alves Consultoria ME;roberto@vanguardab2b.com.br;(41) 98521-4789;Exemplo com CPF (parceiro pessoa física)');
-  lines.push(';;;Contabilidade;;;;;;Exemplo de linha com campos vazios (nulos) que o sistema sinalizará como pendência manual');
+  lines.push('CX-PAR-001;Nexus Contabilidade;12.345.678/0001-90;Contabilidade;Mariana Ramos;15/01/2026;Nexus Soluções Contábeis LTDA;mariana@nexuscontabil.com.br;(11) 98765-4321;São Paulo;SP;sim;Parceiro estratégico focado em PMEs de SP');
+  lines.push('CX-PAR-002;Prime RH & Benefícios;23.456.789/0001-01;BPO DP/RH;Carlos Eduardo;02/02/2026;Prime Gestão & BPO de Pessoal;carlos@primerh.com.br;(21) 99876-5432;Rio de Janeiro;RJ;sim;Atua com empresas de 50 a 300 vidas');
+  lines.push('CX-PAR-003;SoftRev Distribuidora;34.567.890/0001-12;Representante de Softwares;Fernanda Lima;10/02/2026;SoftRev Tecnologia e Distribuição;fernanda@softrev.com.br;(31) 97654-3210;Belo Horizonte;MG;não;Representante comercial em MG, contrato ainda não assinado');
+  lines.push('CX-PAR-004;João Alves Consultor;123.456.789-00;Consultor de Negócios;Roberto Alves;20/02/2026;João Alves Consultoria ME;roberto@vanguardab2b.com.br;(41) 98521-4789;Curitiba;PR;;Exemplo com CPF (pessoa física), contrato ainda não classificado');
+  lines.push(';;;Contabilidade;;;;;;;;;Exemplo de linha com campos vazios (nulos) que o sistema sinalizará como pendência manual');
 
   const content = lines.join('\r\n');
   triggerCSVDownload(content, 'modelo_importacao_parceiros_zorya.csv');

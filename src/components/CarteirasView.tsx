@@ -245,6 +245,7 @@ export default function CarteirasView({
                             <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Parceiro</th>
                             <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Perfil</th>
                             <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Status</th>
+                            <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Contrato</th>
                             <th className="text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px] text-right">Ações</th>
                           </tr>
                         </thead>
@@ -257,6 +258,17 @@ export default function CarteirasView({
                                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${PARTNER_STATUS_BADGE[p.status]}`}>
                                   {PARTNER_STATUS_LABEL[p.status]}
                                 </span>
+                              </td>
+                              <td className="py-3.5 px-[22px] text-[13px]">
+                                {p.hasSignedContract === undefined ? (
+                                  <span className="text-zry-text-2">—</span>
+                                ) : (
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                                    p.hasSignedContract ? 'bg-zry-positive-bg text-zry-positive' : 'bg-zry-danger-bg text-zry-danger'
+                                  }`}>
+                                    {p.hasSignedContract ? 'Assinado' : 'Sem contrato'}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3.5 px-[22px] text-[13px] text-right">
                                 <div className="flex items-center justify-end gap-2">

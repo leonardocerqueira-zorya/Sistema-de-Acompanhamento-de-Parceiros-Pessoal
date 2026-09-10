@@ -121,9 +121,18 @@ export default function PartnersView({
                     </div>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 ${PARTNER_STATUS_BADGE[partner.status]}`}>
-                    {PARTNER_STATUS_LABEL[partner.status]}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${PARTNER_STATUS_BADGE[partner.status]}`}>
+                      {PARTNER_STATUS_LABEL[partner.status]}
+                    </span>
+                    {partner.hasSignedContract !== undefined && (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-semibold ${
+                        partner.hasSignedContract ? 'bg-zry-positive-bg text-zry-positive' : 'bg-zry-danger-bg text-zry-danger'
+                      }`}>
+                        {partner.hasSignedContract ? 'Contrato assinado' : 'Sem contrato'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Contact and Join Date */}

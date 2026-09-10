@@ -19,10 +19,11 @@ export interface Partner {
   email?: string;
   phone?: string;
   company?: string;
-  city?: string; // Cidade do parceiro
+  city?: string; // Cidade do parceiro — lista de municípios do IBGE, filtrada por state
   state?: string; // UF (ex: SP, RJ, BA)
   joinedDate?: string; // YYYY-MM-DD or missing
   status: PartnerStatus;
+  hasSignedContract?: boolean; // Contrato assinado (backfill em lote: importados sem contrato ainda ficam undefined, não false)
   notes?: string;
 
   // Audit flags for missing data
