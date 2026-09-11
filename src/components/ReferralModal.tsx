@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import type { Referral, Partner, DealStatus, CommissionStatus, CommissionInstallment } from '../types';
 import { evaluateMissingFields } from '../services/sheetsService';
+import { listProfiles, listPendingInvites } from '../services/authService';
 import { ZORYA_PLANS, type PricingPlan, loadStoredPricingPlans } from '../data/plansData';
 import { generateCommissionInstallments, calculateFirstInvoiceDueDate } from '../utils/commissionLogic';
 import { formatCurrency, formatDateBR, normalizeDocument, formatDocument } from '../utils/analytics';
@@ -25,6 +26,8 @@ interface ReferralModalProps {
   initialData?: Referral | null;
   partners: Partner[];
   pricingPlans?: PricingPlan[];
+  /** Parceiro que a tela de origem já tinha em foco — vem pré-selecionado. */
+  defaultPartnerId?: string;
 }
 
 export default function ReferralModal({
@@ -33,7 +36,8 @@ export default function ReferralModal({
   onSave,
   initialData,
   partners,
-  pricingPlans
+  pricingPlans,
+  defaultPartnerId
 }: ReferralModalProps) {
   const plans = pricingPlans && pricingPlans.length > 0 ? pricingPlans : loadStoredPricingPlans();
 
@@ -80,6 +84,23 @@ export default function ReferralModal({
   // Existing installments if editing
   const [existingInstallments, setExistingInstallments] = useState<CommissionInstallment[]>([]);
 
+  // Executivos vindos de Usuários (quem já entrou + convite pendente), igual ao
+  // cadastro de parceiro. Vazio = sem Supabase ou sem permissão para listar, e
+  // aí o campo volta a ser texto livre em vez de travar o preenchimento.
+  const [registeredExecutives, setRegisteredExecutives] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    Promise.all([listProfiles(), listPendingInvites()])
+      .then(([profiles, invites]) => {
+        const names = new Set<string>();
+        profiles.forEach(p => { if (p.role === 'executivo' && p.executiveName) names.add(p.executiveName.trim()); });
+        invites.forEach(i => { if (i.role === 'executivo' && i.executiveName) names.add(i.executiveName.trim()); });
+        setRegisteredExecutives(Array.from(names).sort((a, b) => a.localeCompare(b, 'pt-BR')));
+      })
+      .catch(() => setRegisteredExecutives([]));
+  }, [isOpen]);
+
   useEffect(() => {
     if (initialData) {
       setPartnerId(initialData.partnerId || (partners[0]?.id || ''));
@@ -119,7 +140,8 @@ export default function ReferralModal({
       setExistingInstallments(initialData.commissionInstallments || []);
     } else {
       const today = new Date().toISOString().slice(0, 10);
-      setPartnerId(partners[0]?.id || '');
+      const startingPartnerId = defaultPartnerId || partners[0]?.id || '';
+      setPartnerId(startingPartnerId);
       setClientName('');
       setClientDocument('');
       setClientCompany('');
@@ -128,7 +150,7 @@ export default function ReferralModal({
       setReferralDate(today);
       setDealStatus('novo');
       setIdConexa('');
-      setResponsiblePerson('');
+      setResponsiblePerson((partners.find(p => p.id === startingPartnerId)?.accountOwner || '').trim());
       
       // Default to Starter plan
       const defaultPlan = plans[0] || ZORYA_PLANS[0];
@@ -158,7 +180,21 @@ export default function ReferralModal({
       setChurnReason('');
       setExistingInstallments([]);
     }
-  }, [initialData, partners, isOpen]);
+    // `partners` NÃO entra nas dependências. O App recria esse array a cada
+    // sincronização (runSync -> setPartners), e com ele aqui o formulário
+    // inteiro era zerado no meio do preenchimento — bastava a aba voltar ao
+    // foco, que é justamente o que acontece quando se copia o nome do cliente
+    // de outro sistema e volta para colar. O formulário só reinicia quando o
+    // modal abre ou quando muda a indicação em edição.
+  }, [initialData, isOpen, defaultPartnerId]);
+
+  // Os parceiros podem chegar depois que o modal abriu (carga assíncrona) ou
+  // só trocar de identidade numa sincronização. Aqui preenchemos apenas um
+  // seletor ainda vazio: nenhum outro campo do formulário é tocado.
+  useEffect(() => {
+    if (!isOpen || initialData) return;
+    setPartnerId(prev => prev || defaultPartnerId || partners[0]?.id || '');
+  }, [isOpen, initialData, partners, defaultPartnerId]);
 
   // When plan changes, auto-populate standard values (MRR, Commission, Discounts)
   const applyPlanDefaults = (newPlanId: string, recurrence: 'mensal' | 'anual', installments: '1x' | '2x' | '3x') => {
@@ -195,6 +231,14 @@ export default function ReferralModal({
 
     // Commission: fixed from plan table
     setCommissionValue(plan.commissionAmount.toFixed(2));
+  };
+
+  // Trocar o parceiro sugere o executivo dono da carteira dele, mas só quando
+  // o campo ainda está vazio: escolha feita à mão nunca é sobrescrita.
+  const handlePartnerSelect = (newPartnerId: string) => {
+    setPartnerId(newPartnerId);
+    const owner = (partners.find(p => p.id === newPartnerId)?.accountOwner || '').trim();
+    if (owner) setResponsiblePerson(prev => (prev.trim() ? prev : owner));
   };
 
   const handlePlanSelect = (newPlanId: string) => {
@@ -462,7 +506,7 @@ export default function ReferralModal({
               <label className="block text-[12px] font-semibold text-zry-text mb-1.5">Parceiro Indicador *</label>
               <select
                 value={partnerId}
-                onChange={(e) => setPartnerId(e.target.value)}
+                onChange={(e) => handlePartnerSelect(e.target.value)}
                 className="w-full bg-zry-lilas-30 border border-transparent rounded-xl px-3.5 py-2.5 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-border-strong focus:bg-zry-surface transition"
               >
                 {partners
@@ -524,13 +568,29 @@ export default function ReferralModal({
                 <span>Pessoa Responsável (Executivo)</span>
                 {!responsiblePerson && <span className="text-[10px] text-zry-warning font-bold">Pendente</span>}
               </label>
-              <input
-                type="text"
-                placeholder="Ex: Mariana Ramos"
-                value={responsiblePerson}
-                onChange={(e) => setResponsiblePerson(e.target.value)}
-                className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!responsiblePerson ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
-              />
+              {registeredExecutives.length > 0 ? (
+                <select
+                  value={responsiblePerson}
+                  onChange={(e) => setResponsiblePerson(e.target.value)}
+                  className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!responsiblePerson ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
+                >
+                  <option value="">Nenhum</option>
+                  {responsiblePerson && !registeredExecutives.includes(responsiblePerson) && (
+                    <option value={responsiblePerson}>{responsiblePerson} (não cadastrado)</option>
+                  )}
+                  {registeredExecutives.map(ex => (
+                    <option key={ex} value={ex}>{ex}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Ex: Mariana Ramos"
+                  value={responsiblePerson}
+                  onChange={(e) => setResponsiblePerson(e.target.value)}
+                  className={`w-full bg-zry-lilas-30 border rounded-xl px-3 py-2 text-zry-text focus:outline-none focus:border-zry-border-strong ${!responsiblePerson ? 'border-zry-warning/40 bg-zry-warning-bg' : 'border-zry-border'}`}
+                />
+              )}
             </div>
 
             <div>

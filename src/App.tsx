@@ -1104,6 +1104,7 @@ export default function App() {
         onSave={handleSaveReferral}
         initialData={editingReferral}
         partners={visiblePartners}
+        defaultPartnerId={filter.partnerId !== 'all' ? filter.partnerId : undefined}
       />
 
       {/* Partner Modal */}
