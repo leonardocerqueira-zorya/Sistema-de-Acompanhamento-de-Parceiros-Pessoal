@@ -44,6 +44,8 @@ export default function ReferralsTable({
   const baseList = filterReferrals(referrals, filter, partners);
   const filteredList = showOnlyToComplete ? baseList.filter(r => r.isPlaceholder) : baseList;
   const placeholderCount = referrals.filter(r => r.isPlaceholder).length;
+  const filteredDealValue = filteredList.reduce((sum, referral) => sum + (referral.dealValue || 0), 0);
+  const filteredCommissionValue = filteredList.reduce((sum, referral) => sum + (referral.commissionValue || 0), 0);
 
   // Safras que existem nos dados carregados, da mais nova para a mais antiga.
   // A opção "sem data" só aparece quando há registro sem data — é um convite a
@@ -343,6 +345,21 @@ export default function ReferralsTable({
               Registros de Indicações ({filteredList.length})
             </h3>
             <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-zry-lilas-30 text-zry-roxo">
+                <strong>{filteredList.length}</strong> {filteredList.length === 1 ? 'indicação' : 'indicações'}
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-zry-info-bg text-zry-info"
+                title="Soma do Valor do Negócio das indicações exibidas pelos filtros atuais"
+              >
+                Valor total: <strong>{formatCurrency(filteredDealValue)}</strong>
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-zry-positive-bg text-zry-positive"
+                title="Soma das comissões das indicações exibidas pelos filtros atuais"
+              >
+                Comissão total: <strong>{formatCurrency(filteredCommissionValue)}</strong>
+              </span>
               {partnerVintage !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas text-zry-roxo">
                   Parceiros que entraram em {vintageLabel(partnerVintage)}
