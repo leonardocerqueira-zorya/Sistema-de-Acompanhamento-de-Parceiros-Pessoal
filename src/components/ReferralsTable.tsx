@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Hash
+  Hash,
+  RotateCcw
 } from 'lucide-react';
 
 interface ReferralsTableProps {
@@ -102,6 +103,22 @@ export default function ReferralsTable({
       case 'cancelada':
         return <span className={`${badgeBase} bg-zry-danger-bg text-zry-danger`}>Cancelada</span>;
     }
+  };
+
+  const handleClearFilters = () => {
+    onFilterChange({
+      period: { preset: 'all' },
+      partnerId: 'all',
+      dealStatus: 'all',
+      commissionStatus: 'all',
+      onlyMissingData: false,
+      searchQuery: '',
+      churnFilter: 'all',
+      partnerVintage: 'all',
+      referralVintage: 'all',
+      closeMonth: 'all'
+    });
+    setShowOnlyToComplete(false);
   };
 
   const handleExportCSV = () => {
@@ -366,6 +383,16 @@ export default function ReferralsTable({
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>Apenas com dados faltantes (Auditoria)</span>
             </label>
+
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-semibold border border-zry-border-strong text-zry-roxo bg-zry-surface hover:bg-zry-lilas-30 transition"
+              title="Remover todos os filtros e mostrar todas as indicações"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Limpar filtros</span>
+            </button>
 
           </div>
         </div>
