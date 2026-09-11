@@ -578,7 +578,34 @@ export default function App() {
       };
     });
 
-    const mergedReferrals = [...remappedReferrals, ...referrals];
+    // Reimportar a mesma planilha (ou uma versão atualizada dela) não pode duplicar
+    // indicação: descarta o que já existe pelo ID Conexa do contrato ou, na falta
+    // dele, pelo par parceiro + cliente.
+    const normalizeName = (value: string) =>
+      (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+    const existingConexa = new Set(
+      referrals.map(r => (r.idConexa || '').trim().toLowerCase()).filter(Boolean)
+    );
+    const existingPartnerClient = new Set(
+      referrals.map(r => `${r.partnerId}|${normalizeName(r.clientName)}`)
+    );
+
+    let skippedDuplicates = 0;
+    const newReferralsOnly = remappedReferrals.filter(ref => {
+      const conexa = (ref.idConexa || '').trim().toLowerCase();
+      const pairKey = `${ref.partnerId}|${normalizeName(ref.clientName)}`;
+      const isDuplicate = (conexa && existingConexa.has(conexa)) || existingPartnerClient.has(pairKey);
+      if (isDuplicate) {
+        skippedDuplicates++;
+        return false;
+      }
+      if (conexa) existingConexa.add(conexa);
+      existingPartnerClient.add(pairKey);
+      return true;
+    });
+
+    const mergedReferrals = [...newReferralsOnly, ...referrals];
     // Garante comissões (parceiro + embaixador) para indicações importadas já "ganho".
     const { referrals: newReferrals } = backfillAllCommissions(mergedReferrals, newPartners);
     setPartners(newPartners);
@@ -587,8 +614,9 @@ export default function App() {
     saveStoredReferrals(newReferrals);
 
     const newPartnersCount = newPartners.length - partners.length;
+    const duplicateNote = skippedDuplicates > 0 ? ` ${skippedDuplicates} já existia(m) e foi(ram) ignorada(s).` : '';
     if (result.referrals.length > 0) {
-      showToast(`Planilha processada: ${newPartnersCount} parceiro(s) novo(s) e ${result.referrals.length} indicação(ões) importada(s).`);
+      showToast(`Planilha processada: ${newPartnersCount} parceiro(s) novo(s) e ${newReferralsOnly.length} indicação(ões) importada(s).${duplicateNote}`);
       setActiveTab('referrals');
     } else {
       showToast(`Planilha processada: ${newPartnersCount} parceiro(s) novo(s) importado(s) (${result.partners.length} linha(s) reconciliada(s)).`);
