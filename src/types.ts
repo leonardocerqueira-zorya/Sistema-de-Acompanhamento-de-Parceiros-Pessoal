@@ -220,7 +220,9 @@ export interface FilterState {
   // 'all' ou ausente = sem filtro; 'none' = sem data para posicionar na safra.
   partnerVintage?: string;
   referralVintage?: string;
+  referralVintages?: string[]; // múltiplos meses de indicação; vazio = todos
   closeMonth?: string;
+  closeMonths?: string[]; // múltiplos meses de fechamento; vazio = todos
 }
 
 export type RankingSortKey = 'wonDeals' | 'referrals' | 'volume' | 'conversion' | 'speed';
