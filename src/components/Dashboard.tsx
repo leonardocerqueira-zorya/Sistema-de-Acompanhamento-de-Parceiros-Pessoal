@@ -20,6 +20,8 @@ import VintageCohortReport from './VintageCohortReport';
 import PartnerVintageReport from './PartnerVintageReport';
 import ChurnReport from './ChurnReport';
 import PartnerLocationMap from './PartnerLocationMap';
+import AmbassadorAnalysis from './AmbassadorAnalysis';
+import RecentReferralsPopup from './RecentReferralsPopup';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -213,6 +215,8 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6">
+      <RecentReferralsPopup referrals={referrals} onOpenReferral={onEditReferral} />
+
       {/* Cabeçalho da página + alternância de modo + exportação */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
@@ -893,6 +897,12 @@ export default function Dashboard({
           )}
         </div>
       )}
+
+      <AmbassadorAnalysis
+        partners={partners}
+        referrals={referrals}
+        onSelectPartner={onSelectPartner}
+      />
 
       {/* Safras de Parceiro: agrupadas pelo mês de ENTRADA do parceiro (sem corte).
           Vem antes das safras de indicação de propósito: primeiro quem entrou,
