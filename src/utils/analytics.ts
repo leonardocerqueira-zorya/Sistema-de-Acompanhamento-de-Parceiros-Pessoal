@@ -175,7 +175,14 @@ export function filterReferrals(
       if (filter.churnFilter === 'churned' && !isChurned) return false;
     }
 
-    // 4c. Safra do PARCEIRO: mês de entrada de quem indicou. Sem a lista de
+    // 4c. Fechadas no mês: este recorte responde quantos negócios foram ganhos
+    // e qual MRR entrou no período. Exige status ganho e data de fechamento no mês.
+    if (filter.closeMonth && filter.closeMonth !== 'all') {
+      const key = monthKeyOf(ref.closeDate) || 'none';
+      if (ref.dealStatus !== 'ganho' || key !== filter.closeMonth) return false;
+    }
+
+    // 4d. Safra do PARCEIRO: mês de entrada de quem indicou. Sem a lista de
     // parceiros não dá para resolver a safra, então o filtro não é aplicado —
     // melhor mostrar tudo do que esvaziar a tela sem explicação.
     if (wantsPartnerVintage && partners) {
@@ -183,7 +190,7 @@ export function filterReferrals(
       if (key !== filter.partnerVintage) return false;
     }
 
-    // 4d. Safra da INDICAÇÃO: mês em que ela foi feita. Mesma leitura do
+    // 4e. Safra da INDICAÇÃO: mês em que ela foi feita. Mesma leitura do
     // relatório de safras de indicações, inclusive a queda para closeDate
     // quando não há referralDate. O corte do dia 15 é do relatório, não da
     // filiação: a indicação pertence ao mês em que aconteceu.
