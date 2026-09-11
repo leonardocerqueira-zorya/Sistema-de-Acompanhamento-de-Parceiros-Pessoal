@@ -12,7 +12,8 @@
     "mcp:stdio": "tsx mcp-server/src/stdio.ts",
     "mcp:http": "tsx mcp-server/src/http.ts",
     "mcp:test": "tsx mcp-server/smoke-test.ts",
-    "mcp:build": "esbuild mcp-server/src/http.ts mcp-server/src/stdio.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outdir=mcp-server/dist --out-extension:.js=.mjs"
+    "mcp:build": "esbuild mcp-server/src/http.ts mcp-server/src/stdio.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outdir=mcp-server/dist --out-extension:.js=.mjs",
+    "mcp:check": "tsx mcp-server/src/check.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
