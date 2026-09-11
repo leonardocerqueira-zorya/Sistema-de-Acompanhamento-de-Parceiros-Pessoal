@@ -80,6 +80,10 @@ export interface CommissionInstallment {
   partnerNotified?: boolean;
   partnerNotifiedDate?: string;
   invoiceDoc?: AttachedDocument;
+  // Parcelas com o mesmo invoiceGroupId pertencem à mesma NF e ao mesmo
+  // pagamento. Ausente mantém o fluxo individual já existente.
+  invoiceGroupId?: string;
+  invoiceGroupSize?: number;
   scheduledPaymentDate?: string; // Data agendada para quitação
   receiptDoc?: AttachedDocument;
   paidDate?: string; // Data efetiva do pagamento
