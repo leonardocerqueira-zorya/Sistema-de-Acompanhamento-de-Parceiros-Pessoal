@@ -12,6 +12,13 @@ function referralMrr(r: Referral): number {
   return 0;
 }
 
+// MRR de tabela (cheio, antes do desconto) do mesmo negócio. Sem bruto
+// informado, assume que não houve desconto e devolve o próprio líquido.
+function referralGrossMrr(r: Referral): number {
+  if (r.mrrGross !== undefined && r.mrrGross !== null && !isNaN(r.mrrGross)) return r.mrrGross;
+  return referralMrr(r);
+}
+
 // Indicações "ganho" cujo fechamento (closeDate) caiu no mês informado (YYYY-MM).
 // Fechar num mês é um fato histórico: não muda se o cliente cancelar depois.
 export function referralsClosedInPeriod(referrals: Referral[], period: string): Referral[] {
@@ -38,6 +45,12 @@ export function partnersChannelMrrFromReferrals(referrals: Referral[], period: s
   return referralsClosedInPeriod(referrals, period).reduce((sum, r) => sum + referralMrr(r), 0);
 }
 
+// O mesmo MRR do mês, mas a preço de tabela. Serve só para explicar a
+// diferença: o financeiro costuma informar o cheio, o canal conta o líquido.
+export function partnersChannelGrossMrrFromReferrals(referrals: Referral[], period: string): number {
+  return referralsClosedInPeriod(referrals, period).reduce((sum, r) => sum + referralGrossMrr(r), 0);
+}
+
 // MRR do Canal de Parceiros IMPLÍCITO no que foi informado: total da empresa
 // menos a soma dos outros canais. Nunca é digitado diretamente.
 export function partnersChannelMrrDeclared(entry: NewMrrEntry | undefined): number | null {
@@ -49,27 +62,58 @@ export function partnersChannelMrrDeclared(entry: NewMrrEntry | undefined): numb
 export interface MrrDiscrepancyCheck {
   hasEntry: boolean;
   declared: number | null; // MRR do canal implícito no total informado
-  fromReferrals: number; // MRR do canal calculado pelas indicações fechadas
+  fromReferrals: number; // MRR do canal calculado pelas indicações fechadas (líquido)
+  grossFromReferrals: number; // o mesmo mês a preço de tabela (antes do desconto)
+  discountTotal: number; // desconto concedido no mês = bruto - líquido
   diff: number | null; // declared - fromReferrals
   diffPercent: number | null; // diff em % de fromReferrals (null se fromReferrals=0 e diff=0)
   hasDiscrepancy: boolean;
+  // Diferença que é exatamente o desconto: o informado bate com o bruto, não
+  // com o líquido. É explicação, não erro de preenchimento.
+  explainedByDiscount: boolean;
 }
 
 // Confronta o MRR do canal "informado" (total - outros canais) com o MRR
 // calculado a partir das indicações realmente fechadas no período.
 export function checkMrrDiscrepancy(entry: NewMrrEntry | undefined, referrals: Referral[], period: string): MrrDiscrepancyCheck {
   const fromReferrals = partnersChannelMrrFromReferrals(referrals, period);
+  const grossFromReferrals = partnersChannelGrossMrrFromReferrals(referrals, period);
+  const discountTotal = grossFromReferrals - fromReferrals;
   const declared = partnersChannelMrrDeclared(entry);
 
   if (declared === null) {
-    return { hasEntry: false, declared: null, fromReferrals, diff: null, diffPercent: null, hasDiscrepancy: false };
+    return {
+      hasEntry: false,
+      declared: null,
+      fromReferrals,
+      grossFromReferrals,
+      discountTotal,
+      diff: null,
+      diffPercent: null,
+      hasDiscrepancy: false,
+      explainedByDiscount: false
+    };
   }
 
   const diff = declared - fromReferrals;
   const diffPercent = fromReferrals !== 0 ? (diff / fromReferrals) * 100 : (diff !== 0 ? 100 : 0);
   const hasDiscrepancy = Math.abs(diff) > DISCREPANCY_TOLERANCE_REAIS;
+  const explainedByDiscount =
+    hasDiscrepancy &&
+    discountTotal > DISCREPANCY_TOLERANCE_REAIS &&
+    Math.abs(declared - grossFromReferrals) <= DISCREPANCY_TOLERANCE_REAIS;
 
-  return { hasEntry: true, declared, fromReferrals, diff, diffPercent, hasDiscrepancy };
+  return {
+    hasEntry: true,
+    declared,
+    fromReferrals,
+    grossFromReferrals,
+    discountTotal,
+    diff,
+    diffPercent,
+    hasDiscrepancy,
+    explainedByDiscount
+  };
 }
 
 export interface ChannelPeriodMetrics {

@@ -366,8 +366,24 @@ export default function ChannelMetricsView({ referrals, isMaster }: ChannelMetri
               </div>
             )}
 
+            {/* Diferença que é exatamente o desconto concedido: explicação, não alerta */}
+            {liveDiscrepancy && liveDiscrepancy.explainedByDiscount && (
+              <div className="bg-zry-lilas-30 border border-zry-border rounded-xl p-3 text-[12px] text-zry-text-2 flex items-start gap-2">
+                <Info className="w-4 h-4 text-zry-roxo shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-zry-text">A diferença é o desconto concedido — não é erro.</span>
+                  <p className="mt-0.5">
+                    Você informou <strong>{formatCurrency(liveDiscrepancy.declared || 0)}</strong>, que é o MRR de tabela das indicações
+                    fechadas em {formatPeriodLabel(selectedPeriod)}. Tirando{' '}
+                    <strong>{formatCurrency(liveDiscrepancy.discountTotal)}</strong> de desconto, sobram{' '}
+                    <strong>{formatCurrency(liveDiscrepancy.fromReferrals)}</strong> — e é esse líquido, o que o cliente paga de fato, que o
+                    canal usa em todas as métricas. Se o financeiro também trabalha com o líquido, troque o valor informado.
+                  </p>
+                </div>
+              </div>
+            )}
             {/* Alerta de divergência ao vivo, contra as indicações fechadas */}
-            {liveDiscrepancy && liveDiscrepancy.hasDiscrepancy && (
+            {liveDiscrepancy && liveDiscrepancy.hasDiscrepancy && !liveDiscrepancy.explainedByDiscount && (
               <div className="bg-zry-warning-bg border border-zry-warning/30 rounded-xl p-3 text-[12px] text-zry-warning flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
@@ -378,13 +394,22 @@ export default function ChannelMetricsView({ referrals, isMaster }: ChannelMetri
                     novo MRR — diferença de <strong>{formatCurrency(Math.abs(liveDiscrepancy.diff || 0))}</strong>. Confira se todas as
                     indicações desse mês já estão com status "Ganho" e valor de MRR preenchido.
                   </p>
+                  {liveDiscrepancy.discountTotal > 0.01 && (
+                    <p className="mt-1 opacity-80">
+                      O canal conta o MRR líquido: {formatCurrency(liveDiscrepancy.grossFromReferrals)} de tabela −{' '}
+                      {formatCurrency(liveDiscrepancy.discountTotal)} de desconto = {formatCurrency(liveDiscrepancy.fromReferrals)}.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
             {liveDiscrepancy && !liveDiscrepancy.hasDiscrepancy && (
               <div className="bg-zry-positive-bg border border-zry-positive/20 rounded-xl p-3 text-[12px] text-zry-positive flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Bate com as indicações fechadas no sistema ({formatCurrency(liveDiscrepancy.fromReferrals)}).</span>
+                <span>
+                  Bate com as indicações fechadas no sistema ({formatCurrency(liveDiscrepancy.fromReferrals)}
+                  {liveDiscrepancy.discountTotal > 0.01 ? ', já líquido de desconto' : ''}).
+                </span>
               </div>
             )}
 
@@ -470,7 +495,12 @@ export default function ChannelMetricsView({ referrals, isMaster }: ChannelMetri
             <h3 className="text-[14px] font-bold text-zry-text">Canal de Parceiros — {formatPeriodLabel(selectedPeriod)}</h3>
             <p className="text-[11px] text-zry-text-2 mt-0.5">
               {metrics.closedDealsCount} negócio(s) fechado(s) por {metrics.activePartnersCount} parceiro(s) neste mês, somando{' '}
-              {formatCurrency(metrics.channelMrrFromReferrals)} de novo MRR (calculado a partir das indicações).
+              {formatCurrency(metrics.channelMrrFromReferrals)} de novo MRR (calculado a partir das indicações
+              {metrics.discrepancy.discountTotal > 0.01
+                ? `, já líquido: ${formatCurrency(metrics.discrepancy.grossFromReferrals)} de tabela − ${formatCurrency(
+                    metrics.discrepancy.discountTotal
+                  )} de desconto`
+                : ''}).
             </p>
           </div>
         </div>
@@ -643,6 +673,15 @@ export default function ChannelMetricsView({ referrals, isMaster }: ChannelMetri
                       <td className="py-3.5 px-3 text-center">
                         {!m.discrepancy.hasEntry ? (
                           <span className="text-zry-text-2">—</span>
+                        ) : m.discrepancy.explainedByDiscount ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas-30 text-zry-roxo"
+                            title={`O informado bate com o MRR de tabela; a diferença de ${formatCurrency(
+                              Math.abs(m.discrepancy.diff || 0)
+                            )} é o desconto concedido`}
+                          >
+                            <Info className="w-3 h-3" /> Só o desconto
+                          </span>
                         ) : m.discrepancy.hasDiscrepancy ? (
                           <span
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-warning-bg text-zry-warning"
