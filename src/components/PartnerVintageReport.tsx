@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -21,6 +21,7 @@ import {
   rankPartnerVintages
 } from '../utils/partnerVintageAnalytics';
 import { formatCurrency, formatDateBR } from '../utils/analytics';
+import { monthKeyOf, monthLabelPt } from '../utils/dateLabels';
 import { STAT_MODE_LABEL, type StatMode } from '../utils/statistics';
 import {
   ENGAGEMENT_ZERO_DAYS,
@@ -80,6 +81,7 @@ export default function PartnerVintageReport({
   const [windowDays, setWindowDays] = useState<PartnerVintageWindow>(null);
   const [lineMetric, setLineMetric] = useState<LineMetric>('health');
   const [expandedVintageId, setExpandedVintageId] = useState<string | null>(null);
+  const [expandedActivityMonth, setExpandedActivityMonth] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
 
   const report = useMemo(
@@ -88,6 +90,43 @@ export default function PartnerVintageReport({
   );
 
   const { vintages } = report;
+
+  // Visão transversal: em cada mês de indicação, conta parceiros distintos sem
+  // importar a safra de entrada. O detalhamento preserva a safra de cada nome.
+  const monthlyPartnerActivity = useMemo(() => {
+    const partnerById = new Map(partners.map(partner => [partner.id, partner]));
+    const months = new Map<string, {
+      totalReferrals: number;
+      partners: Map<string, { name: string; vintage: string | null; referrals: number }>;
+    }>();
+
+    referrals.forEach(referral => {
+      const month = monthKeyOf(referral.referralDate);
+      if (!month) return;
+
+      const bucket = months.get(month) || { totalReferrals: 0, partners: new Map() };
+      bucket.totalReferrals += 1;
+
+      const partner = partnerById.get(referral.partnerId);
+      const current = bucket.partners.get(referral.partnerId);
+      bucket.partners.set(referral.partnerId, {
+        name: partner?.name || referral.partnerName || 'Parceiro não identificado',
+        vintage: monthKeyOf(partner?.joinedDate),
+        referrals: (current?.referrals || 0) + 1
+      });
+      months.set(month, bucket);
+    });
+
+    return Array.from(months.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([month, bucket]) => ({
+        month,
+        label: monthLabelPt(month),
+        totalReferrals: bucket.totalReferrals,
+        partners: Array.from(bucket.partners.values())
+          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+      }));
+  }, [partners, referrals]);
 
   // Indicações por parceiro conforme a estatística escolhida no topo da tela.
   const pickPerPartner = (v: PartnerVintage): number =>
@@ -284,6 +323,88 @@ export default function PartnerVintageReport({
           </p>
         </div>
       )}
+
+      <div className="bg-zry-lilas-30/60 border border-zry-border rounded-2xl overflow-hidden">
+        <div className="px-4 py-3.5 border-b border-zry-border">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-zry-roxo" />
+            <h3 className="text-sm font-bold text-zry-text">Parceiros diferentes que indicaram em cada mês</h3>
+          </div>
+          <p className="text-[11px] text-zry-text-2 mt-1">
+            Visão independente da safra: cada parceiro conta uma vez no mês, mesmo que tenha feito várias indicações. Clique no mês para ver nomes e safras.
+          </p>
+        </div>
+
+        {monthlyPartnerActivity.length === 0 ? (
+          <div className="px-4 py-8 text-center text-xs text-zry-text-2">
+            Nenhuma indicação com data cadastrada para montar a atividade mensal.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[560px]">
+              <thead>
+                <tr className="text-left text-zry-text-2 border-b border-zry-border">
+                  <th className="py-2.5 px-4 font-semibold">Mês da indicação</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">Parceiros diferentes</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">Indicações</th>
+                  <th className="py-2.5 px-4 font-semibold text-right">Detalhes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyPartnerActivity.map(activity => {
+                  const isOpen = expandedActivityMonth === activity.month;
+                  return (
+                    <Fragment key={activity.month}>
+                      <tr
+                        className={`border-b border-zry-border/60 cursor-pointer transition ${isOpen ? 'bg-zry-surface' : 'hover:bg-zry-surface/70'}`}
+                        onClick={() => setExpandedActivityMonth(isOpen ? null : activity.month)}
+                      >
+                        <td className="py-3 px-4 font-bold text-zry-text">{activity.label}</td>
+                        <td className="py-3 px-3 text-right">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-zry-roxo px-2.5 py-1 font-extrabold text-zry-creme">
+                            {activity.partners.length}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right font-semibold text-zry-text">{activity.totalReferrals}</td>
+                        <td className="py-3 px-4 text-right text-zry-text-2">
+                          <span className="inline-flex items-center gap-1 font-semibold">
+                            {isOpen ? 'Ocultar' : 'Ver parceiros'}
+                            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </span>
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr className="border-b border-zry-border">
+                          <td colSpan={4} className="bg-zry-surface px-4 py-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                              {activity.partners.map(partner => (
+                                <div
+                                  key={partner.name}
+                                  className="flex items-center justify-between gap-3 rounded-xl border border-zry-border bg-zry-lilas-30/50 px-3 py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-zry-text truncate">{partner.name}</div>
+                                    <div className="text-[10.5px] text-zry-text-2">
+                                      Safra: {partner.vintage ? monthLabelPt(partner.vintage) : 'sem data de entrada'}
+                                    </div>
+                                  </div>
+                                  <span className="shrink-0 text-[10.5px] font-semibold text-zry-roxo">
+                                    {partner.referrals} {partner.referrals === 1 ? 'indicação' : 'indicações'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {vintages.length === 0 ? (
         <div className="text-center py-12 text-sm text-zry-text-2">
