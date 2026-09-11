@@ -104,6 +104,7 @@ export interface Referral {
   clientPhone?: string;
   referralDate?: string; // YYYY-MM-DD or missing
   dealStatus: DealStatus;
+  lossReason?: string; // Obrigatório ao marcar o negócio como perdido
   
   // Pricing plan & contract financial details
   planId?: string;
