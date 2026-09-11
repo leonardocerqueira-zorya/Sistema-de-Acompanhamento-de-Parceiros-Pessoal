@@ -51,6 +51,7 @@ export default function ReferralModal({
   const [clientPhone, setClientPhone] = useState('');
   const [referralDate, setReferralDate] = useState('');
   const [dealStatus, setDealStatus] = useState<DealStatus>('novo');
+  const [lossReason, setLossReason] = useState('');
   
   // Plan & Pricing
   const [planId, setPlanId] = useState<string>('starter_1_14');
@@ -111,6 +112,7 @@ export default function ReferralModal({
       setClientPhone(initialData.clientPhone || '');
       setReferralDate(initialData.referralDate || '');
       setDealStatus(initialData.dealStatus || 'novo');
+      setLossReason(initialData.lossReason || '');
       setIdConexa(initialData.idConexa || '');
       setResponsiblePerson(initialData.responsiblePerson || '');
       
@@ -149,6 +151,7 @@ export default function ReferralModal({
       setClientPhone('');
       setReferralDate(today);
       setDealStatus('novo');
+      setLossReason('');
       setIdConexa('');
       setResponsiblePerson((partners.find(p => p.id === startingPartnerId)?.accountOwner || '').trim());
       
@@ -332,6 +335,10 @@ export default function ReferralModal({
       alert('Por favor, informe o nome do cliente indicado.');
       return;
     }
+    if (dealStatus === 'perdido' && !lossReason.trim()) {
+      alert('Informe o motivo da perda antes de salvar a indicação.');
+      return;
+    }
 
     const selectedPartner = partners.find(p => p.id === partnerId);
     const partnerName = selectedPartner ? selectedPartner.name : 'Parceiro Não Informado';
@@ -400,6 +407,7 @@ export default function ReferralModal({
       clientPhone: clientPhone.trim() || undefined,
       referralDate: referralDate || undefined,
       dealStatus,
+      lossReason: dealStatus === 'perdido' ? lossReason.trim() : undefined,
       
       // Plans & Pricing
       planId,
@@ -825,6 +833,25 @@ export default function ReferralModal({
                   <option value="perdido">Perdido</option>
                 </select>
               </div>
+
+              {dealStatus === 'perdido' && (
+                <div className="sm:col-span-2">
+                  <label className="block text-[12px] font-semibold text-zry-text mb-1.5">
+                    Motivo da perda *
+                  </label>
+                  <textarea
+                    value={lossReason}
+                    onChange={(e) => setLossReason(e.target.value)}
+                    required
+                    rows={3}
+                    placeholder="Ex.: preço, concorrente, cliente desistiu, sem retorno..."
+                    className="w-full bg-zry-warning-bg/50 border border-zry-warning/40 rounded-xl px-3 py-2 text-[13px] text-zry-text placeholder:text-zry-text-2 focus:outline-none focus:border-zry-warning resize-y"
+                  />
+                  <p className="text-[10.5px] text-zry-text-2 mt-1">
+                    Obrigatório para registrar o negócio como perdido.
+                  </p>
+                </div>
+              )}
 
               {dealStatus === 'ganho' && (
                 <>
