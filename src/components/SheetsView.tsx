@@ -400,7 +400,7 @@ export default function SheetsView({
               <span className="w-7 h-7 rounded-full bg-zry-roxo text-zry-creme flex items-center justify-center font-bold text-[12px]">
                 2
               </span>
-              <h4 className="text-[15px] font-bold text-zry-text">Copiar e Colar Linhas do Excel (Manual)</h4>
+              <h4 className="text-[15px] font-bold text-zry-text">Enviar Arquivo ou Colar Linhas do Excel</h4>
             </div>
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas-30 text-zry-text-2">
               Sem necessidade de login
@@ -409,15 +409,17 @@ export default function SheetsView({
 
           <div className="p-[22px] space-y-4">
             <p className="text-[12.5px] text-zry-text-2 leading-relaxed">
-              Se você tem uma planilha salva no computador, basta selecionar as linhas no Excel (incluindo o cabeçalho), copiar (Ctrl+C) e colar aqui:
+              Envie um arquivo <strong>.tsv</strong>, <strong>.csv</strong> ou <strong>.txt</strong> salvo no computador — ou selecione as linhas no Excel
+              (incluindo o cabeçalho), copie com Ctrl+C e cole. É aqui que entra a importação em lote de parceiros e indicações;
+              o "Restaurar backup" do rodapé é outra coisa: ele só lê arquivo <strong>.json</strong> e substitui toda a base.
             </p>
 
             <button
               onClick={() => setShowPasteModal(true)}
               className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-[18px] py-2.5 rounded-full text-[12.5px] transition"
             >
-              <ClipboardPaste className="w-4 h-4" />
-              <span>Abrir Caixa de Colar Dados do Excel</span>
+              <Upload className="w-4 h-4" />
+              <span>Enviar arquivo ou colar dados</span>
             </button>
           </div>
         </div>

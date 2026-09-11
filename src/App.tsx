@@ -673,6 +673,15 @@ export default function App() {
 
   // Restore: lê um arquivo JSON de backup e substitui o estado atual.
   const handleImportBackupFile = (file: File) => {
+    // Restaurar backup só lê o JSON exportado pelo próprio sistema. Planilha em
+    // .tsv/.csv é importação em lote e vive na aba Planilhas — avisa antes de
+    // chegar no confirm de substituir a base inteira.
+    if (/\.(tsv|csv|txt|xlsx?)$/i.test(file.name)) {
+      showToast('Isso é uma planilha, não um backup. Importe em Planilhas → Enviar arquivo ou colar dados.');
+      setActiveTab('sheets');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = String(e.target?.result || '');
