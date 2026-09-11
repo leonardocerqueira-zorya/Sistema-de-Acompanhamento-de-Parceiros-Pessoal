@@ -354,6 +354,23 @@ export default function PartnerVintageReport({
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-zry-text-2" aria-label="Legenda do gráfico de safras">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3 h-3 rounded-[3px] bg-[#F4855A]" />
+                <span><strong className="text-zry-text">Barras:</strong> indicações por parceiro ({statLabel})</span>
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="relative w-5 h-3" aria-hidden="true">
+                  <span className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-[#2A1F45]" />
+                  <span className="absolute left-1/2 top-1/2 w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#2A1F45]" />
+                </span>
+                <span><strong className="text-zry-text">Linha:</strong> {LINE_METRIC_LABEL[lineMetric]}</span>
+              </span>
+              <span className="text-[10.5px]">
+                Eixo esquerdo = quantidade · eixo direito = percentual
+              </span>
+            </div>
+
             <div className="w-full h-[340px] sm:h-[380px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 20 }}>
@@ -405,6 +422,23 @@ export default function PartnerVintageReport({
           </div>
 
           {/* Tabela comparativa */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zry-text-2">
+            <span>Na coluna <strong className="text-zry-text">Saúde hoje</strong>, a barra mostra a quantidade de parceiros em cada situação:</span>
+            <div className="flex flex-wrap items-center gap-3" aria-label="Legenda de saúde dos parceiros">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-zry-positive" />
+                Saudável
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-zry-warning" />
+                Em risco
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-zry-text-2/50" />
+                Inativo
+              </span>
+            </div>
+          </div>
           <div className="overflow-x-auto -mx-1">
             <table className="w-full text-xs min-w-[860px]">
               <thead>
