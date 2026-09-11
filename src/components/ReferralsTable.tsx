@@ -518,6 +518,14 @@ export default function ReferralsTable({
                         <td className="py-3.5 px-3 text-[13px]">
                           <div className="flex flex-col items-start gap-1">
                             {statusBadge(ref.dealStatus)}
+                            {ref.dealStatus === 'perdido' && ref.lossReason && (
+                              <span
+                                className="max-w-[180px] text-[10.5px] leading-snug text-zry-danger"
+                                title={ref.lossReason}
+                              >
+                                Motivo: {ref.lossReason}
+                              </span>
+                            )}
                             {ref.dealStatus === 'ganho' && ref.churnedAt && (
                               <span className={`${badgeBase} bg-zry-danger-bg text-zry-danger`} title={ref.churnReason || undefined}>
                                 <XCircle className="w-3 h-3" /> Cancelado em {formatDateBR(ref.churnedAt)}
