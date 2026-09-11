@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "canal-de-parcerias": {
+      "command": "npm",
+      "args": ["run", "mcp:stdio"],
+      "env": {}
+    }
+  }
+}

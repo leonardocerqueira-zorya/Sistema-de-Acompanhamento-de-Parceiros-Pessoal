@@ -8,10 +8,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "mcp:stdio": "tsx mcp-server/src/stdio.ts",
+    "mcp:http": "tsx mcp-server/src/http.ts",
+    "mcp:test": "tsx mcp-server/smoke-test.ts",
+    "mcp:build": "esbuild mcp-server/src/http.ts mcp-server/src/stdio.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outdir=mcp-server/dist --out-extension:.js=.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@supabase/supabase-js": "^2.116.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
@@ -23,7 +28,8 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "recharts": "^3.10.1",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
