@@ -1,6 +1,7 @@
 import type { Referral, ReferralVintage, MonthlyClosedBreakdown } from '../types';
 import { dispatchNotification } from '../services/notificationService';
-import { formatCurrency } from './analytics';
+import { calculateDaysBetween, formatCurrency } from './analytics';
+import { summarize } from './statistics';
 import { MONTH_NAMES_PT, MONTH_SHORT_PT } from './dateLabels';
 
 /**
@@ -95,8 +96,19 @@ export function calculateReferralVintages(
     // Map to aggregate closed deals by their close month
     const closedMonthMap = new Map<string, { count: number; volume: number }>();
 
+    // Produção por parceiro dentro da safra, para conversão por mediana, e
+    // ciclo de fechamento de cada negócio ganho.
+    const perPartner = new Map<string, { total: number; wonAtCutoff: number; wonTotal: number }>();
+    const daysToCloseList: number[] = [];
+
     vintageRefs.forEach(r => {
       const isWon = r.dealStatus === 'ganho';
+      const pId = r.partnerId;
+      if (pId) {
+        const bucket = perPartner.get(pId) || { total: 0, wonAtCutoff: 0, wonTotal: 0 };
+        bucket.total += 1;
+        perPartner.set(pId, bucket);
+      }
       const isPipeline = !r.dealStatus || r.dealStatus === 'novo' || r.dealStatus === 'contato' || r.dealStatus === 'qualificado' || r.dealStatus === 'negociacao';
       const val = Number(r.dealValue) || 0;
 
@@ -110,7 +122,16 @@ export function calculateReferralVintages(
         wonVolumeTotal += val;
 
         const closeDateStr = (r.closeDate || r.referralDate || '').trim().slice(0, 10);
-        
+
+        const cycleDays = calculateDaysBetween(r.referralDate, r.closeDate);
+        if (cycleDays !== null) daysToCloseList.push(cycleDays);
+
+        if (pId) {
+          const bucket = perPartner.get(pId)!;
+          bucket.wonTotal += 1;
+          if (closeDateStr && closeDateStr <= cutoffDate) bucket.wonAtCutoff += 1;
+        }
+
         // Check if closed before or on cutoff date (15th of next month)
         if (closeDateStr && closeDateStr <= cutoffDate) {
           closedAtCutoff += 1;
@@ -128,6 +149,16 @@ export function calculateReferralVintages(
           closedMonthMap.set(closeMonthKey, curr);
         }
       }
+    });
+
+    // Conversão por parceiro: cada parceiro que indicou nesta safra pesa 1,
+    // independentemente de quantas indicações trouxe.
+    const cutoffRates: number[] = [];
+    const currentRates: number[] = [];
+    perPartner.forEach(b => {
+      if (b.total <= 0) return;
+      cutoffRates.push((b.wonAtCutoff / b.total) * 100);
+      currentRates.push((b.wonTotal / b.total) * 100);
     });
 
     // Conversion calculations
@@ -193,6 +224,9 @@ export function calculateReferralVintages(
       closedTotal,
       conversionCurrent: Number(conversionCurrent.toFixed(1)),
       wonVolumeTotal,
+      conversionAtCutoffByPartner: summarize(cutoffRates),
+      conversionCurrentByPartner: summarize(currentRates),
+      daysToClose: summarize(daysToCloseList),
       closedPostCutoff,
       postCutoffGainPercent: Number(postCutoffGainPercent.toFixed(1)),
       hasPostCutoffSales,
@@ -237,6 +271,10 @@ export function checkAndTriggerVintageCutoffNotifications(vintages: ReferralVint
  * Exports vintage cohort report to CSV formatted for Brazilian Excel.
  */
 export function exportVintageReportCSV(vintages: ReferralVintage[]): void {
+  const pctCell = (v: number | null): string =>
+    v === null ? '' : `${v.toFixed(1).replace('.', ',')}%`;
+  const dayCell = (v: number | null): string => (v === null ? '' : String(Math.round(v)));
+
   const headers = [
     'Safra (Mês/Ano)',
     'Data Início',
@@ -250,6 +288,13 @@ export function exportVintageReportCSV(vintages: ReferralVintage[]): void {
     'Tx Conversão no Corte (%)',
     'Fechadas Total (Atual)',
     'Tx Conversão Atual (%)',
+    'Tx Conversão no Corte por Parceiro - Média (%)',
+    'Tx Conversão no Corte por Parceiro - Mediana (%)',
+    'Tx Conversão Atual por Parceiro - Média (%)',
+    'Tx Conversão Atual por Parceiro - Mediana (%)',
+    'Parceiros que Indicaram na Safra',
+    'Ciclo Indicação -> Fechamento (Média, dias)',
+    'Ciclo Indicação -> Fechamento (Mediana, dias)',
     'Vendas Pós-Corte',
     'Ganho Pós-Corte (%)',
     'MRR Total Ganho (R$)'
@@ -268,6 +313,13 @@ export function exportVintageReportCSV(vintages: ReferralVintage[]): void {
     `${v.conversionAtCutoff.toFixed(1)}%`,
     v.closedTotal,
     `${v.conversionCurrent.toFixed(1)}%`,
+    pctCell(v.conversionAtCutoffByPartner.mean),
+    pctCell(v.conversionAtCutoffByPartner.median),
+    pctCell(v.conversionCurrentByPartner.mean),
+    pctCell(v.conversionCurrentByPartner.median),
+    v.conversionCurrentByPartner.count,
+    dayCell(v.daysToClose.mean),
+    dayCell(v.daysToClose.median),
     v.closedPostCutoff,
     `${v.postCutoffGainPercent.toFixed(1)}%`,
     v.wonVolumeTotal.toFixed(2).replace('.', ',')

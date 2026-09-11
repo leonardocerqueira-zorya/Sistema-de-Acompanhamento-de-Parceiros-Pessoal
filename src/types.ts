@@ -1,3 +1,5 @@
+import type { StatSummary } from './utils/statistics';
+
 export type PartnerStatus = 'ativo' | 'onboarding' | 'risco' | 'inativo';
 
 export type PartnerProfile = 
@@ -281,6 +283,18 @@ export interface ChannelKPIs {
   // Cycle KPIs:
   avgDaysPartnerToFirstReferral: number | null; // Média tempo entrada parceiro -> indicação
   avgDaysReferralToClose: number | null; // Média tempo indicação -> fechamento
+
+  // Os mesmos indicadores de conversão e ciclo, com a distribuição inteira,
+  // para a tela alternar entre média e mediana. Ciclo é assimétrico (um lead
+  // que demorou 400 dias desloca a média e não desloca a mediana), então os
+  // dois números contam histórias diferentes e ambos precisam estar à mão.
+  daysPartnerToFirstReferral: StatSummary; // dias entrada -> 1ª indicação, por parceiro
+  daysReferralToClose: StatSummary; // dias indicação -> fechamento, por negócio ganho
+  // Taxa de conversão INDIVIDUAL de cada parceiro com ao menos 1 indicação.
+  // Atenção: conversionRate acima é a taxa agregada do canal (ganhos ÷ total),
+  // dominada por quem mais indica. Esta é a distribuição parceiro a parceiro —
+  // é dela que sai a mediana, ou seja, a conversão do parceiro típico.
+  conversionByPartner: StatSummary;
   activePartnersCount: number;
   partnerActivationRate: number; // % partners that referred at least once
   incompleteDataCount: number;
@@ -324,12 +338,23 @@ export interface DataAuditMetrics {
 export interface PartnerTenureCohortMetric {
   monthIndex: number; // 1, 2, 3...
   monthLabel: string; // "Mês 1", "Mês 2", etc.
-  referrals: number; // Quantidade de indicações (ou média por parceiro no modo médio)
-  closedDeals: number; // Quantidade de fechamentos (ou média por parceiro no modo médio)
-  conversionRate: number; // Taxa de conversão % (fechadas ÷ indicações * 100)
+  referrals: number; // Indicações já resolvidas pelo viewMode + statMode escolhidos
+  closedDeals: number; // Fechamentos já resolvidos pelo viewMode + statMode escolhidos
+  conversionRate: number; // Taxa de conversão % já resolvida pelo statMode escolhido
   totalReferralsRaw: number; // Total absoluto de indicações
   totalClosedRaw: number; // Total absoluto de fechadas
   activePartnersInTenure: number; // Quantidade de parceiros considerados neste mês de maturação
+
+  // As duas leituras, sempre calculadas, para o tooltip mostrar ambas e a tela
+  // alternar sem recalcular nada.
+  conversionRateAggregate: number; // fechadas ÷ indicações do mês (agregada do canal)
+  conversionRateMean: number | null; // média das taxas individuais dos parceiros
+  conversionRateMedian: number | null; // mediana das taxas individuais dos parceiros
+  partnersWithReferralsInMonth: number; // base da média/mediana de conversão
+  referralsPerPartnerMean: number; // indicações por parceiro (média)
+  referralsPerPartnerMedian: number; // indicações por parceiro (mediana)
+  closedPerPartnerMean: number;
+  closedPerPartnerMedian: number;
 }
 
 export interface MonthlyClosedBreakdown {
@@ -369,6 +394,16 @@ export interface ReferralVintage {
   conversionCurrent: number; // (closedTotal / totalReferrals) * 100
   wonVolumeTotal: number; // MRR total ganho
   
+  // Conversão e ciclo da safra vistos parceiro a parceiro, para a tela poder
+  // trocar média por mediana. conversionAtCutoff/conversionCurrent acima são
+  // agregadas (fechadas ÷ indicações da safra) e pesam mais quem mais indicou;
+  // estas distribuem por parceiro, então a mediana responde "como foi a safra
+  // para o parceiro típico".
+  conversionAtCutoffByPartner: StatSummary;
+  conversionCurrentByPartner: StatSummary;
+  /** Dias entre a indicação e o fechamento, por negócio ganho da safra. */
+  daysToClose: StatSummary;
+
   // Desempenho Pós-Corte
   closedPostCutoff: number; // Fechadas após a data de corte (closeDate > cutoffDate)
   postCutoffGainPercent: number; // conversionCurrent - conversionAtCutoff
@@ -417,3 +452,92 @@ export interface NewMrrEntry {
   notes?: string;
   updatedAt: string; // ISO
 }
+
+// ---------------------------------------------------------------------------
+// Safra de PARCEIRO (por mês de entrada no programa).
+//
+// Não confundir com ReferralVintage acima, que é safra de INDICAÇÃO: aquela
+// agrupa leads pela data em que foram gerados e tem corte no dia 15 do mês
+// seguinte. Esta agrupa PARCEIROS pela data de entrada (joinedDate) e NÃO tem
+// corte — a safra de março é simplesmente quem entrou entre 01/03 e 31/03, e
+// ela continua viva e sendo medida para sempre.
+//
+// Serve para responder duas perguntas: quais safras mais indicaram e quais
+// safras continuam saudáveis. Como safra nova teve menos tempo de vida que
+// safra velha, a comparação justa usa a janela (windowDays): só conta o que
+// cada parceiro produziu nos seus primeiros N dias de programa.
+// ---------------------------------------------------------------------------
+
+/** Nível de engajamento de hoje, espelhando EngagementLevel de partnerEngagement.ts. */
+export interface PartnerVintageMember {
+  partnerId: string;
+  partnerName: string;
+  joinedDate: string;
+  status: PartnerStatus;
+  accountOwner?: string;
+  profile?: string;
+  referrals: number; // indicações dentro da janela avaliada
+  wonDeals: number;
+  conversionRate: number | null; // null quando não indicou (não é 0%)
+  wonVolume: number;
+  activeWonVolume: number;
+  daysToFirstReferral: number | null;
+  engagementScore: number | null; // null = sem data de entrada não acontece aqui, mas o tipo respeita a régua
+  engagementLevel: 'saudavel' | 'risco' | 'inativo' | 'sem-dados';
+}
+
+export interface PartnerVintage {
+  vintageId: string; // '2026-03'
+  year: number;
+  month: number; // 1-indexed
+  label: string; // 'Março/2026'
+  shortLabel: string; // 'Mar/26'
+  startDate: string; // '2026-03-01'
+  endDate: string; // '2026-03-31'
+  /** Idade da safra em meses corridos (1 = safra do mês corrente). */
+  monthsSinceEntry: number;
+  /** A safra é jovem demais para preencher a janela escolhida? */
+  isWindowIncomplete: boolean;
+
+  partnerCount: number;
+
+  // Ativação: quem da safra saiu do zero
+  partnersWithReferral: number;
+  activationRate: number; // % da safra que indicou ao menos uma vez
+  daysToFirstReferral: StatSummary; // média e mediana do ciclo de ativação da safra
+
+  // Produção de indicações
+  totalReferrals: number;
+  referralsPerPartner: StatSummary; // inclui quem indicou zero — é a produção real da safra
+
+  // Conversão
+  wonDeals: number;
+  conversionRate: number; // agregada da safra: ganhos ÷ indicações
+  conversionByPartner: StatSummary; // distribuição individual (só quem indicou)
+
+  // Receita gerada pela safra
+  wonVolume: number;
+  activeWonVolume: number;
+  churnedVolume: number;
+
+  // Saúde de HOJE (engajamento não respeita a janela: é estado atual)
+  healthyCount: number;
+  riskCount: number;
+  inactiveCount: number;
+  onboardingCount: number;
+  healthRate: number; // % saudáveis entre os que têm score
+  engagement: StatSummary; // média e mediana do score de engajamento da safra
+
+  members: PartnerVintageMember[];
+}
+
+export interface PartnerVintageReport {
+  vintages: PartnerVintage[];
+  /** null = sem janela, conta a vida inteira de cada parceiro. */
+  windowDays: number | null;
+  /** Parceiros sem joinedDate ficam fora de qualquer safra — precisa aparecer. */
+  partnersWithoutJoinedDate: number;
+  totalPartnersInVintages: number;
+}
+
+export type PartnerVintageWindow = 30 | 60 | 90 | 180 | null;

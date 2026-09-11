@@ -11,11 +11,14 @@ import {
 } from 'recharts';
 import type { Referral, Partner } from '../types';
 import { calculatePartnerTenureCohortMetrics } from '../utils/analytics';
+import { STAT_MODE_LABEL, type StatMode } from '../utils/statistics';
 import { TrendingUp, Users, Filter, BarChart3, HelpCircle, Download } from 'lucide-react';
 
 interface PartnerCohortChartProps {
   referrals: Referral[];
   partners: Partner[];
+  /** Média ou mediana — escolhido no topo do dashboard. */
+  statMode?: StatMode;
   selectedPartnerId?: string;
   onSelectPartner?: (partnerId: string) => void;
 }
@@ -23,6 +26,7 @@ interface PartnerCohortChartProps {
 export default function PartnerCohortChart({
   referrals,
   partners,
+  statMode = 'media',
   selectedPartnerId = 'all',
   onSelectPartner
 }: PartnerCohortChartProps) {
@@ -46,9 +50,13 @@ export default function PartnerCohortChart({
     {
       selectedPartnerId: activePartnerId,
       viewMode: viewMode,
-      limitMonths: 12
+      limitMonths: 12,
+      statMode
     }
   );
+
+  const isMedian = statMode === 'mediana';
+  const statLabel = STAT_MODE_LABEL[statMode].toLowerCase();
 
   // Calculate high-level cohort insights
   const highestConv = metrics.reduce(
@@ -64,19 +72,29 @@ export default function PartnerCohortChart({
   const handleExportCSV = () => {
     const headers = [
       'Ciclo de Maturação',
-      isFiltered ? 'Indicações' : viewMode === 'average' ? 'Média de Indicações/Parceiro' : 'Total de Indicações',
-      isFiltered ? 'Fechamentos' : viewMode === 'average' ? 'Média de Fechamentos/Parceiro' : 'Total de Fechamentos',
-      'Taxa de Conversão (%)',
+      isFiltered ? 'Indicações' : viewMode === 'average' ? `Indicações (${STAT_MODE_LABEL[statMode]} por Parceiro)` : 'Total de Indicações',
+      isFiltered ? 'Fechamentos' : viewMode === 'average' ? `Fechamentos (${STAT_MODE_LABEL[statMode]} por Parceiro)` : 'Total de Fechamentos',
+      'Taxa de Conversão Exibida (%)',
+      'Conversão Agregada do Canal (%)',
+      'Conversão por Parceiro - Média (%)',
+      'Conversão por Parceiro - Mediana (%)',
+      'Parceiros que Indicaram no Mês',
       'Total Bruto Indicações',
       'Total Bruto Fechadas',
       'Parceiros no Cohort'
     ];
 
+    const pct = (v: number | null) => (v === null ? '' : v.toFixed(1).replace('.', ',') + '%');
+
     const rows = metrics.map(m => [
       m.monthLabel,
       m.referrals,
       m.closedDeals,
-      `${m.conversionRate.toFixed(1)}%`,
+      pct(m.conversionRate),
+      pct(m.conversionRateAggregate),
+      pct(m.conversionRateMean),
+      pct(m.conversionRateMedian),
+      m.partnersWithReferralsInMonth,
       m.totalReferralsRaw,
       m.totalClosedRaw,
       m.activePartnersInTenure
@@ -85,6 +103,7 @@ export default function PartnerCohortChart({
     const csvContent = '\uFEFF' + [
       `Relatório de Maturação do Canal - ${partnerName}`,
       `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`,
+      `Estatística exibida: ${STAT_MODE_LABEL[statMode]}`,
       '',
       headers.join(';'),
       ...rows.map(r => r.join(';'))
@@ -118,7 +137,7 @@ export default function PartnerCohortChart({
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-zry-text-2">
                 <span className="w-2.5 h-2.5 rounded-sm bg-zry-lilas inline-block"></span>
-                {isFiltered || viewMode === 'total' ? 'Indicações:' : 'Média Indicações:'}
+                {isFiltered || viewMode === 'total' ? 'Indicações:' : `Indicações (${statLabel}):`}
               </span>
               <span className="font-extrabold text-white">
                 {data.referrals} {isFiltered ? '' : viewMode === 'average' ? '/parceiro' : ''}
@@ -128,7 +147,7 @@ export default function PartnerCohortChart({
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-zry-warning">
                 <span className="w-2.5 h-2.5 rounded-sm bg-zry-warning inline-block"></span>
-                {isFiltered || viewMode === 'total' ? 'Fechadas:' : 'Média Fechadas:'}
+                {isFiltered || viewMode === 'total' ? 'Fechadas:' : `Fechadas (${statLabel}):`}
               </span>
               <span className="font-extrabold text-zry-warning">
                 {data.closedDeals} {isFiltered ? '' : viewMode === 'average' ? '/parceiro' : ''}
@@ -138,12 +157,28 @@ export default function PartnerCohortChart({
             <div className="flex items-center justify-between pt-1 border-t border-zry-border-strong">
               <span className="flex items-center gap-1.5 text-zry-info font-semibold">
                 <span className="w-2.5 h-2.5 rounded-full bg-zry-roxo inline-block"></span>
-                Taxa de Conversão:
+                {isMedian ? 'Conversão (mediana):' : 'Conversão (canal):'}
               </span>
               <span className="font-black text-zry-info text-sm">
                 {data.conversionRate.toFixed(1)}%
               </span>
             </div>
+
+            {/* A outra leitura fica visível no tooltip: agregada e mediana
+                respondem perguntas diferentes e a diferença entre elas é o
+                próprio diagnóstico (poucos parceiros carregando o canal). */}
+            {!isFiltered && (
+              <div className="flex items-center justify-between text-[10px] text-zry-text-2">
+                <span>{isMedian ? 'Agregada do canal:' : 'Mediana por parceiro:'}</span>
+                <span className="font-semibold">
+                  {isMedian
+                    ? `${data.conversionRateAggregate.toFixed(1)}%`
+                    : data.conversionRateMedian === null
+                      ? '—'
+                      : `${data.conversionRateMedian.toFixed(1)}% (${data.partnersWithReferralsInMonth} parceiros)`}
+                </span>
+              </div>
+            )}
           </div>
 
           {!isFiltered && viewMode === 'average' && (
@@ -224,7 +259,7 @@ export default function PartnerCohortChart({
                     : 'text-zry-text-2 hover:text-zry-text'
                 }`}
               >
-                Média / Parceiro
+                {STAT_MODE_LABEL[statMode]} / Parceiro
               </button>
               <button
                 type="button"
@@ -402,7 +437,7 @@ export default function PartnerCohortChart({
 
         <div className="bg-zry-lilas-30 rounded-2xl p-4 border border-zry-border/80">
           <span className="text-[11px] font-medium text-zry-text-2 block">
-            {isFiltered ? 'Rampa Inicial (Mês 1 &rarr; Mês 3)' : 'Evolução Média (Mês 1 &rarr; Mês 3)'}
+            {isFiltered ? 'Rampa Inicial (Mês 1 → Mês 3)' : `Evolução por ${STAT_MODE_LABEL[statMode]} (Mês 1 → Mês 3)`}
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-xl font-extrabold text-zry-text">
@@ -414,7 +449,7 @@ export default function PartnerCohortChart({
             </span>
           </div>
           <span className="text-[11px] text-zry-text-2 block mt-1">
-            Taxa de conversão no primeiro trimestre de onboarding.
+            Taxa de conversão ({statLabel}) no primeiro trimestre de onboarding.
           </span>
         </div>
 
@@ -430,7 +465,7 @@ export default function PartnerCohortChart({
           <span className="text-[11px] text-zry-text-2 block mt-1">
             {isFiltered 
               ? 'Exibindo a curva individualizada deste parceiro.' 
-              : 'Média de todos os parceiros consolidada por ciclo de entrada.'}
+              : `Consolidado de todos os parceiros por ${statLabel}, alinhado pelo ciclo de entrada.`}
           </span>
         </div>
 

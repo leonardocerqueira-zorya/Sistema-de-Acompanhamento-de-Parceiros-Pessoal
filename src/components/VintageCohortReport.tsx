@@ -16,6 +16,7 @@ import {
   exportVintageReportCSV
 } from '../utils/vintageAnalytics';
 import { formatCurrency, formatDateBR } from '../utils/analytics';
+import { pickStat, pickStatRounded, STAT_MODE_LABEL, type StatMode } from '../utils/statistics';
 import {
   Calendar,
   TrendingUp,
@@ -32,11 +33,14 @@ import {
 
 interface VintageCohortReportProps {
   referrals: Referral[];
+  /** Média ou mediana — escolhido no topo do dashboard. */
+  statMode?: StatMode;
   onSelectReferral?: (referralId: string) => void;
 }
 
 export default function VintageCohortReport({
   referrals,
+  statMode = 'media',
   onSelectReferral
 }: VintageCohortReportProps) {
   // Generate vintages for the last 12 months based on current time
@@ -51,6 +55,17 @@ export default function VintageCohortReport({
     setVintages(computed);
     checkAndTriggerVintageCutoffNotifications(computed);
   }, [referrals]);
+
+  const isMedian = statMode === 'mediana';
+  const statLabel = STAT_MODE_LABEL[statMode].toLowerCase();
+
+  // Na mediana, a conversão da safra passa a ser a do PARCEIRO TÍPICO daquele
+  // mês (cada parceiro pesa 1). Na média, segue a agregada da safra, que é o
+  // número do corte oficial e não pode mudar de definição sem avisar.
+  const convAtCutoff = (v: ReferralVintage): number | null =>
+    isMedian ? v.conversionAtCutoffByPartner.median : v.conversionAtCutoff;
+  const convCurrent = (v: ReferralVintage): number | null =>
+    isMedian ? v.conversionCurrentByPartner.median : v.conversionCurrent;
 
   // Identify the most relevant vintage for the spotlight card:
   // Prefer the vintage whose cutoff is currently approaching (e.g. Aug/26 with cutoff on 15/09),
@@ -84,9 +99,11 @@ export default function VintageCohortReport({
       label: v.label,
       totalReferrals: v.totalReferrals,
       closedAtCutoff: v.closedAtCutoff,
-      conversionAtCutoff: v.conversionAtCutoff,
+      conversionAtCutoff: Number((convAtCutoff(v) ?? 0).toFixed(1)),
       closedTotal: v.closedTotal,
-      conversionCurrent: v.conversionCurrent,
+      conversionCurrent: Number((convCurrent(v) ?? 0).toFixed(1)),
+      conversionPartnerCount: v.conversionCurrentByPartner.count,
+      cycleDays: pickStatRounded(v.daysToClose, statMode),
       closedPostCutoff: v.closedPostCutoff,
       postCutoffGainPercent: v.postCutoffGainPercent,
       m0,
@@ -280,7 +297,7 @@ export default function VintageCohortReport({
               </span>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span className="text-2xl font-black text-zry-warning">
-                  {activeSpotlight.conversionAtCutoff}%
+                  {(convAtCutoff(activeSpotlight) ?? 0).toFixed(1)}%
                 </span>
                 <span className="text-xs font-semibold text-zry-text-2">
                   ({activeSpotlight.closedAtCutoff} fechadas)
@@ -299,13 +316,21 @@ export default function VintageCohortReport({
               </span>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span className="text-2xl font-black text-zry-positive">
-                  {activeSpotlight.conversionCurrent}%
+                  {(convCurrent(activeSpotlight) ?? 0).toFixed(1)}%
                 </span>
                 <span className="text-xs font-semibold text-zry-text-2">
                   ({activeSpotlight.closedTotal} fechadas)
                 </span>
               </div>
               <div className="mt-2 pt-2 border-t border-zry-border/60 flex items-center justify-between text-[11px] text-zry-text-2">
+                <span>Ciclo até fechar ({statLabel}):</span>
+                <span className="font-bold text-zry-text">
+                  {pickStatRounded(activeSpotlight.daysToClose, statMode) === null
+                    ? '—'
+                    : `${pickStatRounded(activeSpotlight.daysToClose, statMode)} dias`}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[11px] text-zry-text-2">
                 <span>Receita ganha total:</span>
                 <span className="font-bold text-zry-positive">{formatCurrency(activeSpotlight.wonVolumeTotal)}</span>
               </div>
@@ -651,6 +676,7 @@ export default function VintageCohortReport({
                 <th className="py-3 px-3 text-center">% Corte</th>
                 <th className="py-3 px-3 text-center">Fechadas Total</th>
                 <th className="py-3 px-3 text-center">% Atual</th>
+                <th className="py-3 px-3 text-center">Ciclo</th>
                 <th className="py-3 px-3 text-center">Pós-Corte</th>
                 <th className="py-3 px-3 text-right">MRR Ganho</th>
                 <th className="py-3 px-3 text-right">Pipeline</th>
@@ -687,13 +713,18 @@ export default function VintageCohortReport({
                         {v.closedAtCutoff}
                       </td>
                       <td className="py-3 px-3 text-center font-bold text-zry-warning">
-                        {v.conversionAtCutoff}%
+                        {(convAtCutoff(v) ?? 0).toFixed(1)}%
                       </td>
                       <td className="py-3 px-3 text-center font-extrabold text-zry-positive">
                         {v.closedTotal}
                       </td>
                       <td className="py-3 px-3 text-center font-black text-zry-positive">
-                        {v.conversionCurrent}%
+                        {(convCurrent(v) ?? 0).toFixed(1)}%
+                      </td>
+                      <td className="py-3 px-3 text-center text-zry-text">
+                        {pickStatRounded(v.daysToClose, statMode) === null
+                          ? '—'
+                          : `${pickStatRounded(v.daysToClose, statMode)}d`}
                       </td>
                       <td className="py-3 px-3 text-center">
                         {v.hasPostCutoffSales ? (
@@ -729,7 +760,7 @@ export default function VintageCohortReport({
                     {/* Linha Expandida com as Indicações da Safra */}
                     {isSelected && (
                       <tr>
-                        <td colSpan={11} className="p-4 bg-zry-lilas-30/70 border-y border-zry-border">
+                        <td colSpan={12} className="p-4 bg-zry-lilas-30/70 border-y border-zry-border">
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
                               <h4 className="font-bold text-xs text-zry-text flex items-center gap-1.5">

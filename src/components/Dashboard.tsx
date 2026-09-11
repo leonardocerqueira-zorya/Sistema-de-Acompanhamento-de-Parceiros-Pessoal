@@ -12,10 +12,12 @@ import { calculateDataAuditMetrics } from '../services/sheetsService';
 import { loadChannelCosts, loadNewMrrEntries } from '../services/channelMetricsService';
 import { calculateChannelPeriodMetrics } from '../utils/channelMetrics';
 import { calculateChannelHealth, ENGAGEMENT_RISK_THRESHOLD, ENGAGEMENT_ZERO_DAYS, ENGAGEMENT_REFERRAL_BOOST } from '../utils/partnerEngagement';
+import { pickStatRounded, STAT_MODE_LABEL, type StatMode } from '../utils/statistics';
 import EngagementBar from './EngagementBar';
 import DataAuditView from './DataAuditView';
 import PartnerCohortChart from './PartnerCohortChart';
 import VintageCohortReport from './VintageCohortReport';
+import PartnerVintageReport from './PartnerVintageReport';
 import ChurnReport from './ChurnReport';
 import PartnerLocationMap from './PartnerLocationMap';
 import { 
@@ -48,7 +50,8 @@ import {
   Wallet,
   HelpCircle,
   HeartPulse,
-  TrendingDown
+  TrendingDown,
+  Sigma
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -90,6 +93,11 @@ export default function Dashboard({
   // Sorting state for the Partner Ranking (Explicit requirement: by referrals AND by closed deals)
   const [rankingSort, setRankingSort] = useState<RankingSortKey>('wonDeals');
 
+  // Média ou mediana nos indicadores de conversão e de ciclo. Vale para os
+  // cards, para a curva de maturação e para as safras de parceiro de uma vez:
+  // ler metade da tela em média e metade em mediana confunde mais que ajuda.
+  const [statMode, setStatMode] = useState<StatMode>('media');
+
   // Filtro do KPI de engajamento: 'all' = média do canal, ou um parceiro.
   // É independente do filtro de período — engajamento é sempre "hoje".
   const [engagementPartnerId, setEngagementPartnerId] = useState<string>('all');
@@ -103,6 +111,19 @@ export default function Dashboard({
       : filterReferrals(referrals, { ...filter, partnerId: 'all', dealStatus: 'all', commissionStatus: 'all', onlyMissingData: false, searchQuery: '' });
 
   const kpis = calculateKPIs(periodReferrals, partners);
+
+  // Conversão na mediana é a do PARCEIRO TÍPICO (cada parceiro pesa 1), não a
+  // agregada do canal (que é dominada por quem mais indica). São perguntas
+  // diferentes, por isso o rodapé do card muda junto com o número.
+  const isMedian = statMode === 'mediana';
+  const displayConversion = isMedian
+    ? kpis.conversionByPartner.median
+    : kpis.totalReferrals > 0
+      ? kpis.conversionRate
+      : null;
+  const displayActivationDays = pickStatRounded(kpis.daysPartnerToFirstReferral, statMode);
+  const displayCloseDays = pickStatRounded(kpis.daysReferralToClose, statMode);
+  const statSuffix = isMedian ? 'na mediana' : 'em média';
   const auditMetrics = calculateDataAuditMetrics(partners, referrals);
   const rankings = calculatePartnerRankings(periodReferrals, partners, rankingSort);
 
@@ -242,6 +263,33 @@ export default function Dashboard({
               )}
             </button>
           </div>
+
+          {dashboardTab === 'overview' && (
+            <div
+              className="flex items-center gap-1 bg-zry-lilas-30 p-1 rounded-full border border-zry-border"
+              title="Vale para todos os indicadores de conversão e de ciclo desta tela"
+            >
+              <span className="flex items-center gap-1 text-[11px] text-zry-text-2 px-2 font-semibold">
+                <Sigma className="w-3.5 h-3.5" />
+                Estatística:
+              </span>
+              {(['media', 'mediana'] as StatMode[]).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  id={`btn-stat-${mode}`}
+                  onClick={() => setStatMode(mode)}
+                  className={`px-3.5 py-1.5 rounded-full text-[12px] font-bold transition ${
+                    statMode === mode
+                      ? 'bg-zry-roxo text-zry-creme'
+                      : 'text-zry-text-2 hover:text-zry-roxo'
+                  }`}
+                >
+                  {STAT_MODE_LABEL[mode]}
+                </button>
+              ))}
+            </div>
+          )}
 
           <button
             type="button"
@@ -456,11 +504,22 @@ export default function Dashboard({
             <CheckCircle2 className="w-[18px] h-[18px] text-zry-creme" />
           </div>
           <div className="text-[26px] font-bold tracking-tight text-zry-text leading-none">
-            {kpis.totalReferrals > 0 ? `${kpis.conversionRate.toFixed(1)}%` : '—'}
+            {displayConversion !== null ? `${displayConversion.toFixed(1)}%` : '—'}
           </div>
-          <div className="text-[12.5px] text-zry-text-2 mt-1.5">Taxa de conversão do canal</div>
+          <div className="text-[12.5px] text-zry-text-2 mt-1.5">
+            {isMedian ? 'Conversão do parceiro típico' : 'Taxa de conversão do canal'}
+          </div>
           <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
-            <span className="font-semibold text-zry-text">{kpis.totalWonDeals} ganhos</span> de {kpis.totalReferrals} indicações
+            {isMedian ? (
+              <>
+                Mediana entre{' '}
+                <span className="font-semibold text-zry-text">{kpis.conversionByPartner.count} parceiros</span> que indicaram
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-zry-text">{kpis.totalWonDeals} ganhos</span> de {kpis.totalReferrals} indicações
+              </>
+            )}
           </div>
         </div>
 
@@ -471,15 +530,16 @@ export default function Dashboard({
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-[26px] font-bold tracking-tight text-zry-text leading-none">
-              {kpis.avgDaysPartnerToFirstReferral !== null ? kpis.avgDaysPartnerToFirstReferral : '—'}
+              {displayActivationDays !== null ? displayActivationDays : '—'}
             </span>
-            {kpis.avgDaysPartnerToFirstReferral !== null && (
+            {displayActivationDays !== null && (
               <span className="text-[12px] font-semibold text-zry-text-2">dias</span>
             )}
           </div>
           <div className="text-[12.5px] text-zry-text-2 mt-1.5">Tempo de ativação do parceiro</div>
           <div className="text-[11.5px] text-zry-text-2 mt-2 pt-2 border-t border-zry-border">
-            Média: entrada &rarr; 1ª indicação
+            {STAT_MODE_LABEL[statMode]}: entrada &rarr; 1ª indicação
+            {kpis.daysPartnerToFirstReferral.count > 0 && ` (${kpis.daysPartnerToFirstReferral.count} parceiros)`}
           </div>
         </div>
 
@@ -834,9 +894,20 @@ export default function Dashboard({
         </div>
       )}
 
+      {/* Safras de Parceiro: agrupadas pelo mês de ENTRADA do parceiro (sem corte).
+          Vem antes das safras de indicação de propósito: primeiro quem entrou,
+          depois o que essa entrada gerou. */}
+      <PartnerVintageReport
+        partners={partners}
+        referrals={referrals}
+        statMode={statMode}
+        onSelectPartner={onSelectPartner}
+      />
+
       {/* Safras de Indicação: Corte D+15, Conversão e Fechamentos por Safra (Últimos 12 Meses) */}
       <VintageCohortReport
         referrals={referrals}
+        statMode={statMode}
         onSelectReferral={(referralId) => {
           if (onEditReferral) {
             const found = referrals.find(r => r.id === referralId);
@@ -1129,6 +1200,7 @@ export default function Dashboard({
       <PartnerCohortChart
         referrals={referrals}
         partners={partners}
+        statMode={statMode}
         selectedPartnerId={filter.partnerId}
         onSelectPartner={(partnerId) => {
           onFilterChange({
@@ -1149,7 +1221,8 @@ export default function Dashboard({
               <h2 className="text-lg font-bold text-zry-creme tracking-tight">Ciclo de Indicação do Programa</h2>
             </div>
             <p className="text-xs text-zry-creme/60 mt-1">
-              Indicadores de tempo e maturação comercial de ponta a ponta do canal.
+              Indicadores de tempo e maturação comercial de ponta a ponta do canal, calculados por{' '}
+              <strong className="text-zry-coral">{STAT_MODE_LABEL[statMode].toLowerCase()}</strong>.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs bg-zry-surface/10 px-3 py-1.5 rounded-xl border border-white/15">
@@ -1168,12 +1241,14 @@ export default function Dashboard({
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-zry-creme tracking-tight">
-                {kpis.avgDaysPartnerToFirstReferral !== null ? `${kpis.avgDaysPartnerToFirstReferral}` : '—'}
+                {displayActivationDays !== null ? `${displayActivationDays}` : '—'}
               </span>
-              <span className="text-sm font-semibold text-zry-creme/80">dias em média</span>
+              <span className="text-sm font-semibold text-zry-creme/80">dias {statSuffix}</span>
             </div>
             <p className="text-xs text-zry-creme/60 mt-2 leading-relaxed">
-              Média entre a data de cadastro do parceiro e sua primeira indicação registrada no sistema.
+              {STAT_MODE_LABEL[statMode]} entre a data de cadastro do parceiro e sua primeira indicação registrada.
+              {kpis.daysPartnerToFirstReferral.count > 0 &&
+                ` Base: ${kpis.daysPartnerToFirstReferral.count} parceiro(s) que já indicaram.`}
             </p>
           </div>
 
@@ -1185,12 +1260,14 @@ export default function Dashboard({
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-zry-creme tracking-tight">
-                {kpis.avgDaysReferralToClose !== null ? `${kpis.avgDaysReferralToClose}` : '—'}
+                {displayCloseDays !== null ? `${displayCloseDays}` : '—'}
               </span>
-              <span className="text-sm font-semibold text-zry-creme/80">dias em média</span>
+              <span className="text-sm font-semibold text-zry-creme/80">dias {statSuffix}</span>
             </div>
             <p className="text-xs text-zry-creme/60 mt-2 leading-relaxed">
-              Tempo médio decorrido entre a indicação recebida e a assinatura/fechamento do contrato.
+              Tempo decorrido entre a indicação recebida e a assinatura do contrato, {statSuffix}.
+              {kpis.daysReferralToClose.count > 0 &&
+                ` Base: ${kpis.daysReferralToClose.count} negócio(s) fechado(s).`}
             </p>
           </div>
 

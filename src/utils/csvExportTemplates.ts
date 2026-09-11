@@ -49,7 +49,12 @@ export function exportConsolidatedKPIsAndPartnersCSV(
   // Section 2: Consolidated Channel KPIs
   lines.push('--- CONSOLIDADO DE KPIS DO CANAL ---');
   lines.push('Indicador;Valor Consolidado;Observação');
-  lines.push(`Taxa de Conversão do Canal;${kpis.totalReferrals > 0 ? kpis.conversionRate.toFixed(1) + '%' : '0%'};Negócios Ganhos / Total de Indicações`);
+  const dayStat = (v: number | null): string => (v === null ? 'N/A' : `${Math.round(v)} dias`);
+  const pctStat = (v: number | null): string => (v === null ? 'N/A' : `${v.toFixed(1)}%`);
+
+  lines.push(`Taxa de Conversão do Canal (agregada);${kpis.totalReferrals > 0 ? kpis.conversionRate.toFixed(1) + '%' : '0%'};Negócios Ganhos / Total de Indicações`);
+  lines.push(`Taxa de Conversão por Parceiro (média);${pctStat(kpis.conversionByPartner.mean)};Cada parceiro pesa 1, independentemente do volume que indicou`);
+  lines.push(`Taxa de Conversão por Parceiro (mediana);${pctStat(kpis.conversionByPartner.median)};Conversão do parceiro típico — base: ${kpis.conversionByPartner.count} parceiro(s) com indicações`);
   lines.push(`Total de Indicações Recebidas;${kpis.totalReferrals};Total de leads encaminhados`);
   lines.push(`Negócios Fechados (Ganhos);${kpis.totalWonDeals};Contratos ativos fechados`);
   lines.push(`Contratos Vivos (base do cálculo);${kpis.activeWonDeals};Ganhos sem churn — base de rentabilidade`);
@@ -72,8 +77,10 @@ export function exportConsolidatedKPIsAndPartnersCSV(
   lines.push(`Comissões Quitadas (Pagas);${kpis.commissionsPaid.toFixed(2)};Total já pago com comprovante`);
   lines.push(`Parceiros Ativos;${kpis.activePartnersCount};Parceiros aptos a indicar`);
   lines.push(`Taxa de Ativação do Canal;${kpis.partnerActivationRate.toFixed(1)}%;Parceiros com ao menos 1 indicação`);
-  lines.push(`Ciclo Entrada -> 1ª Indicação;${kpis.avgDaysPartnerToFirstReferral !== null ? kpis.avgDaysPartnerToFirstReferral + ' dias' : 'N/A'};Velocidade de ativação`);
-  lines.push(`Ciclo Médio de Fechamento;${kpis.avgDaysReferralToClose !== null ? kpis.avgDaysReferralToClose + ' dias' : 'N/A'};Tempo indicação até fechamento`);
+  lines.push(`Ciclo Entrada -> 1ª Indicação (média);${dayStat(kpis.daysPartnerToFirstReferral.mean)};Velocidade de ativação — base: ${kpis.daysPartnerToFirstReferral.count} parceiro(s)`);
+  lines.push(`Ciclo Entrada -> 1ª Indicação (mediana);${dayStat(kpis.daysPartnerToFirstReferral.median)};Metade dos parceiros ativou em até esse prazo`);
+  lines.push(`Ciclo de Fechamento (média);${dayStat(kpis.daysReferralToClose.mean)};Tempo indicação até fechamento — base: ${kpis.daysReferralToClose.count} negócio(s)`);
+  lines.push(`Ciclo de Fechamento (mediana);${dayStat(kpis.daysReferralToClose.median)};Metade dos negócios fechou em até esse prazo`);
   lines.push(`Registros com Pendências Cadastrais;${kpis.incompleteDataCount};Campos nulos aguardando preenchimento manual`);
   lines.push('');
 

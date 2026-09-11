@@ -1,4 +1,5 @@
 import type { Referral, Partner, FilterState, ChannelKPIs, PartnerRankingItem, RankingSortKey, PartnerTenureCohortMetric } from '../types';
+import { summarize, type StatMode } from './statistics';
 
 // Format currency into BRL (R$ 1.250,00)
 export function formatCurrency(val: number | undefined | null): string {
@@ -324,10 +325,12 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
   const revenueMultiplier = avgCommissionCost > 0 ? revenue12mPerDeal / avgCommissionCost : 0;
   const netVolume12m = activeWonVolume * 12 - activeCommissionCost;
 
-  // Calculate avg days referral to close
-  const avgDaysReferralToClose = leadToCloseDaysList.length > 0
-    ? Math.round(leadToCloseDaysList.reduce((acc, curr) => acc + curr, 0) / leadToCloseDaysList.length)
-    : null;
+  // Ciclo indicação -> fechamento: guarda a distribuição inteira, não só a
+  // média. A média sozinha esconde o caso típico quando um punhado de negócios
+  // arrasta meses a mais que o resto.
+  const daysReferralToClose = summarize(leadToCloseDaysList);
+  const avgDaysReferralToClose =
+    daysReferralToClose.mean !== null ? Math.round(daysReferralToClose.mean) : null;
 
   // Calculate cycle from partner join to first referral
   const partnerMap = new Map<string, Partner>();
@@ -360,9 +363,30 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     }
   });
 
-  const avgDaysPartnerToFirstReferral = partnerFirstReferralDaysList.length > 0
-    ? Math.round(partnerFirstReferralDaysList.reduce((acc, curr) => acc + curr, 0) / partnerFirstReferralDaysList.length)
-    : null;
+  const daysPartnerToFirstReferral = summarize(partnerFirstReferralDaysList);
+  const avgDaysPartnerToFirstReferral =
+    daysPartnerToFirstReferral.mean !== null ? Math.round(daysPartnerToFirstReferral.mean) : null;
+
+  // Distribuição da conversão parceiro a parceiro. conversionRate lá em cima é
+  // a taxa agregada do canal e é dominada por quem mais indica: um parceiro com
+  // 80 indicações decide o número sozinho. Aqui cada parceiro pesa igual, então
+  // a mediana responde "qual a conversão do parceiro típico". Só entram os que
+  // indicaram — quem não indicou não tem taxa 0%, não tem taxa nenhuma.
+  const conversionRatesByPartner: number[] = [];
+  const wonByPartner = new Map<string, number>();
+  const totalByPartner = new Map<string, number>();
+  referrals.forEach(ref => {
+    if (!ref.partnerId) return;
+    totalByPartner.set(ref.partnerId, (totalByPartner.get(ref.partnerId) || 0) + 1);
+    if (ref.dealStatus === 'ganho') {
+      wonByPartner.set(ref.partnerId, (wonByPartner.get(ref.partnerId) || 0) + 1);
+    }
+  });
+  totalByPartner.forEach((total, partnerId) => {
+    if (total <= 0) return;
+    conversionRatesByPartner.push(((wonByPartner.get(partnerId) || 0) / total) * 100);
+  });
+  const conversionByPartner = summarize(conversionRatesByPartner);
 
   // Em risco continua sendo base ativa: o parceiro segue apto a indicar — é
   // justamente por isso que o status é "risco" e não "inativo". Só onboarding
@@ -403,6 +427,9 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     pendingCommissionCount,
     avgDaysPartnerToFirstReferral,
     avgDaysReferralToClose,
+    daysPartnerToFirstReferral,
+    daysReferralToClose,
+    conversionByPartner,
     activePartnersCount,
     partnerActivationRate,
     incompleteDataCount,
@@ -546,6 +573,8 @@ export function calculatePartnerTenureCohortMetrics(
     selectedPartnerId?: string;
     viewMode?: 'average' | 'total';
     limitMonths?: number;
+    /** Qual estatística resolve referrals/closedDeals/conversionRate. Padrão: média. */
+    statMode?: StatMode;
   }
 ): {
   metrics: PartnerTenureCohortMetric[];
@@ -654,6 +683,8 @@ export function calculatePartnerTenureCohortMetrics(
   }
 
   const metrics: PartnerTenureCohortMetric[] = [];
+  const statMode: StatMode = options?.statMode === 'mediana' ? 'mediana' : 'media';
+  const round1 = (v: number | null): number | null => (v === null ? null : Number(v.toFixed(1)));
 
   for (let m = 1; m <= totalMonthsToShow; m++) {
     if (isFiltered && options?.selectedPartnerId) {
@@ -661,6 +692,8 @@ export function calculatePartnerTenureCohortMetrics(
       const b = pMap?.get(m) || { referrals: 0, won: 0 };
       const conv = b.referrals > 0 ? (b.won / b.referrals) * 100 : 0;
 
+      // Um parceiro só: média e mediana são o próprio número dele. Repetir os
+      // três campos é de propósito — a tela alterna sem precisar saber disso.
       metrics.push({
         monthIndex: m,
         monthLabel: `Mês ${m}`,
@@ -669,29 +702,64 @@ export function calculatePartnerTenureCohortMetrics(
         conversionRate: Number(conv.toFixed(1)),
         totalReferralsRaw: b.referrals,
         totalClosedRaw: b.won,
-        activePartnersInTenure: 1
+        activePartnersInTenure: 1,
+        conversionRateAggregate: Number(conv.toFixed(1)),
+        conversionRateMean: b.referrals > 0 ? Number(conv.toFixed(1)) : null,
+        conversionRateMedian: b.referrals > 0 ? Number(conv.toFixed(1)) : null,
+        partnersWithReferralsInMonth: b.referrals > 0 ? 1 : 0,
+        referralsPerPartnerMean: b.referrals,
+        referralsPerPartnerMedian: b.referrals,
+        closedPerPartnerMean: b.won,
+        closedPerPartnerMedian: b.won
       });
     } else {
-      // Unfiltered: average across partners with tenure >= m
+      // Sem filtro: consolida entre os parceiros que já viveram o mês m.
       const partnersEligible = partners.filter(p => (partnerTenureMap.get(p.id) || 1) >= m);
-      const denom = partnersEligible.length > 0 ? partnersEligible.length : 1;
-
       const gBucket = globalMonthMap.get(m) || { referrals: 0, won: 0 };
       const conv = gBucket.referrals > 0 ? (gBucket.won / gBucket.referrals) * 100 : 0;
 
+      // Produção por parceiro elegível — quem não indicou entra como zero, que
+      // é informação (a safra não engajou), não ausência de dado.
+      const perPartnerReferrals: number[] = [];
+      const perPartnerWon: number[] = [];
+      const perPartnerConversion: number[] = [];
+      partnersEligible.forEach(p => {
+        const b = partnerMonthMap.get(p.id)?.get(m) || { referrals: 0, won: 0 };
+        perPartnerReferrals.push(b.referrals);
+        perPartnerWon.push(b.won);
+        // Conversão só existe para quem indicou: sem indicação não há taxa 0%,
+        // há ausência de taxa — incluir zeros afundaria a mediana de graça.
+        if (b.referrals > 0) perPartnerConversion.push((b.won / b.referrals) * 100);
+      });
+
+      const refSummary = summarize(perPartnerReferrals);
+      const wonSummary = summarize(perPartnerWon);
+      const convSummary = summarize(perPartnerConversion);
+
       const isTotalMode = options?.viewMode === 'total';
-      const refVal = isTotalMode ? gBucket.referrals : Number((gBucket.referrals / denom).toFixed(1));
-      const wonVal = isTotalMode ? gBucket.won : Number((gBucket.won / denom).toFixed(1));
+      const perPartnerRef = statMode === 'mediana' ? refSummary.median : refSummary.mean;
+      const perPartnerWonVal = statMode === 'mediana' ? wonSummary.median : wonSummary.mean;
+      // Na média, a taxa exibida continua sendo a agregada do canal (o número
+      // histórico do card). Na mediana, passa a ser a do parceiro típico.
+      const displayConv = statMode === 'mediana' ? convSummary.median : conv;
 
       metrics.push({
         monthIndex: m,
         monthLabel: `Mês ${m}`,
-        referrals: refVal,
-        closedDeals: wonVal,
-        conversionRate: Number(conv.toFixed(1)),
+        referrals: isTotalMode ? gBucket.referrals : Number((perPartnerRef ?? 0).toFixed(1)),
+        closedDeals: isTotalMode ? gBucket.won : Number((perPartnerWonVal ?? 0).toFixed(1)),
+        conversionRate: Number((displayConv ?? 0).toFixed(1)),
         totalReferralsRaw: gBucket.referrals,
         totalClosedRaw: gBucket.won,
-        activePartnersInTenure: partnersEligible.length
+        activePartnersInTenure: partnersEligible.length,
+        conversionRateAggregate: Number(conv.toFixed(1)),
+        conversionRateMean: round1(convSummary.mean),
+        conversionRateMedian: round1(convSummary.median),
+        partnersWithReferralsInMonth: convSummary.count,
+        referralsPerPartnerMean: Number((refSummary.mean ?? 0).toFixed(1)),
+        referralsPerPartnerMedian: Number((refSummary.median ?? 0).toFixed(1)),
+        closedPerPartnerMean: Number((wonSummary.mean ?? 0).toFixed(1)),
+        closedPerPartnerMedian: Number((wonSummary.median ?? 0).toFixed(1))
       });
     }
   }

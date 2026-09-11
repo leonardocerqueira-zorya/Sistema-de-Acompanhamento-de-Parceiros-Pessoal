@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Partner, Referral } from '../types';
 import { formatCurrency } from '../utils/analytics';
+import {
+  summarize,
+  EMPTY_STAT_SUMMARY,
+  STAT_MODE_LABEL,
+  type StatMode,
+  type StatSummary
+} from '../utils/statistics';
 import { listProfiles, listPendingInvites } from '../services/authService';
 import { PARTNER_STATUS_LABEL, PARTNER_STATUS_BADGE } from '../utils/partnerEngagement';
 import {
@@ -34,7 +41,11 @@ interface ExecutiveGroup {
   lostReferrals: number;
   pipelineReferrals: number;
   wonVolume: number;
-  conversionRate: number;
+  conversionRate: number; // agregada da carteira: ganhas ÷ indicações
+  // Conversão parceiro a parceiro dentro da carteira. A agregada é dominada
+  // por quem mais indica; a mediana mostra como vai o parceiro típico, que é
+  // o que o executivo precisa saber para agir.
+  conversionByPartner: StatSummary;
 }
 
 export default function CarteirasView({
@@ -45,6 +56,9 @@ export default function CarteirasView({
   onMergeExecutive,
   isMaster = false
 }: CarteirasViewProps) {
+  // Conversão por média (agregada da carteira) ou mediana (parceiro típico).
+  const [statMode, setStatMode] = useState<StatMode>('media');
+
   // Carteira duplicada acontece quando o mesmo executivo entra escrito de dois
   // jeitos ("Igor" e "Igor Brandão"), normalmente vindo de importação. Unificar
   // reescreve o Executivo Responsável de todos os parceiros da carteira de origem.
@@ -79,6 +93,9 @@ export default function CarteirasView({
   }, []);
 
   const groups = useMemo<ExecutiveGroup[]>(() => {
+    // Taxas de conversão individuais dos parceiros de cada carteira, para a
+    // mediana. Chaveado igual ao mapa de carteiras.
+    const ratesByExecutive = new Map<string, number[]>();
     const refsByPartner = new Map<string, Referral[]>();
     referrals.forEach(r => {
       if (!refsByPartner.has(r.partnerId)) refsByPartner.set(r.partnerId, []);
@@ -100,17 +117,20 @@ export default function CarteirasView({
           lostReferrals: 0,
           pipelineReferrals: 0,
           wonVolume: 0,
-          conversionRate: 0
+          conversionRate: 0,
+          conversionByPartner: EMPTY_STAT_SUMMARY
         });
       }
       const g = map.get(key)!;
       g.partners.push(p);
 
       const pRefs = refsByPartner.get(p.id) || [];
+      let partnerWon = 0;
       pRefs.forEach(r => {
         g.totalReferrals += 1;
         if (r.dealStatus === 'ganho') {
           g.wonReferrals += 1;
+          partnerWon += 1;
           if (r.dealValue) g.wonVolume += r.dealValue;
         } else if (r.dealStatus === 'perdido') {
           g.lostReferrals += 1;
@@ -118,6 +138,14 @@ export default function CarteirasView({
           g.pipelineReferrals += 1;
         }
       });
+
+      // Quem não indicou não tem conversão 0%: não tem conversão nenhuma, e
+      // por isso fica fora da distribuição da carteira.
+      if (pRefs.length > 0) {
+        const rates = ratesByExecutive.get(key) || [];
+        rates.push((partnerWon / pRefs.length) * 100);
+        ratesByExecutive.set(key, rates);
+      }
     });
 
     // Garante uma carteira (vazia) para quem já foi convidado como executivo
@@ -135,7 +163,8 @@ export default function CarteirasView({
           lostReferrals: 0,
           pipelineReferrals: 0,
           wonVolume: 0,
-          conversionRate: 0
+          conversionRate: 0,
+          conversionByPartner: EMPTY_STAT_SUMMARY
         });
       }
     });
@@ -143,6 +172,8 @@ export default function CarteirasView({
     const list = Array.from(map.values());
     list.forEach(g => {
       g.conversionRate = g.totalReferrals > 0 ? (g.wonReferrals / g.totalReferrals) * 100 : 0;
+      const gKey = g.isUnassigned ? '__unassigned__' : g.executive.toLowerCase();
+      g.conversionByPartner = summarize(ratesByExecutive.get(gKey) || []);
     });
     // Executivos com carteira primeiro; "sem executivo" por último.
     return list.sort((a, b) => {
@@ -164,6 +195,24 @@ export default function CarteirasView({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-1 bg-zry-lilas-30 p-1 rounded-full border border-zry-border"
+            title="Média usa a conversão agregada da carteira; mediana usa a do parceiro típico"
+          >
+            <span className="text-[11px] text-zry-text-2 px-2 font-semibold">Conversão:</span>
+            {(['media', 'mediana'] as StatMode[]).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setStatMode(mode)}
+                className={`px-3 py-1.5 rounded-full text-[12px] font-bold transition ${
+                  statMode === mode ? 'bg-zry-roxo text-zry-creme' : 'text-zry-text-2 hover:text-zry-roxo'
+                }`}
+              >
+                {STAT_MODE_LABEL[mode]}
+              </button>
+            ))}
+          </div>
           <div className="bg-zry-surface border border-zry-border rounded-zry-lg px-4 py-2.5 text-center">
             <span className="block text-[11px] text-zry-text-2 font-semibold uppercase tracking-wider">Executivos</span>
             <span className="text-[20px] font-bold text-zry-text">{totalExecutives}</span>
@@ -222,10 +271,22 @@ export default function CarteirasView({
 
                   <div className="flex items-center gap-5">
                     <div className="text-right">
-                      <span className="block text-[11px] text-zry-text-2 uppercase font-semibold tracking-wider">Conversão</span>
-                      <span className={`text-[15px] font-bold ${g.conversionRate >= 50 ? 'text-zry-positive' : 'text-zry-text'}`}>
-                        {g.conversionRate.toFixed(0)}%
+                      <span className="block text-[11px] text-zry-text-2 uppercase font-semibold tracking-wider">
+                        Conversão ({STAT_MODE_LABEL[statMode].toLowerCase()})
                       </span>
+                      {(() => {
+                        const shown =
+                          statMode === 'mediana' ? g.conversionByPartner.median : g.conversionRate;
+                        return (
+                          <span
+                            className={`text-[15px] font-bold ${
+                              shown !== null && shown >= 50 ? 'text-zry-positive' : 'text-zry-text'
+                            }`}
+                          >
+                            {shown === null ? '—' : `${shown.toFixed(0)}%`}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="text-right">
                       <span className="block text-[11px] text-zry-text-2 uppercase font-semibold tracking-wider">Volume Ganho</span>
