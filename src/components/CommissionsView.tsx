@@ -34,6 +34,9 @@ interface CommissionsViewProps {
     installmentId: string, 
     updates: Partial<CommissionInstallment>
   ) => void;
+  onUpdateInstallments: (
+    batch: Array<{ referralId: string; installmentId: string; updates: Partial<CommissionInstallment> }>
+  ) => void;
   onUpdateCommission: (referralId: string, updates: Partial<Referral>) => void;
   onEditReferral: (referral: Referral) => void;
 }
@@ -41,6 +44,7 @@ interface CommissionsViewProps {
 export default function CommissionsView({
   referrals,
   onUpdateInstallment,
+  onUpdateInstallments,
   onUpdateCommission,
   onEditReferral
 }: CommissionsViewProps) {
@@ -63,12 +67,15 @@ export default function CommissionsView({
   const [copiedMessage, setCopiedMessage] = useState(false);
 
   const [attachingInvoiceInstallment, setAttachingInvoiceInstallment] = useState<{ referral: Referral; installment: CommissionInstallment } | null>(null);
+  const [invoiceBatchItems, setInvoiceBatchItems] = useState<Array<{ referral: Referral; installment: CommissionInstallment }>>([]);
+  const [selectedInstallmentIds, setSelectedInstallmentIds] = useState<string[]>([]);
   const [invoiceFileName, setInvoiceFileName] = useState('');
   const [invoiceDriveUrl, setInvoiceDriveUrl] = useState('');
   const [invoiceScheduledDate, setInvoiceScheduledDate] = useState(todayStr);
   const [invoiceFileData, setInvoiceFileData] = useState<string>('');
 
   const [payingInstallment, setPayingInstallment] = useState<{ referral: Referral; installment: CommissionInstallment } | null>(null);
+  const [paymentBatchItems, setPaymentBatchItems] = useState<Array<{ referral: Referral; installment: CommissionInstallment }>>([]);
   const [receiptFileName, setReceiptFileName] = useState('');
   const [receiptDriveUrl, setReceiptDriveUrl] = useState('');
   const [receiptPaidDate, setReceiptPaidDate] = useState(todayStr);
@@ -210,6 +217,54 @@ export default function CommissionsView({
   const filteredScheduled = filterBySearch(scheduledList);
   const filteredPaid = filterBySearch(paidList);
   const filteredChurnedPending = filterBySearch(churnedPendingList);
+  const installmentKey = (item: FlatInstallment) => `${item.referral.id}:${item.installment.id}`;
+  const selectedInvoiceItems = filteredToRelease.filter(item =>
+    selectedInstallmentIds.includes(installmentKey(item))
+  );
+  const selectedInvoiceTotal = selectedInvoiceItems.reduce((sum, item) => sum + item.installment.value, 0);
+
+  const toggleInvoiceSelection = (item: FlatInstallment) => {
+    if (item.installment.id.startsWith('legacy-')) return;
+    const key = installmentKey(item);
+    setSelectedInstallmentIds(current => {
+      if (current.includes(key)) return current.filter(id => id !== key);
+      const selected = filteredToRelease.filter(candidate => current.includes(installmentKey(candidate)));
+      if (selected.length > 0 && selected[0].installment.partnerId !== item.installment.partnerId) {
+        alert('Uma mesma NF só pode agrupar comissões do mesmo parceiro/recebedor.');
+        return current;
+      }
+      return [...current, key];
+    });
+  };
+
+  const handleOpenBatchInvoiceModal = () => {
+    if (selectedInvoiceItems.length === 0) return;
+    const first = selectedInvoiceItems[0];
+    setAttachingInvoiceInstallment(first);
+    setInvoiceBatchItems(selectedInvoiceItems);
+    setInvoiceFileName(`NF_${first.installment.partnerName.replace(/\s+/g, '_')}_${todayStr}.pdf`);
+    setInvoiceDriveUrl('');
+    setInvoiceScheduledDate(todayStr);
+    setInvoiceFileData('');
+  };
+
+  const scheduledInvoiceGroups = Array.from(
+    filteredScheduled.reduce((groups, item) => {
+      const groupId = item.installment.invoiceGroupId;
+      if (!groupId) return groups;
+      const current = groups.get(groupId) || [];
+      current.push(item);
+      groups.set(groupId, current);
+      return groups;
+    }, new Map<string, FlatInstallment[]>())
+  ).map(([id, items]) => ({
+    id,
+    items,
+    partnerName: items[0].installment.partnerName,
+    invoice: items[0].installment.invoiceDoc,
+    scheduledDate: items[0].installment.scheduledPaymentDate,
+    total: items.reduce((sum, item) => sum + item.installment.value, 0)
+  }));
 
   // Selo de contrato cancelado — mesma marcação em todas as abas para que a
   // parcela nunca apareça indistinguível de uma de cliente ativo.
@@ -276,6 +331,7 @@ export default function CommissionsView({
   // Handlers for Attaching Invoice
   const handleOpenAttachInvoiceModal = (item: FlatInstallment) => {
     setAttachingInvoiceInstallment(item);
+    setInvoiceBatchItems([item]);
     setInvoiceFileName(item.installment.invoiceDoc?.name || `NF_${item.installment.partnerName.replace(/\s+/g, '_')}_${item.installment.installmentNumber}.pdf`);
     setInvoiceDriveUrl(item.installment.invoiceDoc?.url || '');
     setInvoiceScheduledDate(item.installment.scheduledPaymentDate || todayStr);
@@ -311,22 +367,40 @@ export default function CommissionsView({
       fileData: invoiceFileData || undefined
     };
 
-    onUpdateInstallment(
-      attachingInvoiceInstallment.referral.id, 
-      attachingInvoiceInstallment.installment.id, 
-      {
+    const targets = invoiceBatchItems.length > 0 ? invoiceBatchItems : [attachingInvoiceInstallment];
+    const invoiceGroupId = targets.length > 1
+      ? `nf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      : undefined;
+
+    onUpdateInstallments(targets.map(item => ({
+      referralId: item.referral.id,
+      installmentId: item.installment.id,
+      updates: {
         status: 'agendada',
         invoiceDoc: doc,
+        invoiceGroupId,
+        invoiceGroupSize: targets.length,
         scheduledPaymentDate: invoiceScheduledDate
       }
-    );
+    })));
 
+    setSelectedInstallmentIds([]);
+    setInvoiceBatchItems([]);
     setAttachingInvoiceInstallment(null);
   };
 
   // Handlers for Confirming Payment & Attaching Receipt
   const handleOpenPaymentModal = (item: FlatInstallment) => {
     setPayingInstallment(item);
+    const groupId = item.installment.invoiceGroupId;
+    setPaymentBatchItems(
+      groupId
+        ? allFlatInstallments.filter(candidate =>
+            candidate.installment.invoiceGroupId === groupId &&
+            candidate.installment.status === 'agendada'
+          )
+        : [item]
+    );
     setReceiptFileName(`Comprovante_${item.installment.partnerName.replace(/\s+/g, '_')}_${item.installment.installmentNumber}.pdf`);
     setReceiptDriveUrl('');
     setReceiptPaidDate(todayStr);
@@ -364,29 +438,31 @@ export default function CommissionsView({
       fileData: receiptFileData || undefined
     };
 
-    // Automatically transition the NF to folder "NFs Pagas" as requested!
-    let updatedInvoiceDoc = payingInstallment.installment.invoiceDoc;
-    if (updatedInvoiceDoc) {
-      updatedInvoiceDoc = {
-        ...updatedInvoiceDoc,
-        driveFolderId: GOOGLE_DRIVE_CONFIG.paidFolder.id,
-        driveFolderName: GOOGLE_DRIVE_CONFIG.paidFolder.name
+    const targets = paymentBatchItems.length > 0 ? paymentBatchItems : [payingInstallment];
+    onUpdateInstallments(targets.map(item => {
+      const updatedInvoiceDoc = item.installment.invoiceDoc
+        ? {
+            ...item.installment.invoiceDoc,
+            driveFolderId: GOOGLE_DRIVE_CONFIG.paidFolder.id,
+            driveFolderName: GOOGLE_DRIVE_CONFIG.paidFolder.name
+          }
+        : undefined;
+
+      return {
+        referralId: item.referral.id,
+        installmentId: item.installment.id,
+        updates: {
+          status: 'paga',
+          paidDate: receiptPaidDate,
+          paymentMethod: receiptPaymentMethod,
+          receiptDoc,
+          invoiceDoc: updatedInvoiceDoc,
+          notes: receiptNotes.trim() || undefined
+        }
       };
-    }
+    }));
 
-    onUpdateInstallment(
-      payingInstallment.referral.id,
-      payingInstallment.installment.id,
-      {
-        status: 'paga',
-        paidDate: receiptPaidDate,
-        paymentMethod: receiptPaymentMethod,
-        receiptDoc,
-        invoiceDoc: updatedInvoiceDoc,
-        notes: receiptNotes.trim() || undefined
-      }
-    );
-
+    setPaymentBatchItems([]);
     setPayingInstallment(null);
   };
 
@@ -752,6 +828,35 @@ export default function CommissionsView({
             </div>
           </div>
 
+          {selectedInvoiceItems.length > 0 && (
+            <div className="sticky top-3 z-20 bg-zry-roxo text-zry-creme rounded-2xl px-5 py-3.5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="font-bold text-sm">
+                  {selectedInvoiceItems.length} parcela(s) selecionada(s) · {formatCurrency(selectedInvoiceTotal)}
+                </div>
+                <div className="text-[11px] text-zry-creme/70">
+                  Recebedor: {selectedInvoiceItems[0].installment.partnerName}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInstallmentIds([])}
+                  className="px-3.5 py-2 rounded-full border border-zry-creme/30 text-xs font-semibold hover:bg-white/10"
+                >
+                  Limpar seleção
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenBatchInvoiceModal}
+                  className="px-4 py-2 rounded-full bg-zry-coral text-zry-roxo text-xs font-bold hover:bg-zry-coral-dark"
+                >
+                  Anexar uma NF ao grupo
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Table */}
           {filteredToRelease.length === 0 ? (
             <div className="bg-zry-surface border border-zry-border rounded-zry-lg p-12 text-center">
@@ -767,7 +872,10 @@ export default function CommissionsView({
                 <table className="w-full text-left">
                   <thead>
                     <tr>
-                      <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Parceiro Indicador</th>
+                      <th className="w-12 py-3 pl-[22px] text-left">
+                        <span className="sr-only">Selecionar</span>
+                      </th>
+                      <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Parceiro Indicador</th>
                       <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Cliente Indicado</th>
                       <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Parcela &amp; Regra</th>
                       <th className="text-right text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Valor Parcela</th>
@@ -787,7 +895,17 @@ export default function CommissionsView({
 
                       return (
                         <tr key={item.installment.id} className={`border-t border-zry-border hover:bg-zry-lilas-30/60 transition ${isIncomplete ? 'bg-zry-warning-bg/40' : ''}`}>
-                          <td className="py-3.5 px-[22px] text-[13px]">
+                          <td className="py-3.5 pl-[22px] text-[13px]">
+                            <input
+                              type="checkbox"
+                              checked={selectedInstallmentIds.includes(installmentKey(item))}
+                              disabled={isIncomplete}
+                              onChange={() => toggleInvoiceSelection(item)}
+                              className="w-4 h-4 rounded border-zry-border-strong text-zry-roxo focus:ring-zry-roxo disabled:opacity-30"
+                              aria-label={`Selecionar comissão de ${item.installment.clientName}`}
+                            />
+                          </td>
+                          <td className="py-3.5 px-3 text-[13px]">
                             <div className="font-semibold text-zry-text flex items-center gap-2">
                               <span>{item.installment.partnerName}</span>
                               {item.installment.kind === 'embaixador' && (
@@ -1025,6 +1143,35 @@ export default function CommissionsView({
             </div>
           </div>
 
+          {scheduledInvoiceGroups.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-[12px] font-bold text-zry-text">Grupos representados por uma única NF</h4>
+              {scheduledInvoiceGroups.map(group => (
+                <div key={group.id} className="bg-zry-info-bg/60 border border-zry-info/25 rounded-2xl p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-bold text-zry-text">
+                        {group.invoice?.name || 'NF agrupada'} · {group.partnerName}
+                      </div>
+                      <div className="text-[11px] text-zry-text-2">
+                        {group.items.length} parcela(s) · pagamento em {formatDateBR(group.scheduledDate)}
+                      </div>
+                    </div>
+                    <div className="text-lg font-extrabold text-zry-info">{formatCurrency(group.total)}</div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                    {group.items.map(item => (
+                      <div key={installmentKey(item)} className="bg-zry-surface rounded-xl border border-zry-border px-3 py-2 text-[11px]">
+                        <div className="font-bold text-zry-text">{item.installment.clientName}</div>
+                        <div className="text-zry-text-2">{item.installment.triggerDescription} · {formatCurrency(item.installment.value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {filteredScheduled.length === 0 ? (
             <div className="bg-zry-surface border border-zry-border rounded-zry-lg p-12 text-center">
               <Clock className="w-10 h-10 text-zry-warning mx-auto" />
@@ -1064,6 +1211,11 @@ export default function CommissionsView({
                               )}
                             </div>
                             <div className="text-[12px] text-zry-text-2 mt-0.5">Cliente: {item.installment.clientName}</div>
+                            {item.installment.invoiceGroupId && (
+                              <span className="inline-flex mt-1 px-2 py-0.5 rounded-full bg-zry-info-bg text-zry-info text-[10px] font-bold">
+                                NF agrupada · {item.installment.invoiceGroupSize || 1} parcelas
+                              </span>
+                            )}
                             <ChurnBadge referral={item.referral} />
                           </td>
                           <td className="py-3.5 px-3 text-[13px]">
@@ -1128,7 +1280,11 @@ export default function CommissionsView({
                                 className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-[18px] py-2.5 rounded-full text-[12.5px] transition"
                               >
                                 <Receipt className="w-3.5 h-3.5" />
-                                <span>Anexar Comprovante &amp; Marcar Paga</span>
+                                <span>
+                                  {item.installment.invoiceGroupId
+                                    ? `Pagar grupo (${item.installment.invoiceGroupSize || 1})`
+                                    : 'Anexar Comprovante & Marcar Paga'}
+                                </span>
                               </button>
                             </div>
                           </td>
@@ -1439,7 +1595,9 @@ export default function CommissionsView({
                 <div>
                   <h3 className="font-bold text-zry-text">Anexar Nota Fiscal & Agendar Pagamento</h3>
                   <p className="text-xs text-zry-text-2">
-                    {attachingInvoiceInstallment.installment.partnerName} • Parcela: {attachingInvoiceInstallment.installment.triggerDescription}
+                    {attachingInvoiceInstallment.installment.partnerName} • {invoiceBatchItems.length > 1
+                      ? `${invoiceBatchItems.length} parcelas na mesma NF`
+                      : `Parcela: ${attachingInvoiceInstallment.installment.triggerDescription}`}
                   </p>
                 </div>
               </div>
@@ -1448,7 +1606,10 @@ export default function CommissionsView({
 
             <div className="bg-zry-warning-bg p-3 rounded-xl border border-zry-warning/30 flex items-center justify-between text-xs text-zry-warning">
               <div>
-                <span className="font-bold">Valor da Comissão a Pagar:</span> {formatCurrency(attachingInvoiceInstallment.installment.value)}
+                <span className="font-bold">Valor total a pagar:</span> {formatCurrency(
+                  (invoiceBatchItems.length > 0 ? invoiceBatchItems : [attachingInvoiceInstallment])
+                    .reduce((sum, item) => sum + item.installment.value, 0)
+                )}
                 <div className="text-[11px] text-zry-warning">Pasta Destino: Comissões a Pagar (Google Drive)</div>
               </div>
               <a
@@ -1461,6 +1622,20 @@ export default function CommissionsView({
                 <span>Abrir Pasta</span>
               </a>
             </div>
+
+            {invoiceBatchItems.length > 1 && (
+              <div className="max-h-36 overflow-y-auto rounded-xl border border-zry-border divide-y divide-zry-border">
+                {invoiceBatchItems.map(item => (
+                  <div key={installmentKey(item)} className="px-3 py-2 flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="font-bold text-zry-text">{item.installment.clientName}</div>
+                      <div className="text-zry-text-2">{item.installment.triggerDescription}</div>
+                    </div>
+                    <span className="font-bold text-zry-text">{formatCurrency(item.installment.value)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-3 text-xs">
               {/* File upload */}
@@ -1547,7 +1722,9 @@ export default function CommissionsView({
                 <div>
                   <h3 className="font-bold text-zry-text">Liquidação & Comprovante de Pagamento</h3>
                   <p className="text-xs text-zry-text-2">
-                    {payingInstallment.installment.partnerName} • {payingInstallment.installment.triggerDescription}
+                    {payingInstallment.installment.partnerName} • {paymentBatchItems.length > 1
+                      ? `${paymentBatchItems.length} parcelas no mesmo pagamento`
+                      : payingInstallment.installment.triggerDescription}
                   </p>
                 </div>
               </div>
@@ -1556,7 +1733,10 @@ export default function CommissionsView({
 
             <div className="bg-zry-positive-bg p-3 rounded-xl border border-zry-positive/30 space-y-1 text-xs text-zry-positive">
               <div className="flex items-center justify-between">
-                <span className="font-bold">Valor Quitado: {formatCurrency(payingInstallment.installment.value)}</span>
+                <span className="font-bold">Valor Quitado: {formatCurrency(
+                  (paymentBatchItems.length > 0 ? paymentBatchItems : [payingInstallment])
+                    .reduce((sum, item) => sum + item.installment.value, 0)
+                )}</span>
                 <a
                   href={GOOGLE_DRIVE_CONFIG.receiptsFolder.url}
                   target="_blank"
