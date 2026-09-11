@@ -65,7 +65,7 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-20 bg-zry-surface border-b border-zry-border">
-      <div className="h-16 flex items-center gap-3 sm:gap-5 px-4 sm:px-7">
+      <div className="h-16 flex items-center gap-3 sm:gap-4 px-4 sm:px-6">
         {/* Marca */}
         <div className="flex items-center gap-3 sm:gap-5 shrink-0">
           <img src="/brand/marca-zorya-roxa.svg" alt="Zorya" className="h-[18px] w-auto" />
@@ -83,7 +83,7 @@ export default function Navbar({
         {/* Busca global */}
         <form
           onSubmit={handleSearchSubmit}
-          className="hidden lg:flex flex-1 max-w-[460px] mx-2 items-center gap-2.5 bg-zry-lilas-30 rounded-full px-4 py-2.5"
+          className="hidden lg:flex w-[440px] min-w-0 shrink items-center gap-2.5 bg-zry-lilas-30 rounded-full h-9 px-4"
         >
           <Search className="w-[15px] h-[15px] text-zry-text-2 shrink-0" />
           <input
@@ -94,17 +94,102 @@ export default function Navbar({
           />
         </form>
 
-        <div className="flex-1 lg:flex-none" />
+        <div className="flex-1" />
+
+        {/* Estado, alertas e ação primária andam juntos: são o que se faz agora.
+            A identidade fica separada por um divisor, na ponta, como em qualquer
+            app — é para onde a pessoa vai trocar senha ou sair, não para operar. */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Estado da sincronização com o banco. Fila pendente vira aviso: "sincronizado"
+              com linhas presas neste navegador é a mensagem mais perigosa que a barra
+              poderia dar — a pessoa fecha o navegador achando que o time já vê tudo. */}
+          {syncStatus !== 'off' && (() => {
+            const pendente = pendingWrites > 0 && syncStatus === 'ok';
+            const rotulo = syncStatus === 'syncing'
+              ? 'Sincronizando'
+              : syncStatus === 'error'
+                ? 'Sem sincronizar'
+                : pendente
+                  ? `${pendingWrites} a enviar`
+                  : lastSyncAt
+                    ? new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    : 'Sincronizado';
+            const descricao = syncStatus === 'syncing'
+              ? 'Sincronizando com o banco...'
+              : syncStatus === 'error'
+                ? `Falha ao sincronizar${pendingWrites > 0 ? ` — ${pendingWrites} alteração(ões) ainda não subiram` : ''}. Seus dados seguem salvos neste navegador. Clique para tentar de novo.`
+                : pendente
+                  ? `${pendingWrites} alteração(ões) ainda não subiram para o banco — elas só existem neste navegador. Clique para enviar agora.`
+                  : lastSyncAt
+                    ? `Tudo salvo no banco. Última sincronização às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Clique para sincronizar agora.`
+                    : 'Tudo salvo no banco. Clique para sincronizar agora.';
+
+            return (
+              <button
+                type="button"
+                onClick={onSyncNow}
+                disabled={syncStatus === 'syncing' || !onSyncNow}
+                title={descricao}
+                className={`flex items-center gap-1.5 h-9 text-[11px] font-semibold rounded-full px-3 shrink-0 border transition disabled:cursor-default ${
+                  syncStatus === 'error'
+                    ? 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'
+                    : pendente
+                      ? 'text-zry-warning bg-zry-warning-bg border-zry-warning/20 hover:opacity-80'
+                      : 'text-zry-text-2 bg-zry-surface border-zry-border hover:border-zry-border-strong'
+                }`}
+              >
+                {syncStatus === 'syncing' ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : syncStatus === 'error' ? (
+                  <CloudOff className="w-3.5 h-3.5" />
+                ) : pendente ? (
+                  <CloudUpload className="w-3.5 h-3.5" />
+                ) : (
+                  <Cloud className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden xl:inline">{rotulo}</span>
+              </button>
+            );
+          })()}
+
+          {/* Notificações */}
+          <button
+            onClick={onOpenNotifications}
+            title="Central de alertas e notificações"
+            className="relative w-9 h-9 rounded-full flex items-center justify-center text-zry-roxo hover:bg-zry-lilas-30 transition shrink-0"
+          >
+            <Bell className="w-[18px] h-[18px]" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 bg-zry-coral text-zry-roxo rounded-full text-[9px] font-extrabold flex items-center justify-center">
+                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+              </span>
+            )}
+          </button>
+
+          {/* Ação primária */}
+          <button
+            onClick={onOpenNewReferral}
+            className="flex items-center gap-2 h-9 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-3 sm:px-[18px] rounded-full text-[12.5px] transition shrink-0 whitespace-nowrap"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Nova indicação</span>
+          </button>
+        </div>
+
+        <div className="hidden md:block w-px h-6 bg-zry-border shrink-0" />
 
         {/* Perfil de acesso */}
         {authProfile ? (
-          <div className="hidden md:flex items-center gap-1.5 bg-zry-lilas-30 rounded-full pl-3 pr-1.5 py-1 shrink-0">
+          <div className="hidden md:flex items-center gap-1.5 h-9 bg-zry-lilas-30 rounded-full pl-3 pr-1.5 shrink-0">
             {authProfile.role === 'master' ? (
               <ShieldCheck className="w-3.5 h-3.5 text-zry-roxo shrink-0" />
             ) : (
               <Briefcase className="w-3.5 h-3.5 text-zry-roxo shrink-0" />
             )}
-            <span className="text-[12px] font-bold text-zry-roxo">
+            <span
+              className="text-[12px] font-bold text-zry-roxo truncate max-w-[150px]"
+              title={authProfile.role === 'master' ? 'Master' : authProfile.executiveName || 'Executivo'}
+            >
               {authProfile.role === 'master' ? 'Master' : authProfile.executiveName || 'Executivo'}
             </span>
             {onOpenSetPassword && (
@@ -127,7 +212,7 @@ export default function Navbar({
             )}
           </div>
         ) : (
-          <div className="hidden md:flex items-center gap-0.5 bg-zry-lilas-30 rounded-full p-[3px] shrink-0">
+          <div className="hidden md:flex items-center gap-0.5 h-9 bg-zry-lilas-30 rounded-full px-[3px] shrink-0">
             {(['master', 'executivo'] as UserRole[]).map((role) => (
               <button
                 key={role}
@@ -161,81 +246,6 @@ export default function Navbar({
             )}
           </div>
         )}
-
-        {/* Estado da sincronização com o banco. Fila pendente vira aviso: "sincronizado"
-            com linhas presas neste navegador é a mensagem mais perigosa que a barra
-            poderia dar — a pessoa fecha o navegador achando que o time já vê tudo. */}
-        {syncStatus !== 'off' && (() => {
-          const pendente = pendingWrites > 0 && syncStatus !== 'syncing';
-          const rotulo = syncStatus === 'syncing'
-            ? 'Sincronizando'
-            : pendente
-              ? `${pendingWrites} a enviar`
-              : syncStatus === 'error'
-                ? 'Sem sincronizar'
-                : lastSyncAt
-                  ? new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                  : 'Sincronizado';
-          const descricao = syncStatus === 'syncing'
-            ? 'Sincronizando com o banco...'
-            : pendente
-              ? `${pendingWrites} alteração(ões) ainda não subiram para o banco — elas só existem neste navegador. Clique para enviar agora.`
-              : syncStatus === 'error'
-                ? 'Falha ao sincronizar. Seus dados seguem salvos neste navegador e sobem na próxima tentativa. Clique para tentar de novo.'
-                : lastSyncAt
-                  ? `Tudo salvo no banco. Última sincronização às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Clique para sincronizar agora.`
-                  : 'Tudo salvo no banco. Clique para sincronizar agora.';
-
-          return (
-            <button
-              type="button"
-              onClick={onSyncNow}
-              disabled={syncStatus === 'syncing' || !onSyncNow}
-              title={descricao}
-              className={`hidden sm:flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-3 py-2 shrink-0 border transition disabled:cursor-default ${
-                syncStatus === 'error'
-                  ? 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'
-                  : pendente
-                    ? 'text-zry-warning bg-zry-warning-bg border-zry-warning/20 hover:opacity-80'
-                    : 'text-zry-text-2 bg-zry-surface border-zry-border hover:border-zry-border-strong'
-              }`}
-            >
-              {syncStatus === 'syncing' ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              ) : syncStatus === 'error' ? (
-                <CloudOff className="w-3.5 h-3.5" />
-              ) : pendente ? (
-                <CloudUpload className="w-3.5 h-3.5" />
-              ) : (
-                <Cloud className="w-3.5 h-3.5" />
-              )}
-              <span className="hidden xl:inline">{rotulo}</span>
-            </button>
-          );
-        })()}
-
-        {/* Notificações */}
-        <button
-          onClick={onOpenNotifications}
-          title="Central de alertas e notificações"
-          className="relative w-[38px] h-[38px] rounded-full flex items-center justify-center text-zry-roxo hover:bg-zry-lilas-30 transition shrink-0"
-        >
-          <Bell className="w-[18px] h-[18px]" />
-          {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 bg-zry-coral text-zry-roxo rounded-full text-[9px] font-extrabold flex items-center justify-center">
-              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-            </span>
-          )}
-        </button>
-
-        {/* Ação primária */}
-        <button
-          onClick={onOpenNewReferral}
-          className="flex items-center gap-2 bg-zry-coral hover:bg-zry-coral-dark text-zry-roxo font-bold px-3 sm:px-[18px] py-2.5 rounded-full text-[12.5px] transition shrink-0 whitespace-nowrap"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Nova indicação</span>
-        </button>
       </div>
     </header>
   );
