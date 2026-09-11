@@ -257,14 +257,27 @@ export interface ChannelKPIs {
   commissionsPaid: number; // R$ pago
   pendingCommissionCount: number;
 
-  // Performance Consolidada & Rentabilidade do Canal:
-  avgTicket: number; // Ticket Médio de Vendas (Volume ganho / Negócios fechados)
-  avgCommissionCost: number; // Custo Médio de Comissão (Comissões ganhas / Negócios fechados)
-  totalCommissionsWon: number; // Total de comissões geradas pelos negócios fechados
-  netChannelMargin: number; // Margem líquida retida por venda (avgTicket - avgCommissionCost)
-  commissionSharePercent: number; // % do ticket médio consumido por comissão (avgCommissionCost / avgTicket * 100)
-  revenueMultiplier: number; // Retorno em receita para cada R$ 1 de comissão (avgTicket / avgCommissionCost)
-  
+  // Performance Consolidada & Rentabilidade do Canal.
+  // Atenção à unidade: avgTicket é MRR (mensal, recorrente) e avgCommissionCost
+  // é custo único de aquisição (soma das parcelas). Margem, take-rate e ROI
+  // comparam a comissão contra 12 meses de MRR — nunca contra um mês só.
+  // Base = contratos vivos (churn fora dos dois lados).
+  avgTicket: number; // MRR médio por contrato vivo (activeWonVolume / activeWonDeals)
+  avgCommissionCost: number; // Custo de aquisição médio por contrato vivo (pago + ainda devido)
+  paybackMonths: number | null; // Meses de MRR para cobrir a comissão (avgCommissionCost / avgTicket)
+  revenue12mPerDeal: number; // Receita de 12 meses por contrato vivo (avgTicket * 12)
+  totalCommissionsWon: number; // Total histórico de comissões geradas por negócios fechados
+  netChannelMargin: number; // Margem líquida por venda em 12 meses (revenue12mPerDeal - avgCommissionCost)
+  commissionSharePercent: number; // % da receita de 12m consumida por comissão
+  revenueMultiplier: number; // ROI 12m: receita de 12 meses por R$ 1 de comissão
+  netVolume12m: number; // Volume líquido consolidado em 12 meses da base viva
+  activeWonDeals: number; // Contratos ganhos ainda ativos (base de cálculo do card)
+  activeCommissionCost: number; // Comissão total (paga + devida) dos contratos vivos
+  activeCommissionPaid: number; // Parte de activeCommissionCost já quitada
+  activeCommissionOwed: number; // Parte de activeCommissionCost ainda devida
+  churnedCommissionPaid: number; // Comissão já paga em contratos que cancelaram (perda)
+  churnedCommissionCancelled: number; // Parcelas que deixaram de ser devidas por churn
+
   // Cycle KPIs:
   avgDaysPartnerToFirstReferral: number | null; // Média tempo entrada parceiro -> indicação
   avgDaysReferralToClose: number | null; // Média tempo indicação -> fechamento

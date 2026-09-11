@@ -875,20 +875,26 @@ export default function Dashboard({
                 </span>
               </div>
               <p className="text-xs text-zry-text-2 mt-1">
-                Comparativo financeiro entre o Ticket Médio de Vendas e o Custo Médio de Comissão para aferir a margem e o ROI do canal de parceiros.
+                A receita do canal é recorrente (MRR) e a comissão é um custo único de aquisição. Por isso a margem e o ROI comparam a comissão contra <strong className="text-zry-text-2">12 meses</strong> de mensalidade, e o payback aparece em meses. Base: contratos vivos.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {kpis.paybackMonths !== null && (
+              <div className="flex items-center gap-1.5 bg-zry-lilas text-zry-roxo border border-zry-roxo/30 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
+                <Clock className="w-3.5 h-3.5 text-zry-roxo" />
+                <span>Payback: {kpis.paybackMonths.toFixed(1)} {kpis.paybackMonths === 1 ? 'mês' : 'meses'} de MRR</span>
+              </div>
+            )}
             {kpis.revenueMultiplier > 0 ? (
               <div className="flex items-center gap-1.5 bg-zry-positive-bg text-zry-positive border border-zry-positive/80 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
                 <Coins className="w-3.5 h-3.5 text-zry-positive" />
-                <span>Retorno: {kpis.revenueMultiplier.toFixed(1)}x por R$ em comissão</span>
+                <span>ROI 12m: {kpis.revenueMultiplier.toFixed(1)}x por R$ em comissão</span>
               </div>
             ) : (
               <span className="text-xs text-zry-text-2 bg-zry-lilas-30 px-3 py-1 rounded-lg font-medium">
-                Sem vendas ganhas no filtro
+                Sem contratos vivos no filtro
               </span>
             )}
           </div>
@@ -905,29 +911,36 @@ export default function Dashboard({
                   Receita do Canal
                 </span>
                 <span className="text-xs text-zry-text-2 font-medium">
-                  {kpis.totalWonDeals} negócio(s) fechado(s)
+                  {kpis.activeWonDeals} contrato(s) vivo(s)
                 </span>
               </div>
               <div className="mt-3">
-                <span className="text-xs text-zry-text-2 block font-medium">Ticket Médio de Vendas (MRR / Contrato)</span>
+                <span className="text-xs text-zry-text-2 block font-medium">Ticket Médio Recorrente (MRR / contrato vivo)</span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl sm:text-4xl font-black text-zry-text tracking-tight">
                     {formatCurrency(kpis.avgTicket)}
                   </span>
                   <span className="text-xs font-semibold text-zry-text-2">
-                    / venda
+                    / mês
                   </span>
                 </div>
+                <span className="text-[11px] text-zry-roxo font-semibold block mt-1.5">
+                  {formatCurrency(kpis.revenue12mPerDeal)} em 12 meses por contrato
+                </span>
               </div>
             </div>
 
             <div className="pt-3 border-t border-zry-border/60 flex flex-wrap items-center justify-between text-xs text-zry-text-2 gap-2">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-zry-roxo inline-block"></span>
-                Volume Total Fechado: <strong className="text-zry-text">{formatCurrency(kpis.totalWonVolume)}</strong>
+                MRR Ativo do Canal: <strong className="text-zry-text">{formatCurrency(kpis.activeWonVolume)}</strong>
               </span>
               <span className="text-zry-text-2">
-                Valor Bruto de Tabela: <strong className="text-zry-text-2">{formatCurrency(kpis.totalWonDeals > 0 ? kpis.grossWonVolume / kpis.totalWonDeals : 0)}</strong>
+                {kpis.churnedCount > 0 ? (
+                  <>Fora da conta: <strong className="text-zry-danger">{formatCurrency(kpis.churnedVolume)}</strong> em {kpis.churnedCount} churn</>
+                ) : (
+                  <>Valor Bruto de Tabela: <strong className="text-zry-text-2">{formatCurrency(kpis.totalWonDeals > 0 ? kpis.grossWonVolume / kpis.totalWonDeals : 0)}</strong></>
+                )}
               </span>
             </div>
           </div>
@@ -940,29 +953,32 @@ export default function Dashboard({
                   Custo de Parceria
                 </span>
                 <span className="text-xs font-semibold text-zry-warning">
-                  {kpis.commissionSharePercent > 0 ? `${kpis.commissionSharePercent.toFixed(1)}% do ticket médio` : '0%'}
+                  {kpis.commissionSharePercent > 0 ? `${kpis.commissionSharePercent.toFixed(1)}% da receita de 12m` : '0%'}
                 </span>
               </div>
               <div className="mt-3">
-                <span className="text-xs text-zry-warning block font-medium">Custo Médio de Comissão por Fechamento</span>
+                <span className="text-xs text-zry-warning block font-medium">Custo de Aquisição por Contrato (comissão total)</span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl sm:text-4xl font-black text-zry-warning tracking-tight">
                     {formatCurrency(kpis.avgCommissionCost)}
                   </span>
                   <span className="text-xs font-semibold text-zry-warning">
-                    / comissão
+                    uma vez
                   </span>
                 </div>
+                <span className="text-[11px] text-zry-warning font-semibold block mt-1.5">
+                  Todas as parcelas somadas — não se repete a cada mês
+                </span>
               </div>
             </div>
 
             <div className="pt-3 border-t border-zry-warning/60 flex flex-wrap items-center justify-between text-xs text-zry-warning gap-2">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-zry-warning inline-block"></span>
-                Comissões Geradas: <strong className="text-zry-warning">{formatCurrency(kpis.totalCommissionsWon)}</strong>
+                Comissão da Base Viva: <strong className="text-zry-warning">{formatCurrency(kpis.activeCommissionCost)}</strong>
               </span>
               <span className="text-zry-warning">
-                Quitadas: <strong>{formatCurrency(kpis.commissionsPaid)}</strong> | A Pagar: <strong>{formatCurrency(kpis.commissionsToPay)}</strong>
+                Quitadas: <strong>{formatCurrency(kpis.activeCommissionPaid)}</strong> | A Pagar: <strong>{formatCurrency(kpis.activeCommissionOwed)}</strong>
               </span>
             </div>
           </div>
@@ -973,23 +989,23 @@ export default function Dashboard({
         <div className="bg-zry-lilas-30 rounded-2xl p-5 border border-zry-border/80 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1.5">
             <span className="font-bold text-zry-text-2">
-              Distribuição Proporcional do Ticket Médio por Venda
+              Distribuição da Receita de 12 Meses por Contrato
             </span>
             <span className="text-zry-text-2">
-              {kpis.totalWonDeals > 0 
-                ? `Base de cálculo: ${kpis.totalWonDeals} contrato(s) ganho(s)` 
-                : 'Nenhum contrato ganho registrado no filtro selecionado'}
+              {kpis.activeWonDeals > 0
+                ? `Base de cálculo: ${kpis.activeWonDeals} contrato(s) vivo(s) · ${formatCurrency(kpis.revenue12mPerDeal)} em 12m`
+                : 'Nenhum contrato vivo registrado no filtro selecionado'}
             </span>
           </div>
 
-          {kpis.totalWonDeals > 0 && kpis.avgTicket > 0 ? (
+          {kpis.activeWonDeals > 0 && kpis.avgTicket > 0 ? (
             <div className="space-y-2">
               <div className="h-5 w-full bg-zry-lilas rounded-xl overflow-hidden flex shadow-inner">
                 {/* Net company retention */}
                 <div 
                   style={{ width: `${Math.max(5, 100 - kpis.commissionSharePercent)}%` }}
                   className="bg-zry-roxo hover:bg-zry-roxo-hover transition-colors flex items-center justify-start px-2.5 text-[10px] font-bold text-white truncate"
-                  title={`Margem Líquida Retida: ${formatCurrency(kpis.netChannelMargin)} (${(100 - kpis.commissionSharePercent).toFixed(1)}%)`}
+                  title={`Margem Líquida em 12 meses: ${formatCurrency(kpis.netChannelMargin)} (${(100 - kpis.commissionSharePercent).toFixed(1)}%)`}
                 >
                   {(100 - kpis.commissionSharePercent).toFixed(1)}% Margem Líquida
                 </div>
@@ -1006,7 +1022,7 @@ export default function Dashboard({
               <div className="flex flex-wrap items-center justify-between text-[11px] text-zry-text-2 pt-1">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-zry-positive inline-block"></span>
-                  <span>Margem Retida: <strong className="text-zry-positive">{formatCurrency(kpis.netChannelMargin)}</strong> por cliente</span>
+                  <span>Margem Retida em 12m: <strong className="text-zry-positive">{formatCurrency(kpis.netChannelMargin)}</strong> por cliente</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-zry-warning inline-block"></span>
@@ -1021,11 +1037,21 @@ export default function Dashboard({
           )}
         </div>
 
-        {/* 4 Strategic Pillars of Channel Profitability */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-          
+        {/* 5 Strategic Pillars of Channel Profitability */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
+
           <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
-            <span className="text-[11px] font-medium text-zry-text-2 block">Margem Líquida por Venda</span>
+            <span className="text-[11px] font-medium text-zry-text-2 block">Payback da Comissão</span>
+            <span className="text-lg font-bold text-zry-text block mt-1">
+              {kpis.paybackMonths !== null ? `${kpis.paybackMonths.toFixed(1)} ${kpis.paybackMonths === 1 ? 'mês' : 'meses'}` : '—'}
+            </span>
+            <span className="text-[11px] text-zry-text-2 block mt-0.5">
+              Mensalidades até se pagar
+            </span>
+          </div>
+
+          <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
+            <span className="text-[11px] font-medium text-zry-text-2 block">Margem Líquida em 12m</span>
             <span className="text-lg font-bold text-zry-text block mt-1">
               {formatCurrency(kpis.netChannelMargin)}
             </span>
@@ -1040,31 +1066,59 @@ export default function Dashboard({
               {kpis.commissionSharePercent > 0 ? `${kpis.commissionSharePercent.toFixed(1)}%` : '0%'}
             </span>
             <span className="text-[11px] text-zry-warning font-medium block mt-0.5">
-              Custo comissão s/ ticket
+              Comissão s/ receita de 12m
             </span>
           </div>
 
           <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
-            <span className="text-[11px] font-medium text-zry-text-2 block">Múltiplo ROI do Canal</span>
+            <span className="text-[11px] font-medium text-zry-text-2 block">Múltiplo ROI (12m)</span>
             <span className="text-lg font-bold text-zry-text block mt-1">
               {kpis.revenueMultiplier > 0 ? `${kpis.revenueMultiplier.toFixed(1)}x` : '—'}
             </span>
             <span className="text-[11px] text-zry-text-2 block mt-0.5">
-              Receita por R$ 1 em comissão
+              Receita 12m por R$ 1 de comissão
             </span>
           </div>
 
           <div className="bg-zry-surface rounded-xl p-3.5 border border-zry-border">
-            <span className="text-[11px] font-medium text-zry-text-2 block">Volume Líquido Consolidado</span>
+            <span className="text-[11px] font-medium text-zry-text-2 block">Volume Líquido em 12m</span>
             <span className="text-lg font-bold text-zry-text block mt-1">
-              {formatCurrency(kpis.totalWonVolume - kpis.totalCommissionsWon)}
+              {formatCurrency(kpis.netVolume12m)}
             </span>
             <span className="text-[11px] text-zry-text-2 block mt-0.5">
-              Receita total livre de comissão
+              Base viva livre de comissão
             </span>
           </div>
 
         </div>
+
+        {/* Churn: o que saiu da conta acima, declarado em vez de escondido */}
+        {kpis.churnedCount > 0 && (
+          <div className="bg-zry-danger-bg/40 rounded-2xl p-4 border border-zry-danger/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <TrendingDown className="w-4 h-4 text-zry-danger shrink-0 mt-0.5" />
+              <div>
+                <span className="text-xs font-bold text-zry-danger block">
+                  {kpis.churnedCount} contrato(s) cancelado(s) — fora dos cálculos acima
+                </span>
+                <span className="text-[11px] text-zry-text-2 block mt-0.5">
+                  A receita saiu da base e as parcelas que restavam deixaram de ser devidas.
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] shrink-0">
+              <span className="text-zry-text-2">
+                MRR perdido: <strong className="text-zry-danger">{formatCurrency(kpis.churnedVolume)}</strong>
+              </span>
+              <span className="text-zry-text-2">
+                Comissão paga sem retorno: <strong className="text-zry-danger">{formatCurrency(kpis.churnedCommissionPaid)}</strong>
+              </span>
+              <span className="text-zry-text-2">
+                Parcelas canceladas: <strong className="text-zry-positive">{formatCurrency(kpis.churnedCommissionCancelled)}</strong>
+              </span>
+            </div>
+          </div>
+        )}
 
       </div>
 

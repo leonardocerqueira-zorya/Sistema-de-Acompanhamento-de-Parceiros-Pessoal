@@ -23,7 +23,8 @@ import {
   Sparkles,
   ShieldAlert,
   Eye,
-  X
+  X,
+  XCircle
 } from 'lucide-react';
 
 interface CommissionsViewProps {
@@ -129,35 +130,55 @@ export default function CommissionsView({
     }
   });
 
-  // Calculate Alerts:
+  // Contrato cancelado (churn): pela regra do canal a parcela que ainda não foi
+  // liberada deixa de ser devida. Ela não some da tela — sai da fila de trabalho
+  // (alertas e total a liberar) e vai para um agrupamento próprio, onde alguém
+  // decide cancelar formalmente. Agendadas e pagas ficam onde estão: a NF já foi
+  // emitida pelo parceiro, então só ganham o selo.
+  const isChurnedItem = (item: FlatInstallment) => !!item.referral.churnedAt;
+  const isPendingStatus = (status: CommissionInstallment['status']) =>
+    status === 'a_liberar' || status === 'solicitada';
+
+  // Calculate Alerts (a fila de trabalho ignora contratos cancelados):
   // 1. Vencendo hoje: scheduledPaymentDate === todayStr and status === 'agendada'
-  const dueTodayList = allFlatInstallments.filter(item => 
-    item.installment.status === 'agendada' && 
+  const dueTodayList = allFlatInstallments.filter(item =>
+    !isChurnedItem(item) &&
+    item.installment.status === 'agendada' &&
     item.installment.scheduledPaymentDate === todayStr
   );
 
   // 2. Sendo liberadas hoje: releaseDate === todayStr and (status === 'a_liberar' or 'solicitada')
-  const releasingTodayList = allFlatInstallments.filter(item => 
-    item.installment.releaseDate === todayStr && 
+  const releasingTodayList = allFlatInstallments.filter(item =>
+    !isChurnedItem(item) &&
+    item.installment.releaseDate === todayStr &&
     ['a_liberar', 'solicitada'].includes(item.installment.status)
   );
 
   // 3. Aguardando anexo de NF (notificadas ou já vencidas aguardando NF)
   const awaitingInvoiceList = allFlatInstallments.filter(item =>
+    !isChurnedItem(item) &&
     ['a_liberar', 'solicitada'].includes(item.installment.status) &&
     item.installment.releaseDate <= todayStr
   );
 
   // 4. Atrasadas: agendadas com data de pagamento já vencida e ainda sem comprovante (não quitadas)
   const overdueList = allFlatInstallments.filter(item =>
+    !isChurnedItem(item) &&
     item.installment.status === 'agendada' &&
     !!item.installment.scheduledPaymentDate &&
     item.installment.scheduledPaymentDate < todayStr &&
     !item.installment.receiptDoc
   );
 
+  // 5. Pendentes de contrato cancelado: deixaram de ser devidas e aguardam
+  // cancelamento formal da parcela. Sem filtro de mês — some da fila, não da vista.
+  const churnedPendingList = allFlatInstallments.filter(item =>
+    isChurnedItem(item) && isPendingStatus(item.installment.status)
+  );
+
   // Tab 1: Comissões a Liberar no Mês
   const toReleaseList = allFlatInstallments.filter(item => {
+    if (isChurnedItem(item)) return false;
     if (!['a_liberar', 'solicitada'].includes(item.installment.status)) return false;
     if (allMonthsFilter) return true;
     return item.installment.releaseDate.startsWith(selectedMonth) || item.installment.releaseDate < selectedMonth;
@@ -188,6 +209,22 @@ export default function CommissionsView({
   const filteredToRelease = filterBySearch(toReleaseList);
   const filteredScheduled = filterBySearch(scheduledList);
   const filteredPaid = filterBySearch(paidList);
+  const filteredChurnedPending = filterBySearch(churnedPendingList);
+
+  // Selo de contrato cancelado — mesma marcação em todas as abas para que a
+  // parcela nunca apareça indistinguível de uma de cliente ativo.
+  const ChurnBadge = ({ referral }: { referral: Referral }) => {
+    if (!referral.churnedAt) return null;
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-danger-bg text-zry-danger mt-1"
+        title="O contrato deste cliente foi cancelado — a comissão pendente deixou de ser devida"
+      >
+        <XCircle className="w-3 h-3" />
+        <span>Cliente cancelado em {formatDateBR(referral.churnedAt)}</span>
+      </span>
+    );
+  };
 
   // Handlers for Notifying Partner
   const handleOpenNotifyModal = (item: FlatInstallment) => {
@@ -220,7 +257,11 @@ export default function CommissionsView({
   // Handlers for Inadimplência do Cliente (marca a parcela como não liberada / cancelada)
   const handleOpenDefaultModal = (item: FlatInstallment) => {
     setDefaultingInstallment(item);
-    setDefaultReason('Inadimplência do cliente');
+    setDefaultReason(
+      item.referral.churnedAt
+        ? `Contrato cancelado pelo cliente em ${formatDateBR(item.referral.churnedAt)}`
+        : 'Inadimplência do cliente'
+    );
   };
 
   const handleConfirmDefault = () => {
@@ -385,7 +426,8 @@ export default function CommissionsView({
       'Documento NF',
       'Pasta NF',
       'Comprovante',
-      'Pasta Comprovante'
+      'Pasta Comprovante',
+      'Contrato Cancelado Em'
     ];
 
     const rows = paidList.map(item => [
@@ -398,7 +440,8 @@ export default function CommissionsView({
       `"${item.installment.invoiceDoc?.name || ''}"`,
       `"${GOOGLE_DRIVE_CONFIG.paidFolder.name}"`,
       `"${item.installment.receiptDoc?.name || ''}"`,
-      `"${GOOGLE_DRIVE_CONFIG.receiptsFolder.name}"`
+      `"${GOOGLE_DRIVE_CONFIG.receiptsFolder.name}"`,
+      `"${item.referral.churnedAt || ''}"`
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
@@ -505,6 +548,32 @@ export default function CommissionsView({
           </a>
         </div>
       </div>
+
+      {/* Contratos cancelados com comissão pendente — fora da fila, à vista */}
+      {churnedPendingList.length > 0 && (
+        <div className="bg-zry-danger-bg/50 border border-zry-danger/30 rounded-zry-lg px-[22px] py-[18px] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-zry-danger text-zry-creme rounded-full shrink-0">
+              <XCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-[15px] font-bold text-zry-text tracking-tight">
+                {churnedPendingList.length} comissão(ões) de contrato cancelado
+              </h4>
+              <p className="text-[12.5px] text-zry-text-2 mt-1 max-w-xl">
+                Somam <strong className="text-zry-danger">{formatCurrency(churnedPendingList.reduce((acc, i) => acc + i.installment.value, 0))}</strong> e
+                {' '}<strong>deixaram de ser devidas</strong> — já estão fora dos alertas e do total a liberar. Ainda constam como pendentes no cadastro até alguém cancelar a parcela.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('a_liberar_mes')}
+            className="flex items-center gap-2 bg-transparent border border-zry-danger/40 text-zry-danger font-semibold px-[18px] py-2.5 rounded-full text-[12.5px] hover:bg-zry-danger-bg transition shrink-0"
+          >
+            Revisar ({churnedPendingList.length})
+          </button>
+        </div>
+      )}
 
       {/* Real-time Alerts Banner */}
       {(dueTodayList.length > 0 || releasingTodayList.length > 0 || awaitingInvoiceList.length > 0 || overdueList.length > 0) && (
@@ -833,6 +902,108 @@ export default function CommissionsView({
               </div>
             </div>
           )}
+
+          {/* Agrupamento à parte: contratos cancelados. Sem filtro de mês — estas
+              parcelas não entram no total acima nem nos alertas, mas precisam
+              continuar visíveis até serem canceladas formalmente. */}
+          {filteredChurnedPending.length > 0 && (
+            <div className="bg-zry-surface border border-zry-danger/30 rounded-zry-lg overflow-hidden">
+              <div className="px-[22px] py-[18px] border-b border-zry-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zry-danger-bg/40">
+                <div className="flex items-start gap-2.5">
+                  <XCircle className="w-4 h-4 text-zry-danger shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-[14px] font-bold tracking-tight text-zry-text">
+                      Comissões de contratos cancelados — não devidas
+                    </h3>
+                    <p className="text-[12px] text-zry-text-2 mt-0.5 max-w-2xl">
+                      O cliente cancelou antes desta parcela ser liberada. Fora do total a liberar e dos alertas, e independente do mês selecionado.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[12.5px] text-zry-text-2">Valor não devido:</span>
+                  <span className="text-[18px] font-bold tracking-tight text-zry-danger">
+                    {formatCurrency(filteredChurnedPending.reduce((acc, i) => acc + i.installment.value, 0))}
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr>
+                      <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Parceiro Indicador</th>
+                      <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Cliente Indicado</th>
+                      <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Parcela &amp; Regra</th>
+                      <th className="text-right text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Valor Parcela</th>
+                      <th className="text-left text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-3">Data Liberação (Fatura)</th>
+                      <th className="text-right text-[11px] uppercase tracking-wider font-semibold text-zry-text-2 py-3 px-[22px]">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredChurnedPending.map((item) => {
+                      const isIncomplete = item.installment.id.startsWith('legacy-');
+                      return (
+                        <tr key={item.installment.id} className="border-t border-zry-border hover:bg-zry-danger-bg/30 transition">
+                          <td className="py-3.5 px-[22px] text-[13px]">
+                            <div className="font-semibold text-zry-text flex items-center gap-2">
+                              <span>{item.installment.partnerName}</span>
+                              {item.installment.kind === 'embaixador' && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas text-zry-roxo">
+                                  Embaixador
+                                </span>
+                              )}
+                            </div>
+                            {item.referral.clientCompany && (
+                              <div className="text-[12px] text-zry-text-2 mt-0.5">{item.referral.clientCompany}</div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-3 text-[13px]">
+                            <div className="font-semibold text-zry-text">{item.installment.clientName}</div>
+                            <ChurnBadge referral={item.referral} />
+                          </td>
+                          <td className="py-3.5 px-3 text-[13px]">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas text-zry-roxo">
+                              {item.installment.triggerDescription}
+                            </span>
+                            <div className="text-[11px] text-zry-text-2 mt-1">
+                              {item.installment.installmentNumber}ª de {item.installment.totalInstallments} partes
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3 text-[13px] text-right">
+                            <div className="text-[15px] font-bold tracking-tight text-zry-text-2 line-through">
+                              {formatCurrency(item.installment.value)}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3 text-[13px]">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-zry-text-2" />
+                              <span className="text-zry-text-2">{formatDateBR(item.installment.releaseDate)}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-[22px] text-[13px] text-right">
+                            {isIncomplete ? (
+                              <span className="text-[12px] text-zry-text-2" title="Parcela sintética: complete a Data de Fechamento na indicação para poder cancelá-la">
+                                Cadastro incompleto
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenDefaultModal(item)}
+                                className="flex items-center gap-1.5 bg-zry-danger-bg hover:bg-zry-danger-bg/70 text-zry-danger font-semibold px-3.5 py-[7px] rounded-full text-[12px] border border-zry-danger/30 transition ml-auto"
+                                title="Cancelar formalmente esta parcela, registrando o motivo"
+                              >
+                                <ShieldAlert className="w-3 h-3" />
+                                <span>Cancelar Parcela</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -893,6 +1064,7 @@ export default function CommissionsView({
                               )}
                             </div>
                             <div className="text-[12px] text-zry-text-2 mt-0.5">Cliente: {item.installment.clientName}</div>
+                            <ChurnBadge referral={item.referral} />
                           </td>
                           <td className="py-3.5 px-3 text-[13px]">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas text-zry-roxo">
@@ -1018,6 +1190,7 @@ export default function CommissionsView({
                         <td className="py-3.5 px-[22px] text-[13px]">
                           <div className="font-semibold text-zry-text">{item.installment.partnerName}</div>
                           <div className="text-[12px] text-zry-text-2 mt-0.5">Cliente: {item.installment.clientName}</div>
+                          <ChurnBadge referral={item.referral} />
                         </td>
                         <td className="py-3.5 px-3 text-[13px]">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas text-zry-roxo">
@@ -1119,6 +1292,7 @@ export default function CommissionsView({
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-zry-text">{ref.clientName}</div>
                           {ref.clientCompany && <div className="text-[11px] text-zry-text-2">{ref.clientCompany}</div>}
+                          <ChurnBadge referral={ref} />
                         </td>
                         <td className="py-3.5 px-4 font-bold text-zry-text">
                           {formatCurrency(ref.dealValue)}

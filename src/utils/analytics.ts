@@ -184,6 +184,34 @@ export function filterReferrals(
   });
 }
 
+// Separa a comissão de uma indicação entre o que já saiu do caixa ('paga') e o
+// que ainda é devido ('a_liberar' | 'solicitada' | 'agendada'). 'cancelada' e
+// 'pendente_fechamento' não entram em nenhum dos dois: a primeira já não é
+// devida, a segunda ainda não existe como obrigação.
+function splitCommission(ref: Referral): { paid: number; owed: number; owedCount: number } {
+  const installments = ref.commissionInstallments;
+  if (installments && installments.length > 0) {
+    let paid = 0;
+    let owed = 0;
+    let owedCount = 0;
+    installments.forEach(inst => {
+      const value = Number(inst.value) || 0;
+      if (inst.status === 'paga') {
+        paid += value;
+      } else if (inst.status === 'a_liberar' || inst.status === 'solicitada' || inst.status === 'agendada') {
+        owed += value;
+        owedCount++;
+      }
+    });
+    return { paid, owed, owedCount };
+  }
+
+  const value = Number(ref.commissionValue) || 0;
+  if (ref.commissionStatus === 'paga') return { paid: value, owed: 0, owedCount: 0 };
+  if (ref.commissionStatus === 'a_pagar') return { paid: 0, owed: value, owedCount: 1 };
+  return { paid: 0, owed: 0, owedCount: 0 };
+}
+
 // Compute comprehensive Channel KPIs
 export function calculateKPIs(referrals: Referral[], partners: Partner[]): ChannelKPIs {
   let totalReferrals = referrals.length;
@@ -199,12 +227,24 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
   let incompleteDataCount = 0;
   let churnedCount = 0;
   let churnedVolume = 0;
+  // Base viva: é ela que sustenta a rentabilidade do canal hoje. O custo de
+  // comissão dela é tudo que já foi pago + o que ainda é devido.
+  let activeWonDeals = 0;
+  let activeCommissionCost = 0;
+  let activeCommissionPaid = 0;
+  let activeCommissionOwed = 0;
+  // Churn: a comissão já paga virou perda (não volta) e a que restava deixa de
+  // ser devida. Nenhuma das duas entra no custo da base viva — ficam à parte.
+  let churnedCommissionPaid = 0;
+  let churnedCommissionCancelled = 0;
 
   // Lead to close cycle day calculations
   const leadToCloseDaysList: number[] = [];
 
   referrals.forEach(ref => {
     if (ref.hasMissingData) incompleteDataCount++;
+
+    const commission = splitCommission(ref);
 
     if (ref.dealStatus === 'ganho') {
       totalWonDeals++;
@@ -235,6 +275,13 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
         if (ref.dealValue && !isNaN(ref.dealValue)) {
           churnedVolume += ref.dealValue;
         }
+        churnedCommissionPaid += commission.paid;
+        churnedCommissionCancelled += commission.owed;
+      } else {
+        activeWonDeals++;
+        activeCommissionCost += commission.paid + commission.owed;
+        activeCommissionPaid += commission.paid;
+        activeCommissionOwed += commission.owed;
       }
 
       // Calculate days between referral and close
@@ -249,39 +296,34 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     }
 
     // Commission aggregations (installment-aware if present)
-    if (ref.commissionInstallments && ref.commissionInstallments.length > 0) {
-      ref.commissionInstallments.forEach(inst => {
-        if (['a_liberar', 'solicitada', 'agendada'].includes(inst.status)) {
-          commissionsToPay += inst.value || 0;
-          pendingCommissionCount++;
-        } else if (inst.status === 'paga') {
-          commissionsPaid += inst.value || 0;
-        }
-      });
-    } else {
-      if (ref.commissionStatus === 'a_pagar') {
-        pendingCommissionCount++;
-        if (ref.commissionValue && !isNaN(ref.commissionValue)) {
-          commissionsToPay += ref.commissionValue;
-        }
-      } else if (ref.commissionStatus === 'paga') {
-        if (ref.commissionValue && !isNaN(ref.commissionValue)) {
-          commissionsPaid += ref.commissionValue;
-        }
-      }
-    }
+    commissionsPaid += commission.paid;
+    commissionsToPay += commission.owed;
+    pendingCommissionCount += commission.owedCount;
   });
 
   const conversionRate = totalReferrals > 0 ? (totalWonDeals / totalReferrals) * 100 : 0;
   const avgDiscountPercent = grossWonVolume > 0 ? (totalDiscountVolume / grossWonVolume) * 100 : 0;
 
-  // Performance Consolidada: Ticket Médio de Vendas vs Custo Médio de Comissão
-  const avgTicket = totalWonDeals > 0 ? totalWonVolume / totalWonDeals : 0;
-  const avgCommissionCost = totalWonDeals > 0 ? totalCommissionsWon / totalWonDeals : 0;
-  const netChannelMargin = avgTicket - avgCommissionCost;
-  const commissionSharePercent = avgTicket > 0 ? (avgCommissionCost / avgTicket) * 100 : 0;
-  const revenueMultiplier = avgCommissionCost > 0 ? avgTicket / avgCommissionCost : 0;
-  
+  // Churn: totalWonVolume/totalWonDeals continuam históricos; activeWonVolume
+  // é o que efetivamente ainda gera MRR hoje.
+  const activeWonVolume = totalWonVolume - churnedVolume;
+  const churnRate = totalWonDeals > 0 ? (churnedCount / totalWonDeals) * 100 : 0;
+
+  // Performance Consolidada: receita é MRR (mensal, recorrente), comissão é um
+  // custo único de aquisição (a soma das parcelas). Comparar os dois direto é
+  // comparar mês contra vitalício — por isso a receita é anualizada em 12 meses
+  // antes de virar margem/ROI, e o payback aparece em meses (sem premissa).
+  // Base = contratos vivos: churn tira a receita, a comissão que restava deixa
+  // de ser devida e a que já foi paga vira perda declarada à parte.
+  const avgTicket = activeWonDeals > 0 ? activeWonVolume / activeWonDeals : 0;
+  const avgCommissionCost = activeWonDeals > 0 ? activeCommissionCost / activeWonDeals : 0;
+  const paybackMonths = avgTicket > 0 && avgCommissionCost > 0 ? avgCommissionCost / avgTicket : null;
+  const revenue12mPerDeal = avgTicket * 12;
+  const netChannelMargin = revenue12mPerDeal - avgCommissionCost;
+  const commissionSharePercent = revenue12mPerDeal > 0 ? (avgCommissionCost / revenue12mPerDeal) * 100 : 0;
+  const revenueMultiplier = avgCommissionCost > 0 ? revenue12mPerDeal / avgCommissionCost : 0;
+  const netVolume12m = activeWonVolume * 12 - activeCommissionCost;
+
   // Calculate avg days referral to close
   const avgDaysReferralToClose = leadToCloseDaysList.length > 0
     ? Math.round(leadToCloseDaysList.reduce((acc, curr) => acc + curr, 0) / leadToCloseDaysList.length)
@@ -332,11 +374,6 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     ? (partnersWithReferrals.size / partners.length) * 100
     : 0;
 
-  // Churn: totalWonVolume/totalWonDeals continuam históricos; activeWonVolume
-  // é o que efetivamente ainda gera MRR hoje.
-  const activeWonVolume = totalWonVolume - churnedVolume;
-  const churnRate = totalWonDeals > 0 ? (churnedCount / totalWonDeals) * 100 : 0;
-
   return {
     totalReferrals,
     totalWonDeals,
@@ -351,9 +388,18 @@ export function calculateKPIs(referrals: Referral[], partners: Partner[]): Chann
     totalCommissionsWon,
     avgTicket,
     avgCommissionCost,
+    paybackMonths,
+    revenue12mPerDeal,
     netChannelMargin,
     commissionSharePercent,
     revenueMultiplier,
+    netVolume12m,
+    activeWonDeals,
+    activeCommissionCost,
+    activeCommissionPaid,
+    activeCommissionOwed,
+    churnedCommissionPaid,
+    churnedCommissionCancelled,
     pendingCommissionCount,
     avgDaysPartnerToFirstReferral,
     avgDaysReferralToClose,
