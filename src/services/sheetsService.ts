@@ -1,6 +1,8 @@
 import { getAccessToken } from './firebaseAuth';
 import { normalizeDocument } from '../utils/analytics';
 import type { Referral, Partner, DealStatus, CommissionStatus } from '../types';
+import { loadStoredPricingPlans, type PricingPlan } from '../data/plansData';
+import { calculateFirstInvoiceDueDate } from '../utils/commissionLogic';
 
 export interface SheetImportResult {
   partners: Partner[];
@@ -312,6 +314,57 @@ export function parseBooleanFlag(val: string | undefined | null): boolean | unde
   return undefined;
 }
 
+// Faixa de colaboradores ("101 a 200", "1000+") -> limite superior, para desempatar
+// planos homônimos quando o preço de tabela se repete em várias faixas.
+function rangeUpperBound(range: string | undefined | null): number | undefined {
+  if (!range) return undefined;
+  const nums = range.replace(/./g, '').match(/d+/g);
+  if (!nums || nums.length === 0) return undefined;
+  return parseInt(nums[nums.length - 1], 10);
+}
+
+/**
+ * Resolve o plano da planilha (nome comercial + valor de tabela) contra a tabela
+ * de preços vigente. Planos legados (Folha Completa, Gerencial, Corporativo) têm
+ * o mesmo nome em 21 faixas, então o preço é o desempate principal e a faixa de
+ * colaboradores é o desempate secundário.
+ */
+export function resolvePlanFromSheet(
+  plans: PricingPlan[],
+  planName: string | undefined,
+  grossValue: number | undefined,
+  collaboratorsRange?: string,
+  recurrence?: 'mensal' | 'anual'
+): PricingPlan | undefined {
+  if (!planName || !planName.trim()) return undefined;
+  const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const target = norm(planName);
+  const sameName = plans.filter(p => norm(p.commercialName) === target);
+  if (sameName.length === 0) return undefined;
+  if (sameName.length === 1) return sameName[0];
+
+  // Contrato anual: o valor da planilha é o do ano, então compara com o preço anual
+  // de tabela (12x), não com a mensalidade.
+  const priceOf = (p: PricingPlan) => (recurrence === 'anual' ? p.annualFullPrice : p.monthlyPrice);
+  const byPrice = grossValue !== undefined
+    ? sameName.filter(p => Math.abs(priceOf(p) - grossValue) < 0.01)
+    : [];
+  const pool = byPrice.length > 0 ? byPrice : sameName;
+  if (pool.length === 1) return pool[0];
+
+  const upper = rangeUpperBound(collaboratorsRange);
+  if (upper !== undefined) {
+    const scored = pool
+      .map(p => ({ p, bound: rangeUpperBound(p.collaboratorsRange) }))
+      .filter(x => x.bound !== undefined)
+      .sort((a, b) => Math.abs(a.bound! - upper) - Math.abs(b.bound! - upper));
+    if (scored.length > 0) return scored[0].p;
+  }
+
+  // Sem desempate confiável: só devolve o plano quando o preço bateu.
+  return byPrice.length > 0 ? byPrice[0] : undefined;
+}
+
 // Convert parsed matrix from spreadsheet into structured Partners and Referrals
 export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   if (rows.length < 2) {
@@ -357,6 +410,21 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
   const commPaidDateIdx = headers.findIndex(h => h.includes('pago em') || h.includes('data pag') || h.includes('liquid'));
   const notesIdx = headers.findIndex(h => h.includes('obs') || h.includes('nota') || h.includes('coment'));
 
+  // Plano contratado e financeiro do fechamento. Sem estas colunas o import continua
+  // funcionando como antes (só valor negociado solto), mas a indicação entra sem
+  // planId/MRR e some das análises de MRR e safra.
+  const tierIdx = headers.findIndex(h => h.includes('tier') || h.includes('nivel'));
+  const planIdx = headers.findIndex(h => h.includes('plano') && !h.includes('valor'));
+  const recurrenceIdx = headers.findIndex(h => h.includes('recorren') || h.includes('periodicidade'));
+  const installmentsIdx = headers.findIndex(h => h.includes('parcelamento') || h.includes('parcelas'));
+  const discountIdx = headers.findIndex(h => h.includes('desconto'));
+  const grossIdx = headers.findIndex(h => (h.includes('bruto') || h.includes('tabela') || h.includes('cheio')) && !h.includes('comis'));
+  const rangeIdx = headers.findIndex(h => h.includes('faixa') || h.includes('colaborador') || h.includes('funcionario'));
+  const churnIdx = headers.findIndex(h => h.includes('cancelamento') || h.includes('churn'));
+  const churnReasonIdx = headers.findIndex(h => h.includes('motivo'));
+
+  const pricingPlans = loadStoredPricingPlans();
+
   const partnersMap = new Map<string, Partner>();
   const referrals: Referral[] = [];
   let rowsWithMissingData = 0;
@@ -394,6 +462,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
     const partnerCity = partnerCityIdx >= 0 && row[partnerCityIdx]?.trim() ? row[partnerCityIdx].trim() : undefined;
     const partnerState = partnerStateIdx >= 0 && row[partnerStateIdx]?.trim() ? row[partnerStateIdx].trim().toUpperCase() : undefined;
     const hasSignedContract = contractIdx >= 0 ? parseBooleanFlag(row[contractIdx]) : undefined;
+    const partnerTier = tierIdx >= 0 && row[tierIdx]?.trim() ? row[tierIdx].trim() : undefined;
 
     // Register partner if not existing
     const partnerKey = (partnerName || 'Parceiro Não Identificado').toLowerCase();
@@ -402,6 +471,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
         id: 'p-' + Math.random().toString(36).substring(2, 9),
         name: partnerName || 'Parceiro Não Identificado',
         idConexa: idConexa,
+        tier: partnerTier,
         document: partnerDocument,
         profile: partnerProfile,
         responsiblePerson: responsiblePerson,
@@ -426,6 +496,7 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
       if (responsiblePerson && !p.responsiblePerson) p.responsiblePerson = responsiblePerson;
       if (accountOwner && !p.accountOwner) p.accountOwner = accountOwner;
       if (idConexa && !p.idConexa) p.idConexa = idConexa;
+      if (partnerTier && !p.tier) p.tier = partnerTier;
       if (partnerDocument && !p.document) p.document = partnerDocument;
       if (partnerEmail && !p.email) p.email = partnerEmail;
       if (partnerPhone && !p.phone) p.phone = partnerPhone;
@@ -450,10 +521,79 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
       const commissionPercent = commPercentIdx >= 0 && row[commPercentIdx]?.trim() ? parseCurrency(row[commPercentIdx]) : undefined;
       let commissionValue = commValueIdx >= 0 && row[commValueIdx]?.trim() ? parseCurrency(row[commValueIdx]) : undefined;
 
-      // Calculate commission if percentage & dealValue exist and commissionValue wasn't provided in formula
-      if (dealValue && commissionPercent && commissionValue === undefined) {
-        commissionValue = (dealValue * commissionPercent) / 100;
+      // --- Plano contratado e financeiro do fechamento ---------------------
+      // A planilha do CRM traz o preço de tabela na coluna de valor bruto e o
+      // desconto negociado em %; o líquido é derivado igual à tela de indicação
+      // (ver applyPlanDefaults em ReferralModal), pra não divergir do manual.
+      const planRecurrence: 'mensal' | 'anual' | undefined =
+        recurrenceIdx >= 0 && row[recurrenceIdx]?.trim()
+          ? (row[recurrenceIdx].trim().toLowerCase().startsWith('anu') ? 'anual' : 'mensal')
+          : undefined;
+      const rawInstallments = installmentsIdx >= 0 && row[installmentsIdx]?.trim() ? row[installmentsIdx].replace(/\D/g, '') : '';
+      const planInstallments: '1x' | '2x' | '3x' | undefined =
+        rawInstallments === '2' ? '2x' : rawInstallments === '3' ? '3x' : rawInstallments === '1' ? '1x' : undefined;
+      const collaboratorsRange = rangeIdx >= 0 && row[rangeIdx]?.trim() ? row[rangeIdx].trim() : undefined;
+      const sheetGross = grossIdx >= 0 && row[grossIdx]?.trim() ? parseCurrency(row[grossIdx]) : undefined;
+      const planName = planIdx >= 0 && row[planIdx]?.trim() ? row[planIdx].trim() : undefined;
+      // Num contrato anual a coluna de valor traz o total do ANO, não a mensalidade —
+      // tanto para achar o plano na tabela quanto para derivar o MRR.
+      const isAnnual = planRecurrence === 'anual';
+      const plan = resolvePlanFromSheet(pricingPlans, planName, sheetGross, collaboratorsRange, planRecurrence);
+
+      // Desconto pode vir como fração (0,1) ou percentual (10 / "10%").
+      let discountPercent = discountIdx >= 0 && row[discountIdx]?.trim() ? parseCurrency(row[discountIdx].replace('%', '')) : undefined;
+      if (discountPercent !== undefined && discountPercent > 0 && discountPercent < 1) {
+        discountPercent = parseFloat((discountPercent * 100).toFixed(4));
       }
+
+      const annualGross = isAnnual ? (sheetGross ?? plan?.annualFullPrice) : undefined;
+      const mrrGross = isAnnual
+        ? (plan?.monthlyPrice ?? (annualGross !== undefined ? parseFloat((annualGross / 12).toFixed(2)) : undefined))
+        : (sheetGross ?? plan?.monthlyPrice);
+
+      let discountValue: number | undefined;
+      let mrrNet: number | undefined;
+      let grossDealValue: number | undefined;
+      let netDealValue: number | undefined;
+
+      const pct = discountPercent ?? 0;
+      if (isAnnual && annualGross !== undefined) {
+        discountValue = parseFloat(((annualGross * pct) / 100).toFixed(2));
+        const annualNet = parseFloat((annualGross - discountValue).toFixed(2));
+        grossDealValue = annualGross;
+        netDealValue = annualNet;
+        mrrNet = parseFloat((annualNet / 12).toFixed(2));
+      } else if (!isAnnual && mrrGross !== undefined) {
+        discountValue = parseFloat(((mrrGross * pct) / 100).toFixed(2));
+        mrrNet = parseFloat((mrrGross - discountValue).toFixed(2));
+        grossDealValue = mrrGross;
+        netDealValue = mrrNet;
+      }
+
+      // O valor negociado explícito da planilha manda; senão usa o líquido derivado do plano.
+      const finalDealValue = dealValue ?? netDealValue;
+
+      // Comissão fixa da tabela de preços quando a planilha não trouxe o valor.
+      if (commissionValue === undefined && plan) {
+        commissionValue = plan.commissionAmount;
+      }
+
+      // Calculate commission if percentage & dealValue exist and commissionValue wasn't provided in formula
+      if (finalDealValue && commissionPercent && commissionValue === undefined) {
+        commissionValue = (finalDealValue * commissionPercent) / 100;
+      }
+
+      // Churn pós-fechamento: o negócio continua 'ganho' (não reescrevemos o histórico),
+      // só marca a data em que o cliente cancelou.
+      const churnedAt = churnIdx >= 0 && row[churnIdx]?.trim() ? parseDateString(row[churnIdx]) : undefined;
+      const churnReason = churnReasonIdx >= 0 && row[churnReasonIdx]?.trim() ? row[churnReasonIdx].trim() : undefined;
+
+      // 1ª fatura: quando o dia de vencimento é anterior ao dia do fechamento, ela
+      // cai no mês seguinte — e as parcelas da comissão acompanham essa data, não a
+      // data de fechamento (mesma regra da tela de indicação).
+      const firstInvoiceDueDate = closeDate && invoiceDueDay
+        ? calculateFirstInvoiceDueDate(closeDate, invoiceDueDay)
+        : undefined;
 
       const commissionStatus = parseCommissionStatus(commStatusIdx >= 0 ? row[commStatusIdx] : undefined, dealStatus);
       const commissionPaidDate = commPaidDateIdx >= 0 && row[commPaidDateIdx]?.trim() ? parseDateString(row[commPaidDateIdx]) : undefined;
@@ -469,9 +609,20 @@ export function parseSpreadsheetRows(rows: string[][]): SheetImportResult {
         responsiblePerson: responsiblePerson,
         referralDate,
         dealStatus,
-        dealValue,
+        planId: plan?.id,
+        planRecurrence,
+        planInstallments: planRecurrence === 'anual' ? (planInstallments || '1x') : undefined,
+        mrrGross,
+        discountPercent,
+        discountValue,
+        mrrNet,
+        dealValue: finalDealValue,
+        grossDealValue,
         closeDate,
         invoiceDueDay,
+        firstInvoiceDueDate,
+        churnedAt,
+        churnReason,
         commissionPercent,
         commissionValue,
         commissionStatus,
