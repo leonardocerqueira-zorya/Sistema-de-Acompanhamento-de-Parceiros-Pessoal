@@ -108,7 +108,7 @@ export default function Dashboard({
   const periodReferrals =
     filter.period.preset === 'all'
       ? referrals
-      : filterReferrals(referrals, { ...filter, partnerId: 'all', dealStatus: 'all', commissionStatus: 'all', onlyMissingData: false, searchQuery: '' });
+      : filterReferrals(referrals, { ...filter, partnerId: 'all', dealStatus: 'all', commissionStatus: 'all', onlyMissingData: false, searchQuery: '', partnerVintage: 'all', referralVintage: 'all' });
 
   const kpis = calculateKPIs(periodReferrals, partners);
 

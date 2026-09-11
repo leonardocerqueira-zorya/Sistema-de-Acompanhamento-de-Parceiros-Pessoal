@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Referral, Partner, FilterState, DealStatus, CommissionStatus } from '../types';
 import { filterReferrals, formatCurrency, formatDateBR } from '../utils/analytics';
+import { monthKeyOf, monthLabelPt } from '../utils/dateLabels';
 import {
   Search,
   AlertTriangle,
@@ -40,9 +41,26 @@ export default function ReferralsTable({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showOnlyToComplete, setShowOnlyToComplete] = useState(false);
 
-  const baseList = filterReferrals(referrals, filter);
+  const baseList = filterReferrals(referrals, filter, partners);
   const filteredList = showOnlyToComplete ? baseList.filter(r => r.isPlaceholder) : baseList;
   const placeholderCount = referrals.filter(r => r.isPlaceholder).length;
+
+  // Safras que existem nos dados carregados, da mais nova para a mais antiga.
+  // A opção "sem data" só aparece quando há registro sem data — é um convite a
+  // completar o cadastro, não uma opção fixa do seletor.
+  const buildVintageOptions = (keys: (string | null)[]) => {
+    const months = new Set<string>();
+    let hasNone = false;
+    keys.forEach(k => { if (k) months.add(k); else hasNone = true; });
+    return { months: Array.from(months).sort((a, b) => b.localeCompare(a)), hasNone };
+  };
+
+  const partnerVintages = buildVintageOptions(partners.map(p => monthKeyOf(p.joinedDate)));
+  const referralVintages = buildVintageOptions(referrals.map(r => monthKeyOf(r.referralDate || r.closeDate)));
+
+  const partnerVintage = filter.partnerVintage || 'all';
+  const referralVintage = filter.referralVintage || 'all';
+  const vintageLabel = (v: string) => (v === 'none' ? 'sem data' : monthLabelPt(v));
 
   const badgeBase = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold';
 
@@ -207,6 +225,48 @@ export default function ReferralsTable({
               </select>
             </div>
 
+            {/* Safra do parceiro — mês de ENTRADA de quem indicou (joinedDate) */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[12.5px] text-zry-text-2 font-semibold"
+                title="Mês de entrada do parceiro no programa. Mostra tudo o que a turma indicou, em qualquer data."
+              >
+                Safra do parceiro:
+              </span>
+              <select
+                value={partnerVintage}
+                onChange={(e) => onFilterChange({ ...filter, partnerVintage: e.target.value })}
+                className="bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
+              >
+                <option value="all">Todas as safras</option>
+                {partnerVintages.months.map(k => (
+                  <option key={k} value={k}>{monthLabelPt(k)}</option>
+                ))}
+                {partnerVintages.hasNone && <option value="none">Parceiro sem data de entrada</option>}
+              </select>
+            </div>
+
+            {/* Safra da indicação — mês em que a INDICAÇÃO foi feita (referralDate) */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[12.5px] text-zry-text-2 font-semibold"
+                title="Mês em que a indicação foi feita, de qualquer parceiro. Combina com a safra do parceiro."
+              >
+                Safra da indicação:
+              </span>
+              <select
+                value={referralVintage}
+                onChange={(e) => onFilterChange({ ...filter, referralVintage: e.target.value })}
+                className="bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
+              >
+                <option value="all">Todas as safras</option>
+                {referralVintages.months.map(k => (
+                  <option key={k} value={k}>{monthLabelPt(k)}</option>
+                ))}
+                {referralVintages.hasNone && <option value="none">Indicação sem data</option>}
+              </select>
+            </div>
+
             {/* Deal Status Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[12.5px] text-zry-text-2 font-semibold">Status Negócio:</span>
@@ -282,11 +342,23 @@ export default function ReferralsTable({
             <h3 className="text-[15px] font-bold text-zry-text tracking-tight">
               Registros de Indicações ({filteredList.length})
             </h3>
-            {filter.onlyMissingData && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-warning-bg text-zry-warning">
-                Filtro de auditoria ativo
-              </span>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {partnerVintage !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-lilas text-zry-roxo">
+                  Parceiros que entraram em {vintageLabel(partnerVintage)}
+                </span>
+              )}
+              {referralVintage !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-info-bg text-zry-info">
+                  Indicações feitas em {vintageLabel(referralVintage)}
+                </span>
+              )}
+              {filter.onlyMissingData && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-warning-bg text-zry-warning">
+                  Filtro de auditoria ativo
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">

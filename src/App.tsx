@@ -157,7 +157,9 @@ export default function App() {
     dealStatus: 'all',
     commissionStatus: 'all',
     onlyMissingData: false,
-    searchQuery: ''
+    searchQuery: '',
+    partnerVintage: 'all',
+    referralVintage: 'all'
   });
 
   // Modal states

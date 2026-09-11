@@ -1,5 +1,6 @@
 import type { Referral, Partner, FilterState, ChannelKPIs, PartnerRankingItem, RankingSortKey, PartnerTenureCohortMetric } from '../types';
 import { summarize, type StatMode } from './statistics';
+import { monthKeyOf } from './dateLabels';
 
 // Format currency into BRL (R$ 1.250,00)
 export function formatCurrency(val: number | undefined | null): string {
@@ -130,11 +131,20 @@ export function isDateInPeriod(dateStr: string | undefined, filter: FilterState[
   }
 }
 
-// Filter referrals based on period, partner, deal status, commission status, missing data and search
+// Filter referrals based on period, partner, safra, deal status, commission status, missing data and search
 export function filterReferrals(
   referrals: Referral[],
-  filter: FilterState
+  filter: FilterState,
+  partners?: Partner[]
 ): Referral[] {
+  // A safra do parceiro mora no joinedDate, que não está na indicação: resolve
+  // o mês de entrada de cada parceiro uma vez só, antes de varrer a lista.
+  const wantsPartnerVintage = !!filter.partnerVintage && filter.partnerVintage !== 'all';
+  const partnerVintageById = new Map<string, string>();
+  if (wantsPartnerVintage && partners) {
+    partners.forEach(p => partnerVintageById.set(p.id, monthKeyOf(p.joinedDate) || 'none'));
+  }
+
   return referrals.filter(ref => {
     // 1. Period filter (evaluated by referralDate; if missing referralDate and not 'all', exclude)
     if (filter.period.preset !== 'all') {
@@ -163,6 +173,23 @@ export function filterReferrals(
       const isChurned = !!ref.churnedAt;
       if (filter.churnFilter === 'active' && isChurned) return false;
       if (filter.churnFilter === 'churned' && !isChurned) return false;
+    }
+
+    // 4c. Safra do PARCEIRO: mês de entrada de quem indicou. Sem a lista de
+    // parceiros não dá para resolver a safra, então o filtro não é aplicado —
+    // melhor mostrar tudo do que esvaziar a tela sem explicação.
+    if (wantsPartnerVintage && partners) {
+      const key = (ref.partnerId && partnerVintageById.get(ref.partnerId)) || 'none';
+      if (key !== filter.partnerVintage) return false;
+    }
+
+    // 4d. Safra da INDICAÇÃO: mês em que ela foi feita. Mesma leitura do
+    // relatório de safras de indicações, inclusive a queda para closeDate
+    // quando não há referralDate. O corte do dia 15 é do relatório, não da
+    // filiação: a indicação pertence ao mês em que aconteceu.
+    if (filter.referralVintage && filter.referralVintage !== 'all') {
+      const key = monthKeyOf(ref.referralDate || ref.closeDate) || 'none';
+      if (key !== filter.referralVintage) return false;
     }
 
     // 5. Only missing data audit filter
