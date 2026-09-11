@@ -52,6 +52,26 @@ export default function SheetsView({
   // Paste raw data state
   const [pastedData, setPastedData] = useState('');
   const [showPasteModal, setShowPasteModal] = useState(false);
+  const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
+
+  // Carrega um .tsv/.csv salvo em disco na mesma área de colagem: é o mesmo
+  // conteúdo de um Ctrl+C da planilha, mas sem depender de abrir o arquivo no Excel.
+  const handlePickFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = String(e.target?.result || '').replace(/^\uFEFF/, '');
+      if (!text.trim()) {
+        setErrorMsg('O arquivo está vazio.');
+        return;
+      }
+      setPastedData(text);
+      setLoadedFileName(file.name);
+      setErrorMsg(null);
+    };
+    reader.onerror = () => setErrorMsg('Não consegui ler o arquivo.');
+    reader.readAsText(file, 'utf-8');
+  };
 
   const handleConnectSheet = async () => {
     if (!sheetInput.trim()) {
@@ -127,7 +147,9 @@ export default function SheetsView({
     if (!pastedData.trim()) return;
 
     try {
-      const lines = pastedData.trim().split('\n');
+      // Colagem vinda de arquivo salvo no Windows traz \r no fim da linha, que gruda
+      // na última coluna e quebra a leitura dela (data/valor viram texto inválido).
+      const lines = pastedData.trim().split('\n').map(line => line.replace(/\r$/, ''));
       const matrix: string[][] = lines.map(line => {
         // If tab-separated (standard Excel copy-paste)
         if (line.includes('\t')) {
@@ -149,6 +171,7 @@ export default function SheetsView({
       onImportData(parsed);
       setShowPasteModal(false);
       setPastedData('');
+      setLoadedFileName(null);
       setSuccessMsg(
         parsed.referrals.length > 0
           ? `Dados do Excel importados: ${parsed.referrals.length} indicações processadas com sucesso! ` +
@@ -421,8 +444,26 @@ export default function SheetsView({
 
             <div className="p-[22px] space-y-4">
               <p className="text-[12.5px] text-zry-text-2 leading-relaxed">
-                Copie a tabela no Excel (com colunas como Parceiro, Cliente, Data, Status, Valor, Fechamento, Comissão) e cole na área abaixo:
+                Copie a tabela no Excel (com colunas como Parceiro, Cliente, Data, Status, Valor, Fechamento, Comissão) e cole na área abaixo — ou escolha um arquivo .tsv/.csv:
               </p>
+
+              <label className="flex items-center gap-2.5 border border-dashed border-zry-border-strong rounded-zry-lg px-3.5 py-3 cursor-pointer hover:bg-zry-lilas-30 transition">
+                <Upload className="w-4 h-4 text-zry-roxo shrink-0" />
+                <span className="text-[12.5px] text-zry-text-2">
+                  {loadedFileName
+                    ? <><span className="font-semibold text-zry-text">{loadedFileName}</span> carregado — confira abaixo e importe</>
+                    : 'Selecionar arquivo .tsv, .csv ou .txt'}
+                </span>
+                <input
+                  type="file"
+                  accept=".tsv,.csv,.txt,text/plain,text/csv,text/tab-separated-values"
+                  className="hidden"
+                  onChange={e => {
+                    handlePickFile(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
 
               <textarea
                 rows={8}
