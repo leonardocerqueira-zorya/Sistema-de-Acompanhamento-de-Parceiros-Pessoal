@@ -177,9 +177,14 @@ export function filterReferrals(
 
     // 4c. Fechadas no mês: este recorte responde quantos negócios foram ganhos
     // e qual MRR entrou no período. Exige status ganho e data de fechamento no mês.
-    if (filter.closeMonth && filter.closeMonth !== 'all') {
+    const selectedCloseMonths = filter.closeMonths?.length
+      ? filter.closeMonths
+      : filter.closeMonth && filter.closeMonth !== 'all'
+        ? [filter.closeMonth]
+        : [];
+    if (selectedCloseMonths.length > 0) {
       const key = monthKeyOf(ref.closeDate) || 'none';
-      if (ref.dealStatus !== 'ganho' || key !== filter.closeMonth) return false;
+      if (ref.dealStatus !== 'ganho' || !selectedCloseMonths.includes(key)) return false;
     }
 
     // 4d. Safra do PARCEIRO: mês de entrada de quem indicou. Sem a lista de
@@ -194,9 +199,14 @@ export function filterReferrals(
     // relatório de safras de indicações, inclusive a queda para closeDate
     // quando não há referralDate. O corte do dia 15 é do relatório, não da
     // filiação: a indicação pertence ao mês em que aconteceu.
-    if (filter.referralVintage && filter.referralVintage !== 'all') {
+    const selectedReferralVintages = filter.referralVintages?.length
+      ? filter.referralVintages
+      : filter.referralVintage && filter.referralVintage !== 'all'
+        ? [filter.referralVintage]
+        : [];
+    if (selectedReferralVintages.length > 0) {
       const key = monthKeyOf(ref.referralDate || ref.closeDate) || 'none';
-      if (key !== filter.referralVintage) return false;
+      if (!selectedReferralVintages.includes(key)) return false;
     }
 
     // 5. Only missing data audit filter
