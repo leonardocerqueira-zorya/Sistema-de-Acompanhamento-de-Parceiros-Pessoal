@@ -17,6 +17,7 @@ import {
   setBlobBackupAllowed
 } from './services/storageService';
 import { syncWithCloud, flushToCloud } from './services/syncService';
+import { pendingWriteCount } from './services/repository';
 import {
   loadAccess,
   saveAccess,
@@ -85,6 +86,9 @@ export default function App() {
   );
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const lastSyncMsRef = useRef(0);
+  // Linhas que já estão salvas aqui mas ainda não subiram para o banco.
+  const [pendingWrites, setPendingWrites] = useState(0);
+  const syncNowRef = useRef<(() => Promise<void>) | null>(null);
 
   // Login real (Supabase Auth, magic link). Sem Supabase configurado, o app roda
   // no modo antigo (dropdown livre de acesso, sem login) — ver Navbar.tsx.
@@ -253,6 +257,7 @@ export default function App() {
 
       const outcome = await syncWithCloud();
       if (!active) return;
+      setPendingWrites(pendingWriteCount());
 
       if (outcome.status === 'failed') {
         setSyncStatus('error');
@@ -283,6 +288,14 @@ export default function App() {
     };
 
     runSync(true);
+    syncNowRef.current = () => runSync(false);
+
+    // A fila de escrita vive no armazenamento local e esvazia sozinha em segundo
+    // plano; a barra precisa acompanhar para ninguém fechar o navegador achando
+    // que tudo já subiu.
+    const pendingTimer = window.setInterval(() => {
+      if (active) setPendingWrites(pendingWriteCount());
+    }, 4000);
 
     // Traz o que o time salvou enquanto esta aba estava em segundo plano.
     const onFocus = () => {
@@ -301,6 +314,8 @@ export default function App() {
 
     return () => {
       active = false;
+      window.clearInterval(pendingTimer);
+      syncNowRef.current = null;
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onFocus);
       window.removeEventListener('pagehide', onHide);
@@ -802,6 +817,8 @@ export default function App() {
           onSearch={(query) => setFilter(prev => ({ ...prev, searchQuery: query }))}
           syncStatus={syncStatus}
           lastSyncAt={lastSyncAt}
+          pendingWrites={pendingWrites}
+          onSyncNow={() => { void syncNowRef.current?.(); }}
         />
 
       {/* Main Container */}

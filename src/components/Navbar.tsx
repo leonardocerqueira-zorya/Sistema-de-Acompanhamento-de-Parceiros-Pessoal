@@ -1,8 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
-import type { User } from 'firebase/auth';
-import { initAuth, googleSignIn, logout } from '../services/firebaseAuth';
+import { useState, type FormEvent } from 'react';
 import type { AccessState, UserRole, UserProfile } from '../types';
-import { Plus, Bell, LogOut, KeyRound, Search, ShieldCheck, Briefcase, CheckCircle, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Plus, Bell, LogOut, KeyRound, Search, ShieldCheck, Briefcase, Cloud, CloudOff, CloudUpload, RefreshCw } from 'lucide-react';
 
 export type AppTab =
   | 'dashboard'
@@ -33,6 +31,9 @@ interface NavbarProps {
   onSearch?: (query: string) => void;
   syncStatus?: 'off' | 'syncing' | 'ok' | 'error';
   lastSyncAt?: string | null;
+  /** Linhas salvas neste navegador que ainda não subiram para o banco. */
+  pendingWrites?: number;
+  onSyncNow?: () => void;
 }
 
 export default function Navbar({
@@ -48,38 +49,11 @@ export default function Navbar({
   onOpenSetPassword,
   onSearch,
   syncStatus = 'off',
-  lastSyncAt = null
+  lastSyncAt = null,
+  pendingWrites = 0,
+  onSyncNow
 }: NavbarProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
   const [searchDraft, setSearchDraft] = useState('');
-
-  useEffect(() => {
-    const unsubscribe = initAuth(
-      (currentUser) => setUser(currentUser),
-      () => setUser(null)
-    );
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
-  }, []);
-
-  const handleGoogleLogin = async () => {
-    setIsLoggingIn(true);
-    try {
-      const res = await googleSignIn();
-      if (res) setUser(res.user);
-    } catch (err) {
-      console.error('Falha no login Google:', err);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleGoogleLogout = async () => {
-    await logout();
-    setUser(null);
-  };
 
   // Busca global: joga o termo no filtro de indicações e leva pra essa aba.
   const handleSearchSubmit = (e: FormEvent) => {
@@ -188,81 +162,57 @@ export default function Navbar({
           </div>
         )}
 
-        {/* Conexão Google Sheets */}
-        {user ? (
-          <button
-            onClick={handleGoogleLogout}
-            title={`${user.email} — desconectar Google Sheets`}
-            className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-zry-positive bg-zry-positive-bg border border-zry-positive/20 rounded-full px-3 py-2 shrink-0 hover:opacity-80 transition"
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">Sheets conectado</span>
-          </button>
-        ) : (
-          <button
-            onClick={handleGoogleLogin}
-            disabled={isLoggingIn}
-            title="Conectar com Google Sheets"
-            className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-zry-text-2 bg-zry-surface border border-zry-border rounded-full px-3 py-2 shrink-0 hover:text-zry-roxo hover:border-zry-border-strong transition disabled:opacity-60"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 48 48">
-              <path
-                fill="#EA4335"
-                d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-              />
-              <path
-                fill="#4285F4"
-                d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-              />
-              <path
-                fill="#34A853"
-                d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-              />
-            </svg>
-            <span className="hidden xl:inline">{isLoggingIn ? 'Conectando...' : 'Conectar Sheets'}</span>
-          </button>
-        )}
+        {/* Estado da sincronização com o banco. Fila pendente vira aviso: "sincronizado"
+            com linhas presas neste navegador é a mensagem mais perigosa que a barra
+            poderia dar — a pessoa fecha o navegador achando que o time já vê tudo. */}
+        {syncStatus !== 'off' && (() => {
+          const pendente = pendingWrites > 0 && syncStatus !== 'syncing';
+          const rotulo = syncStatus === 'syncing'
+            ? 'Sincronizando'
+            : pendente
+              ? `${pendingWrites} a enviar`
+              : syncStatus === 'error'
+                ? 'Sem sincronizar'
+                : lastSyncAt
+                  ? new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                  : 'Sincronizado';
+          const descricao = syncStatus === 'syncing'
+            ? 'Sincronizando com o banco...'
+            : pendente
+              ? `${pendingWrites} alteração(ões) ainda não subiram para o banco — elas só existem neste navegador. Clique para enviar agora.`
+              : syncStatus === 'error'
+                ? 'Falha ao sincronizar. Seus dados seguem salvos neste navegador e sobem na próxima tentativa. Clique para tentar de novo.'
+                : lastSyncAt
+                  ? `Tudo salvo no banco. Última sincronização às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Clique para sincronizar agora.`
+                  : 'Tudo salvo no banco. Clique para sincronizar agora.';
 
-        {/* Estado da sincronização com a cópia compartilhada do time */}
-        {syncStatus !== 'off' && (
-          <div
-            title={
-              syncStatus === 'syncing'
-                ? 'Sincronizando com a nuvem...'
-                : syncStatus === 'error'
-                  ? 'Falha ao sincronizar. Seus dados seguem salvos neste navegador e sobem na próxima tentativa.'
-                  : lastSyncAt
-                    ? `Sincronizado com a nuvem às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                    : 'Sincronizado com a nuvem'
-            }
-            className={`hidden sm:flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-3 py-2 shrink-0 border ${
-              syncStatus === 'error'
-                ? 'text-red-700 bg-red-50 border-red-200'
-                : 'text-zry-text-2 bg-zry-surface border-zry-border'
-            }`}
-          >
-            {syncStatus === 'syncing' ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : syncStatus === 'error' ? (
-              <CloudOff className="w-3.5 h-3.5" />
-            ) : (
-              <Cloud className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden xl:inline">
-              {syncStatus === 'syncing'
-                ? 'Sincronizando'
-                : syncStatus === 'error'
-                  ? 'Sem sincronizar'
-                  : lastSyncAt
-                    ? new Date(lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                    : 'Sincronizado'}
-            </span>
-          </div>
-        )}
+          return (
+            <button
+              type="button"
+              onClick={onSyncNow}
+              disabled={syncStatus === 'syncing' || !onSyncNow}
+              title={descricao}
+              className={`hidden sm:flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-3 py-2 shrink-0 border transition disabled:cursor-default ${
+                syncStatus === 'error'
+                  ? 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'
+                  : pendente
+                    ? 'text-zry-warning bg-zry-warning-bg border-zry-warning/20 hover:opacity-80'
+                    : 'text-zry-text-2 bg-zry-surface border-zry-border hover:border-zry-border-strong'
+              }`}
+            >
+              {syncStatus === 'syncing' ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : syncStatus === 'error' ? (
+                <CloudOff className="w-3.5 h-3.5" />
+              ) : pendente ? (
+                <CloudUpload className="w-3.5 h-3.5" />
+              ) : (
+                <Cloud className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden xl:inline">{rotulo}</span>
+            </button>
+          );
+        })()}
 
         {/* Notificações */}
         <button

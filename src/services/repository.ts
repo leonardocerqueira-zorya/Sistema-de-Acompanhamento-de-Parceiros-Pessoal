@@ -253,6 +253,11 @@ export function pendingIdsFor(table: TableName): Set<string> {
   return ids;
 }
 
+/** Quantas linhas ainda não subiram para o banco (fila de escrita deste navegador). */
+export function pendingWriteCount(): number {
+  return Object.keys(loadOutbox()).length;
+}
+
 export function hasPendingWrites(): boolean {
   return Object.keys(loadOutbox()).length > 0;
 }
