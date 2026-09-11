@@ -45,6 +45,10 @@ export default function ReferralsTable({
   const filteredList = showOnlyToComplete ? baseList.filter(r => r.isPlaceholder) : baseList;
   const placeholderCount = referrals.filter(r => r.isPlaceholder).length;
   const filteredDealValue = filteredList.reduce((sum, referral) => sum + (referral.dealValue || 0), 0);
+  const filteredMrr = filteredList.reduce(
+    (sum, referral) => sum + (referral.mrrNet ?? referral.dealValue ?? 0),
+    0
+  );
   const filteredCommissionValue = filteredList.reduce((sum, referral) => sum + (referral.commissionValue || 0), 0);
 
   // Safras que existem nos dados carregados, da mais nova para a mais antiga.
@@ -59,9 +63,13 @@ export default function ReferralsTable({
 
   const partnerVintages = buildVintageOptions(partners.map(p => monthKeyOf(p.joinedDate)));
   const referralVintages = buildVintageOptions(referrals.map(r => monthKeyOf(r.referralDate || r.closeDate)));
+  const closeMonths = buildVintageOptions(
+    referrals.filter(r => r.dealStatus === 'ganho').map(r => monthKeyOf(r.closeDate))
+  );
 
   const partnerVintage = filter.partnerVintage || 'all';
   const referralVintage = filter.referralVintage || 'all';
+  const closeMonth = filter.closeMonth || 'all';
   const vintageLabel = (v: string) => (v === 'none' ? 'sem data' : monthLabelPt(v));
 
   const badgeBase = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold';
@@ -269,6 +277,30 @@ export default function ReferralsTable({
               </select>
             </div>
 
+            {/* Mês de fechamento — negócios ganhos pela data de fechamento */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[12.5px] text-zry-text-2 font-semibold"
+                title="Mostra somente negócios ganhos cuja data de fechamento está no mês selecionado."
+              >
+                Fechadas no mês:
+              </span>
+              <select
+                value={closeMonth}
+                onChange={(e) => onFilterChange({
+                  ...filter,
+                  closeMonth: e.target.value,
+                  dealStatus: e.target.value === 'all' ? filter.dealStatus : 'ganho'
+                })}
+                className="bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
+              >
+                <option value="all">Todos os meses</option>
+                {closeMonths.months.map(k => (
+                  <option key={k} value={k}>{monthLabelPt(k)}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Deal Status Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[12.5px] text-zry-text-2 font-semibold">Status Negócio:</span>
@@ -350,6 +382,12 @@ export default function ReferralsTable({
               </span>
               <span
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-zry-info-bg text-zry-info"
+                title="Soma do MRR líquido das indicações exibidas; em registros antigos sem MRR, usa o valor do negócio."
+              >
+                MRR: <strong>{formatCurrency(filteredMrr)}</strong>
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-zry-lilas-30 text-zry-text"
                 title="Soma do Valor do Negócio das indicações exibidas pelos filtros atuais"
               >
                 Valor total: <strong>{formatCurrency(filteredDealValue)}</strong>
