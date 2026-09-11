@@ -210,10 +210,12 @@ export interface FilterState {
   churnFilter?: 'all' | 'active' | 'churned'; // Só se aplica a indicações 'ganho'
   // Safras. São dois recortes diferentes e combináveis:
   // partnerVintage = mês de ENTRADA do parceiro (joinedDate);
-  // referralVintage = mês em que a INDICAÇÃO foi feita (referralDate).
+  // referralVintage = mês em que a INDICAÇÃO foi feita (referralDate);
+  // closeMonth = mês em que o negócio GANHO foi fechado (closeDate).
   // 'all' ou ausente = sem filtro; 'none' = sem data para posicionar na safra.
   partnerVintage?: string;
   referralVintage?: string;
+  closeMonth?: string;
 }
 
 export type RankingSortKey = 'wonDeals' | 'referrals' | 'volume' | 'conversion' | 'speed';
