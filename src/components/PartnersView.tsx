@@ -26,6 +26,9 @@ interface PartnersViewProps {
   onEditPartner: (partner: Partner) => void;
   onDeletePartner: (partnerId: string) => void;
   onSelectPartnerForReferrals: (partnerId: string) => void;
+  /** Termo vindo da busca global da barra superior. */
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
 }
 
 function getInitials(name: string) {
@@ -41,9 +44,14 @@ export default function PartnersView({
   onOpenNewPartner,
   onEditPartner,
   onDeletePartner,
-  onSelectPartnerForReferrals
+  onSelectPartnerForReferrals,
+  searchQuery = '',
+  onSearchQueryChange
 }: PartnersViewProps) {
-  const [search, setSearch] = useState('');
+  // A busca é a mesma da barra superior: digitar aqui também atualiza lá, para o
+  // termo continuar valendo ao trocar de aba.
+  const search = searchQuery;
+  const setSearch = (valor: string) => onSearchQueryChange?.(valor);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const rankings = calculatePartnerRankings(referrals, partners);
@@ -52,9 +60,12 @@ export default function PartnersView({
   const filteredPartners = partners.filter(p => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
+    const digitos = q.replace(/\D/g, '');
     return p.name.toLowerCase().includes(q) ||
       (p.company && p.company.toLowerCase().includes(q)) ||
-      (p.email && p.email.toLowerCase().includes(q));
+      (p.email && p.email.toLowerCase().includes(q)) ||
+      (digitos.length >= 3 && p.document?.includes(digitos)) ||
+      (p.responsiblePerson && p.responsiblePerson.toLowerCase().includes(q));
   });
 
   return (

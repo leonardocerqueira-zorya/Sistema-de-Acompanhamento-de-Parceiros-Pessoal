@@ -412,6 +412,31 @@ export default function App() {
     }
   };
 
+  // Unifica duas carteiras: reescreve o Executivo Responsável de todos os parceiros
+  // da carteira de origem. A lista de executivos é derivada de Partner.accountOwner,
+  // então o mesmo nome escrito de dois jeitos vira duas carteiras — é o que acontece
+  // quando uma importação traz só o primeiro nome.
+  const handleMergeExecutive = (de: string, para: string) => {
+    if (!checkIsMaster(effectiveAccess)) {
+      showToast('Apenas o acesso Master pode unificar carteiras.');
+      return;
+    }
+    const origem = de.trim().toLowerCase();
+    if (!origem || !para.trim() || origem === para.trim().toLowerCase()) return;
+
+    let movidos = 0;
+    const updated = partners.map(p => {
+      if ((p.accountOwner || '').trim().toLowerCase() !== origem) return p;
+      movidos++;
+      return { ...p, accountOwner: para };
+    });
+    if (movidos === 0) return;
+
+    setPartners(updated);
+    saveStoredPartners(updated);
+    showToast(`${movidos} parceiro(s) movidos de "${de}" para "${para}".`);
+  };
+
   const handleDeletePartner = (id: string) => {
     const updated = partners.filter(p => p.id !== id);
     setPartners(updated);
@@ -560,7 +585,23 @@ export default function App() {
     // Map from the import-batch partner id -> the reconciled (existing or new) partner id.
     const partnerIdRemap = new Map<string, string>();
 
+    // Planilha do CRM traz o executivo pelo primeiro nome ("Igor"), enquanto a base
+    // usa o nome completo ("Igor Brandão") — e a lista de carteiras sai de
+    // Partner.accountOwner, então isso criaria uma carteira duplicada para a mesma
+    // pessoa. Quando o nome importado é o primeiro nome de um único executivo já
+    // existente, adota o nome completo; com mais de um candidato não há como
+    // escolher, e o nome entra como veio para o Master resolver em Carteiras.
+    const executivosAtuais = listExecutives(partners);
+    const normalizaExecutivo = (nome: string | undefined) => {
+      const alvo = (nome || '').trim().toLowerCase();
+      if (!alvo) return nome;
+      if (executivosAtuais.some(e => e.toLowerCase() === alvo)) return nome;
+      const candidatos = executivosAtuais.filter(e => e.toLowerCase().split(/\s+/)[0] === alvo);
+      return candidatos.length === 1 ? candidatos[0] : nome;
+    };
+
     result.partners.forEach(imported => {
+      imported.accountOwner = normalizaExecutivo(imported.accountOwner);
       const existing = findExistingPartner(imported);
       if (existing) {
         // Backfill any fields the existing partner was missing, without overwriting good data.
@@ -637,6 +678,31 @@ export default function App() {
       showToast(`Planilha processada: ${newPartnersCount} parceiro(s) novo(s) importado(s) (${result.partners.length} linha(s) reconciliada(s)).`);
       setActiveTab('partners');
     }
+  };
+
+  // Busca global: o termo vale nas duas listas. A aba de destino é a que tem
+  // resultado — procurar um parceiro e cair numa lista vazia de indicações era
+  // o mesmo que a busca não funcionar.
+  const handleGlobalSearch = (query: string) => {
+    setFilter(prev => ({ ...prev, searchQuery: query }));
+
+    const q = query.trim().toLowerCase();
+    if (!q) return;
+
+    const achaNaIndicacao = visibleReferrals.some(r =>
+      r.clientName.toLowerCase().includes(q) ||
+      r.partnerName.toLowerCase().includes(q) ||
+      (r.clientCompany || '').toLowerCase().includes(q) ||
+      (r.notes || '').toLowerCase().includes(q)
+    );
+    const achaNoParceiro = visiblePartners.some(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.company || '').toLowerCase().includes(q) ||
+      (p.email || '').toLowerCase().includes(q) ||
+      (p.responsiblePerson || '').toLowerCase().includes(q)
+    );
+
+    setActiveTab(!achaNaIndicacao && achaNoParceiro ? 'partners' : 'referrals');
   };
 
   const handleChangeAccess = (next: AccessState) => {
@@ -795,8 +861,6 @@ export default function App() {
 
         {/* Barra superior */}
         <Navbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           onOpenNewReferral={() => {
             setEditingReferral(null);
             setIsReferralModalOpen(true);
@@ -814,7 +878,7 @@ export default function App() {
           authProfile={authProfile}
           onLogout={isSupabaseConfigured ? handleLogout : undefined}
           onOpenSetPassword={isSupabaseConfigured ? () => setIsSetPasswordOpen(true) : undefined}
-          onSearch={(query) => setFilter(prev => ({ ...prev, searchQuery: query }))}
+          onSearch={handleGlobalSearch}
           syncStatus={syncStatus}
           lastSyncAt={lastSyncAt}
           pendingWrites={pendingWrites}
@@ -891,6 +955,8 @@ export default function App() {
           <PartnersView
             partners={visiblePartners}
             referrals={visibleReferrals}
+            searchQuery={filter.searchQuery}
+            onSearchQueryChange={(query) => setFilter(prev => ({ ...prev, searchQuery: query }))}
             onOpenNewPartner={() => {
               setEditingPartner(null);
               setIsPartnerModalOpen(true);
@@ -913,6 +979,8 @@ export default function App() {
               setEditingPartner(p);
               setIsPartnerModalOpen(true);
             }}
+            onMergeExecutive={handleMergeExecutive}
+            isMaster={isMaster}
           />
         )}
 

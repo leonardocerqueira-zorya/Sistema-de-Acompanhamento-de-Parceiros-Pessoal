@@ -10,7 +10,8 @@ import {
   UserCheck,
   AlertTriangle,
   Filter,
-  Clock
+  Clock,
+  Merge
 } from 'lucide-react';
 
 interface CarteirasViewProps {
@@ -18,6 +19,9 @@ interface CarteirasViewProps {
   referrals: Referral[];
   onSelectPartnerForReferrals: (partnerId: string) => void;
   onEditPartner: (partner: Partner) => void;
+  /** Reescreve o Executivo Responsável de todos os parceiros de uma carteira. */
+  onMergeExecutive?: (de: string, para: string) => void;
+  isMaster?: boolean;
 }
 
 interface ExecutiveGroup {
@@ -37,8 +41,15 @@ export default function CarteirasView({
   partners,
   referrals,
   onSelectPartnerForReferrals,
-  onEditPartner
+  onEditPartner,
+  onMergeExecutive,
+  isMaster = false
 }: CarteirasViewProps) {
+  // Carteira duplicada acontece quando o mesmo executivo entra escrito de dois
+  // jeitos ("Igor" e "Igor Brandão"), normalmente vindo de importação. Unificar
+  // reescreve o Executivo Responsável de todos os parceiros da carteira de origem.
+  const [unificando, setUnificando] = useState<string | null>(null);
+  const [destino, setDestino] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   // Executivos convidados em Usuários contam como executivo mesmo antes de fazer
@@ -223,6 +234,57 @@ export default function CarteirasView({
                     {isOpen ? <ChevronUp className="w-4 h-4 text-zry-text-2" /> : <ChevronDown className="w-4 h-4 text-zry-text-2" />}
                   </div>
                 </button>
+
+                {isMaster && onMergeExecutive && !g.isUnassigned && g.partners.length > 0 && (
+                  <div className="px-[22px] pb-3 -mt-1">
+                    {unificando === g.executive ? (
+                      <div className="flex items-center gap-2 flex-wrap bg-zry-lilas-30 rounded-zry-lg px-3.5 py-3">
+                        <span className="text-[12.5px] text-zry-text-2">
+                          Mover os {g.partners.length} parceiro(s) de <strong className="text-zry-text">{g.executive}</strong> para
+                        </span>
+                        <select
+                          value={destino}
+                          onChange={e => setDestino(e.target.value)}
+                          className="bg-zry-surface border border-zry-border rounded-full px-3 py-1.5 text-[12.5px] text-zry-text focus:outline-none focus:border-zry-border-strong"
+                        >
+                          <option value="">Selecione o executivo…</option>
+                          {groups
+                            .filter(o => !o.isUnassigned && o.executive !== g.executive)
+                            .map(o => <option key={o.executive} value={o.executive}>{o.executive}</option>)}
+                        </select>
+                        <button
+                          type="button"
+                          disabled={!destino}
+                          onClick={() => {
+                            onMergeExecutive(g.executive, destino);
+                            setUnificando(null);
+                            setDestino('');
+                          }}
+                          className="bg-zry-roxo text-zry-creme font-bold px-3.5 py-1.5 rounded-full text-[12px] disabled:opacity-50 transition"
+                        >
+                          Unificar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setUnificando(null); setDestino(''); }}
+                          className="text-[12px] font-semibold text-zry-text-2 hover:text-zry-text px-2 py-1.5 transition"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setUnificando(g.executive); setDestino(''); }}
+                        title="Usar quando o mesmo executivo aparece escrito de dois jeitos"
+                        className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-zry-text-2 hover:text-zry-roxo transition"
+                      >
+                        <Merge className="w-3.5 h-3.5" />
+                        Unificar com outra carteira
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {isOpen && (
                   <div className="border-t border-zry-border">

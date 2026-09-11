@@ -15,8 +15,6 @@ export type AppTab =
   | 'users';
 
 interface NavbarProps {
-  activeTab: AppTab;
-  setActiveTab: (tab: AppTab) => void;
   onOpenNewReferral: () => void;
   onOpenNewPartner: () => void;
   incompleteCount: number;
@@ -37,7 +35,6 @@ interface NavbarProps {
 }
 
 export default function Navbar({
-  setActiveTab,
   onOpenNewReferral,
   unreadNotificationsCount = 0,
   onOpenNotifications,
@@ -60,7 +57,6 @@ export default function Navbar({
     e.preventDefault();
     if (!onSearch) return;
     onSearch(searchDraft.trim());
-    setActiveTab('referrals');
   };
 
   return (
