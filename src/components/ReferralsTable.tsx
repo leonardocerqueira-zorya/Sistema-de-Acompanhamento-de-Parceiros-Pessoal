@@ -71,6 +71,12 @@ export default function ReferralsTable({
   const partnerVintage = filter.partnerVintage || 'all';
   const referralVintage = filter.referralVintage || 'all';
   const closeMonth = filter.closeMonth || 'all';
+  const selectedReferralVintages = filter.referralVintages?.length
+    ? filter.referralVintages
+    : referralVintage !== 'all' ? [referralVintage] : [];
+  const selectedCloseMonths = filter.closeMonths?.length
+    ? filter.closeMonths
+    : closeMonth !== 'all' ? [closeMonth] : [];
   const vintageLabel = (v: string) => (v === 'none' ? 'sem data' : monthLabelPt(v));
 
   const badgeBase = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold';
@@ -116,7 +122,9 @@ export default function ReferralsTable({
       churnFilter: 'all',
       partnerVintage: 'all',
       referralVintage: 'all',
-      closeMonth: 'all'
+      referralVintages: [],
+      closeMonth: 'all',
+      closeMonths: []
     });
     setShowOnlyToComplete(false);
   };
@@ -273,50 +281,34 @@ export default function ReferralsTable({
               </select>
             </div>
 
-            {/* Safra da indicação — mês em que a INDICAÇÃO foi feita (referralDate) */}
-            <div className="flex items-center gap-2">
-              <span
-                className="text-[12.5px] text-zry-text-2 font-semibold"
-                title="Mês em que a indicação foi feita, de qualquer parceiro. Combina com a safra do parceiro."
-              >
-                Safra da indicação:
-              </span>
-              <select
-                value={referralVintage}
-                onChange={(e) => onFilterChange({ ...filter, referralVintage: e.target.value })}
-                className="bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
-              >
-                <option value="all">Todas as safras</option>
-                {referralVintages.months.map(k => (
-                  <option key={k} value={k}>{monthLabelPt(k)}</option>
-                ))}
-                {referralVintages.hasNone && <option value="none">Indicação sem data</option>}
-              </select>
-            </div>
+            {/* Safra da indicação — permite combinar vários meses */}
+            <MonthMultiSelect
+              label="Safra da indicação:"
+              title="Meses em que as indicações foram feitas. É possível combinar quantos meses quiser."
+              months={referralVintages.months}
+              hasNone={referralVintages.hasNone}
+              noneLabel="Indicação sem data"
+              selected={selectedReferralVintages}
+              onChange={(months) => onFilterChange({
+                ...filter,
+                referralVintage: 'all',
+                referralVintages: months
+              })}
+            />
 
-            {/* Mês de fechamento — negócios ganhos pela data de fechamento */}
-            <div className="flex items-center gap-2">
-              <span
-                className="text-[12.5px] text-zry-text-2 font-semibold"
-                title="Mostra somente negócios ganhos cuja data de fechamento está no mês selecionado."
-              >
-                Fechadas no mês:
-              </span>
-              <select
-                value={closeMonth}
-                onChange={(e) => onFilterChange({
-                  ...filter,
-                  closeMonth: e.target.value,
-                  dealStatus: e.target.value === 'all' ? filter.dealStatus : 'ganho'
-                })}
-                className="bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none focus:border-zry-border-strong"
-              >
-                <option value="all">Todos os meses</option>
-                {closeMonths.months.map(k => (
-                  <option key={k} value={k}>{monthLabelPt(k)}</option>
-                ))}
-              </select>
-            </div>
+            {/* Mês de fechamento — permite combinar vários meses */}
+            <MonthMultiSelect
+              label="Fechadas nos meses:"
+              title="Negócios ganhos nos meses de fechamento selecionados. É possível combinar vários meses."
+              months={closeMonths.months}
+              selected={selectedCloseMonths}
+              onChange={(months) => onFilterChange({
+                ...filter,
+                closeMonth: 'all',
+                closeMonths: months,
+                dealStatus: months.length > 0 ? 'ganho' : filter.dealStatus
+              })}
+            />
 
             {/* Deal Status Selector */}
             <div className="flex items-center gap-2">
@@ -430,9 +422,14 @@ export default function ReferralsTable({
                   Parceiros que entraram em {vintageLabel(partnerVintage)}
                 </span>
               )}
-              {referralVintage !== 'all' && (
+              {selectedReferralVintages.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-info-bg text-zry-info">
-                  Indicações feitas em {vintageLabel(referralVintage)}
+                  Indicações em {selectedReferralVintages.map(vintageLabel).join(', ')}
+                </span>
+              )}
+              {selectedCloseMonths.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zry-positive-bg text-zry-positive">
+                  Fechadas em {selectedCloseMonths.map(vintageLabel).join(', ')}
                 </span>
               )}
               {filter.onlyMissingData && (
@@ -668,6 +665,71 @@ export default function ReferralsTable({
         </div>
 
       </div>
+    </div>
+  );
+}
+
+interface MonthMultiSelectProps {
+  label: string;
+  title: string;
+  months: string[];
+  selected: string[];
+  onChange: (months: string[]) => void;
+  hasNone?: boolean;
+  noneLabel?: string;
+}
+
+function MonthMultiSelect({
+  label,
+  title,
+  months,
+  selected,
+  onChange,
+  hasNone = false,
+  noneLabel = 'Sem data'
+}: MonthMultiSelectProps) {
+  const options = hasNone ? [...months, 'none'] : months;
+  const toggle = (month: string) => {
+    const next = selected.includes(month)
+      ? selected.filter(item => item !== month)
+      : [...selected, month];
+    onChange(next);
+  };
+  const summary = selected.length === 0
+    ? 'Todos os meses'
+    : selected.length === 1
+      ? (selected[0] === 'none' ? noneLabel : monthLabelPt(selected[0]))
+      : `${selected.length} meses selecionados`;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[12.5px] text-zry-text-2 font-semibold" title={title}>{label}</span>
+      <details className="relative group">
+        <summary className="list-none cursor-pointer min-w-[160px] bg-zry-lilas-30 border border-transparent rounded-xl px-3 py-2 text-[12.5px] text-zry-text font-semibold focus:outline-none group-open:border-zry-border-strong">
+          {summary}
+        </summary>
+        <div className="absolute z-30 top-full mt-1 right-0 min-w-[230px] max-h-72 overflow-y-auto bg-zry-surface border border-zry-border rounded-xl shadow-xl p-2">
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zry-roxo hover:bg-zry-lilas-30"
+          >
+            Todos os meses
+          </button>
+          <div className="h-px bg-zry-border my-1" />
+          {options.map(month => (
+            <label key={month} className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-zry-text cursor-pointer hover:bg-zry-lilas-30">
+              <input
+                type="checkbox"
+                checked={selected.includes(month)}
+                onChange={() => toggle(month)}
+                className="rounded border-zry-border-strong text-zry-roxo focus:ring-zry-roxo"
+              />
+              <span>{month === 'none' ? noneLabel : monthLabelPt(month)}</span>
+            </label>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
