@@ -567,6 +567,37 @@ export default function App() {
     }
   };
 
+  const handleUpdateInstallments = (
+    batch: Array<{ referralId: string; installmentId: string; updates: Partial<CommissionInstallment> }>
+  ) => {
+    if (batch.length === 0) return;
+    const byKey = new Map(batch.map(item => [`${item.referralId}:${item.installmentId}`, item.updates]));
+
+    const updated = referrals.map(referral => {
+      const updateList = (list?: CommissionInstallment[]) =>
+        list?.map(installment => {
+          const changes = byKey.get(`${referral.id}:${installment.id}`);
+          return changes ? { ...installment, ...changes } : installment;
+        });
+
+      return updateReferralCommissionStatusFromInstallments({
+        ...referral,
+        commissionInstallments: updateList(referral.commissionInstallments),
+        ambassadorCommissionInstallments: updateList(referral.ambassadorCommissionInstallments)
+      });
+    });
+
+    setReferrals(updated);
+    saveStoredReferrals(updated);
+
+    const status = batch[0].updates.status;
+    if (status === 'agendada') {
+      showToast(`NF vinculada a ${batch.length} parcela(s) e pagamento agendado.`);
+    } else if (status === 'paga') {
+      showToast(`Comprovante vinculado e ${batch.length} parcela(s) liquidadas.`);
+    }
+  };
+
   const handleImportSheetData = (result: SheetImportResult) => {
     // Reconcile the partner vínculo so imported referrals keep pointing to the correct partner id.
     // Matching priority: CNPJ/CPF -> ID Conexa -> Name (case-insensitive).
@@ -960,6 +991,7 @@ export default function App() {
           <CommissionsView
             referrals={visibleReferrals}
             onUpdateInstallment={handleUpdateInstallment}
+            onUpdateInstallments={handleUpdateInstallments}
             onUpdateCommission={handleUpdateCommission}
             onEditReferral={(ref) => {
               setEditingReferral(ref);
