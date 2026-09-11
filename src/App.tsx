@@ -822,7 +822,22 @@ export default function App() {
   };
 
   const handleSelectPartner = (partnerId: string) => {
-    setFilter(prev => ({ ...prev, partnerId }));
+    // "Ver indicações" é uma navegação para a ficha completa do parceiro.
+    // Filtros deixados por consultas anteriores (busca, safras, fechamento etc.)
+    // não podem esconder registros que o card acabou de contabilizar.
+    setFilter(prev => ({
+      ...prev,
+      period: { preset: 'all' },
+      partnerId,
+      dealStatus: 'all',
+      commissionStatus: 'all',
+      churnFilter: 'all',
+      onlyMissingData: false,
+      searchQuery: '',
+      partnerVintage: 'all',
+      referralVintage: 'all',
+      closeMonth: 'all'
+    }));
     setActiveTab('referrals');
   };
 
