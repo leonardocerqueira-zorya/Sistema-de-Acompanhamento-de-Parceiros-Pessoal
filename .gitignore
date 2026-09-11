@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Backfill: dados reais de parceiro e cliente ficam fora do versionamento
+# (ver scripts/reconciliacao.exemplo.json).
+scripts/*.local.json
+scripts/safra-anterior.json
+backfill-*.tsv

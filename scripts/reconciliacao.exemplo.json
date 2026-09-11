@@ -1,0 +1,34 @@
+{
+  "_leia_me": "Copie para reconciliacao.local.json e preencha com os dados reais. Esse arquivo fica fora do git porque carrega CNPJ e razão social de parceiro. As chaves são a razão social da planilha normalizada por chave(): sem acento, minúscula, sem pontuação e sem ltda/me/epp/eireli.",
+
+  "parceirosNaBase": {
+    "acme assessoria contabil": { "nome": "Fulana De Tal", "documento": "00000000000191" },
+    "beta solucoes empresariais": { "nome": "Beta Soluções Empresariais", "documento": "" }
+  },
+
+  "entradaNoPrograma": {
+    "acme assessoria contabil": "2026-01-15"
+  },
+
+  "tier": {
+    "beta solucoes empresariais": "Revendedor"
+  },
+
+  "executivo": {
+    "acme assessoria contabil": "Nome Do Executivo"
+  },
+
+  "contato": {
+    "acme assessoria contabil": "Nome Completo Da Pessoa"
+  },
+
+  "parcelamento": {
+    "cliente indicado com contrato anual": "2x"
+  },
+
+  "alias": {
+    "acme contabilidade": "acme assessoria contabil"
+  },
+
+  "ignorar": []
+}
